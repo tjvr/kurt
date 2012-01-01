@@ -21,7 +21,7 @@ def test_cons(cons, encoded, value):
     except Exception, e:
         if not failed: fail()
         failed = True
-        print '  Error: %s' % e
+        print '  Parse Error: %s' % e
     else:
         if not parsed == value or parsed != value: # Stupid but might forget to do __ne__ as well as __eq__...
             if not failed: fail()
@@ -34,7 +34,7 @@ def test_cons(cons, encoded, value):
     except Exception, e:
         if not failed: fail()
         failed = True
-        print '  Error: %s' % e
+        print '  Build Error: %s' % e
     else:
         if not built == encoded or built != encoded:
             if not failed: fail()

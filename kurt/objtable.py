@@ -1,4 +1,10 @@
 from construct import *
+from functools import partial
+import inspect
+
+from fixed_objects import *
+import fixed_objects
+from inline_objects import field, Ref
 
 
 ### DBEUG
@@ -8,173 +14,51 @@ class PrintContext(Construct):
     
     def _build(self, obj, stream, context):
         print 'build', context
+###
 
 
-
-### Inline fields & References ###
-
-class Ref(object):
-    def __init__(self, index):
-        self.index = int(index)
-    
-    def __repr__(self):
-        return 'Ref(%i)' % self.index
-    
-    def __eq__(self, other):
-        return isinstance(other, Ref) and self.index == other.index
-    
-    def __ne__(self, other):
-        return not self == other
-
-
-class RefAdapter(Adapter):
-    def _encode(self, obj, context):
-        assert isinstance(obj, Ref)
-        index1 = obj.index % 65536
-        index2 = (obj.index - index1) >> 16
-        return Container(classID = 'Ref', _index1=index1, _index2=index2)
+class ObjectAdapter(Adapter):
+    """Decodes a construct to a pythonic class representation.
+    The class must have a from_construct classmethod and a to_construct instancemethod.
+    Arguments: a class, list of classes, or a dictionary of obj.classID name to class mapping.
+        eg ObjectAdapter({"String": String, "Array": Collection}, <subcon>...)
+    NB: Must use new-style objects.
+    """
+    def __init__(self, classes, *args, **kwargs):
+        Adapter.__init__(self, *args, **kwargs)
         
-    def _decode(self, obj, context):
-        index = int(obj._index2 << 16) + obj._index1
-        return Ref(index)
-
-
-class FieldAdapter(Adapter):
-    def _encode(self, obj, context):
-        assert not isinstance(obj, str)
-        
-        if obj is None:
-            classID = 'nil'
-        elif obj is True:
-            classID = 'true'
-        elif obj is False:
-            classID = 'false'
-        elif isinstance(obj, float):
-            classID = 'Float'
-        elif isinstance(obj, Ref):
-            classID = 'Ref'
-        elif isinstance(obj, int):
-            # for now, assume SmallInteger
-            if obj < 65536:
-                classID = 'SmallInteger16'
-            else:
-                classID = 'SmallInteger'
+        if isinstance(classes, list):
+            classes = dict((cls.__name__, cls) for cls in classes)
+        self.classes = classes
+    
+    def get_class(self, classID):
+        if inspect.isclass(self.classes):
+            return self.classes
         else:
-            raise NotImplementedError, 'no field type for %r' % obj
-        return Container(classID=classID, value=obj)
+            return self.classes[classID]
+    
+    def _encode(self, obj, context):
+        return obj.to_construct(context)
     
     def _decode(self, obj, context):
-        if isinstance(obj, Ref):
-            return obj
-        else:
-            return obj.value
+        cls = self.get_class(obj.classID)
+        return cls.from_construct(obj, context)
 
 
-field = FieldAdapter(Struct("field",
-    Enum(UBInt8("classID"),
-        nil = 1,
-        true = 2,
-        false = 3,
-        SmallInteger = 4,
-        SmallInteger16 = 5,
-        LargePositiveInteger = 6,
-        LargeNegativeInteger = 7,
-        Float = 8,
-        Ref = 99,
-    ),
-    Switch("value", lambda ctx: ctx.classID, {
-        "nil": Value("", lambda ctx: None),
-        "true": Value("", lambda ctx: True),
-        "false": Value("", lambda ctx: False),
-        "SmallInteger": UBInt32(""),
-        "SmallInteger16": UBInt16(""),
-        "LargePositiveInteger": Struct("",
-            UBInt16("length"),
-            MetaRepeater(lambda ctx: ctx.length, UBInt8("data")),
-        ),
-        "LargeNegativeInteger": Struct("",
-            UBInt16("length"),
-            MetaRepeater(lambda ctx: ctx.length, UBInt8("data")),
-        ),
-        "Float": BFloat64(""),
-        "Ref": RefAdapter(Struct("",
-            UBInt8("_index2"),
-            UBInt16("_index1"),
-        )),
-    })
-))
+fixed_object_classes = []
+fixed_object_ids_by_name = {}
+fixed_object_cons_by_name = {}
 
+for name in dir(fixed_objects):
+    if not name.startswith('_'):
+        cls = getattr(fixed_objects, name)
+        classID = getattr(cls, 'classID', None)
+        if classID:
+            fixed_object_classes.append(cls)
+            fixed_object_ids_by_name[name] = classID
+            fixed_object_cons_by_name[name] = cls._construct
 
-
-### Fixed-format objects ###
-
-class FixedObject:
-    def __init__(self, value):
-        self.value = value
-    
-    def __eq__(self, other):
-        return self.__class__ == other.__class__ and self.value == other.value
-    
-    def __ne__(self, other):
-        return not self == other
-    
-    def __str__(self):
-        return repr(self)
-    
-    def __repr__(self):
-        return "%s(%s)" % (self.__class__.__name__, repr(self.value))
-        
-    @property
-    def classID(self):
-        return self.__class__.__name__
-
-
-class ContainsRefs: pass
-    
-class String(FixedObject): pass
-class Symbol(FixedObject):
-    def __repr__(self):
-        return "<#%s>" % self.value
-
-class ByteArray(FixedObject): pass
-class SoundBuffer(FixedObject): pass
-class Bitmap(FixedObject): pass
-class UTF8(FixedObject): pass
-
-class Collection(FixedObject, ContainsRefs):
-    def __iter__(self):
-        return iter(self.value)
-    
-    def __getattr__(self, name):
-        if name in ('append', 'count', 'extend', 'index', 'insert', 'pop', 'remove', 'reverse', 'sort'):
-            return getattr(self.value, name)
-    
-    def __getitem__(self, index):
-        return self.value[index]
-    
-    def __setitem__(self, index, value):
-        self.value[index] = value
-    
-    def __delitem__(self, index):
-        del self.value[index]
-
-class Array(Collection): pass
-class OrderedCollection(Collection): pass
-class Set(Collection): pass
-class IdentitySet(Collection): pass
-
-class Dictionary(Collection): pass
-class IdentityDictionary(Collection): pass
-
-class Color(FixedObject): pass
-class TranslucentColor(FixedObject): pass
-class Point(FixedObject): pass
-class Rectangle(FixedObject): pass
-class Form(FixedObject, ContainsRefs): pass
-class ColorForm(FixedObject, ContainsRefs, Form): pass
-
-
-class FixedObjectAdapter(Adapter):    
+class FixedObjectAdapter(Adapter):
     def _encode(self, obj, context):
         return obj
     
@@ -182,122 +66,11 @@ class FixedObjectAdapter(Adapter):
         cls = eval(obj.classID)
         return cls(obj.value)
 
-
-# Tuples
-class TupleAdapter(Adapter):
-    def __init__(self, fields, subcon):
-        Adapter.__init__(self, subcon)
-        self.fields = fields
-    
-    def _encode(self, obj, context):
-        return Container(**dict(zip(self.fields, obj)))
-    
-    def _decode(self, obj, context):
-        return tuple(obj[field] for field in self.fields)
-
-# Collection
-class CollectionAdapter(Adapter):
-    def _encode(self, obj, context):
-        obj = list(obj)
-        return Container(items=obj, length=len(obj))
-    
-    def _decode(self, obj, context):
-        assert len(obj.items) == obj.length # DEBUG
-        return obj.items
-
-_collection = CollectionAdapter(Struct("collection",
-    UBInt32("length"),
-    MetaRepeater(lambda ctx: ctx.length, Rename("items", field)),
-))
-
-# Dictionary
-class DictionaryAdapter(Adapter):
-    def _encode(self, obj, context):
-        return [Container(key=key, value=value) for (key, value) in dict(obj).items()]
-    
-    def _decode(self, obj, context):
-        return dict([(item.key, item.value) for item in obj])
-
-_dictionary = DictionaryAdapter(CollectionAdapter(Struct("dictionary",
-    UBInt32("length"),
-    MetaRepeater(lambda ctx: ctx.length, Struct("items",
-        Rename("key", field),
-        Rename("value", field),
-    )),
-)))
-
-# Form
-_form = Struct("form",
-    Rename("width", field),
-    Rename("height", field),
-    Rename("depth", field),
-    Rename("privateOffset", field),
-    Rename("bits", field),
-)
-
-
-fixed_object_ids = {
-    "String": 9,
-    "Symbol": 10,
-    "ByteArray": 11,
-    "SoundBuffer": 12,
-    "Bitmap": 13,
-    "UTF8": 14,
-    
-    "Array": 20,
-    "OrderedCollection": 21,
-    "Set": 22,
-    "IdentitySet": 23,
-    "Dictionary": 24,
-    "IdentityDictionary": 25,
-    
-    "Color": 30,
-    "TranslucentColor": 31,
-    "Point": 32,
-    "Rectangle": 33,
-    "Form": 34,
-    "ColorForm": 35,
-}
+FixedObjectAdapter = partial(ObjectAdapter, fixed_object_classes)
 
 fixed_object = FixedObjectAdapter(Struct("fixed_object",
-    Enum(UBInt8("classID"),
-        **fixed_object_ids
-    ),
-    Switch("value", lambda ctx: ctx.classID, {
-        "String": PascalString("value", length_field=UBInt32("length")),
-        "Symbol": PascalString("value", length_field=UBInt32("length")),
-        "ByteArray": PascalString("value", length_field=UBInt32("length")),
-        "SoundBuffer": Struct("",
-            UBInt32("length"),
-            MetaRepeater(lambda ctx: ctx.length * 2, UBInt8("bytes")),
-        ),
-        "Bitmap": Struct("",
-            UBInt32("length"),
-            MetaRepeater(lambda ctx: ctx.length, UBInt32("")),
-        ),
-        "UTF8": PascalString("value", length_field=UBInt32("length"), encoding="utf8"),
-        
-        "Array": _collection,
-        "OrderedCollection": _collection,
-        "Set": _collection,
-        "IdentitySet": _collection,
-        
-        "Dictionary": _dictionary,
-        "IdentityDictionary": _dictionary,
-        
-        "Color": UBInt32("value"),
-        "TranslucentColor": Struct("", UBInt32("color"), UBInt8("more_color")),
-        "Point": TupleAdapter(('x', 'y'), Struct("",
-            Rename("x", field),
-            Rename("y", field),
-        )),
-        "Rectangle": StrictRepeater(4, field),
-        "Form": _form,
-        "ColorForm": Struct("",
-            Embed(_form),
-            Rename("colors", field),
-        ),
-    }),
+    Enum(UBInt8("classID"), **fixed_object_ids_by_name),
+    Switch("value", lambda ctx: ctx.classID, fixed_object_cons_by_name),
 ))
 
 
@@ -631,7 +404,7 @@ stage_bin = '\x7D\x05\x15\x63\x00\x00\x02\x01\x63\x00\x00\x03\x63\x00\x00\x04\x0
 stage = user_object.parse(stage_bin)
 
 file = open('/Users/tim/Code/Scratch format/Blank-musical.sprite').read()
-ot = obj_table.parse(file)
+#ot = obj_table.parse(file)
 
 
 
