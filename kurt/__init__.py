@@ -1,0 +1,1 @@
+from kurt.objtable import *
