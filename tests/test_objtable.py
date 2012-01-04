@@ -37,7 +37,8 @@ test_cons(fixed_object, '\x09\x00\x00\x00\x0C\x42\x6C\x61\x6E\x6B\x2E\x73\x70\x7
 # Symbol - TODO
 # ByteArray - TODO
 # SoundBuffer - TODO
-# Bitmap - TODO
+# Bitmap
+test_cons(fixed_object, '\r\x00\x00\x00\x01\xff\x00\x00\x08', Bitmap([4278190088L]))
 # UTF8
 test_cons(fixed_object, '\x0E\x00\x00\x00\x05\x42\x6C\x61\x6E\x6B', UTF8('Blank'))
 
@@ -67,6 +68,15 @@ test_cons(fixed_object, '\x21\x05\x02\x16\x05\x00\x47\x05\x02\x48\x05\x00\x6F',
 # ColorForm
 
 
+
+def test_file(path):
+    bytes = open(path).read()
+    ot = obj_network.parse(bytes)
+    built_bytes = obj_network.build(ot)
+    assert bytes == built_bytes
+    print 'Tested file! :D'
+
+test_file('/Users/tim/Code/python/kurt/tests/var.sprite')
 
 
 # print summary

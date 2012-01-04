@@ -39,11 +39,28 @@ class FixedObject(object):
 
 class ContainsRefs: pass
 
+class FixedObjectWithRepeater(FixedObject):
+    """Used internally to handle things like
+        Struct("",
+            UBInt32("length"),
+            MetaRepeater(lambda ctx: ctx.length, UBInt32("items")),
+        )
+    """
+    def to_value(self):
+        return Container(items = self.value, length = len(self.value))
+    
+    @classmethod
+    def from_value(cls, obj):
+        assert len(obj.items) == obj.length # DEBUG
+        return cls(obj.items)
+
+
 
 # Bytes
 class String(FixedObject):
     classID = 9
     _construct = PascalString("value", length_field=UBInt32("length"))
+
 
 class Symbol(FixedObject):
     classID = 10
@@ -51,22 +68,24 @@ class Symbol(FixedObject):
     def __repr__(self):
         return "<#%s>" % self.value
 
+
 class ByteArray(FixedObject):
     classID = 11
     _construct = PascalString("value", length_field=UBInt32("length"))
 
-class SoundBuffer(FixedObject):
+
+class SoundBuffer(FixedObjectWithRepeater):
     classID = 12
     _construct = Struct("",
         UBInt32("length"),
-        MetaRepeater(lambda ctx: ctx.length * 2, UBInt8("bytes")),
+        MetaRepeater(lambda ctx: ctx.length * 2, UBInt8("items")),
     )
 
-class Bitmap(FixedObject):
+class Bitmap(FixedObjectWithRepeater):
     classID = 13
     _construct = Struct("",
         UBInt32("length"),
-        MetaRepeater(lambda ctx: ctx.length, UBInt32("")),
+        MetaRepeater(lambda ctx: ctx.length, UBInt32("items")),
     )
 
 class UTF8(FixedObject):
@@ -75,19 +94,11 @@ class UTF8(FixedObject):
 
 
 # Collections
-class Collection(FixedObject, ContainsRefs):
-    _construct = Struct("collection",
+class Collection(FixedObjectWithRepeater, ContainsRefs):
+    _construct = Struct("",
         UBInt32("length"),
         MetaRepeater(lambda ctx: ctx.length, Rename("items", field)),
     )
-    
-    def to_value(self):
-        return Container(items=self.value, length=len(self.value))
-    
-    @classmethod
-    def from_value(cls, value):
-        assert len(value.items) == value.length # DEBUG
-        return cls(value.items)
     
     def __iter__(self):
         return iter(self.value)
@@ -192,6 +203,21 @@ class Form(FixedObject, ContainsRefs):
         Rename("bits", field),
     )
     
+    @property
+    def value(self):
+        return dict((k, getattr(self, k)) for k in self.__dict__ if not k.startswith("_"))
+    
+    def to_value(self):
+        return Container(**self.value)
+    
+    @classmethod
+    def from_value(cls, value):
+        return cls(**dict(value))
+    
+    def __init__(self, **fields):
+        self.__dict__.update(fields)
+
+
 class ColorForm(Form):
     classID = 35
     _construct = Struct("",
