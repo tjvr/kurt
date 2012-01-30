@@ -3,6 +3,8 @@ path_to_lib = os.path.split(os.getcwd())[0]
 sys.path.append(path_to_lib)
 
 from kurt import *
+from kurt.inline_objects import field, Ref
+from kurt.objtable import fixed_object
 from testing import *
 
 
@@ -71,8 +73,8 @@ test_cons(fixed_object, '\x21\x05\x02\x16\x05\x00\x47\x05\x02\x48\x05\x00\x6F',
 
 def test_file(path):
     bytes = open(path).read()
-    ot = obj_network.parse(bytes)
-    built_bytes = obj_network.build(ot)
+    ot = obj_table.parse(bytes)
+    built_bytes = obj_table.build(ot)
     assert bytes == built_bytes
     print 'Tested file! :D'
 
@@ -83,3 +85,15 @@ test_file('/Users/tim/Code/python/kurt/tests/var.sprite')
 tests_finish()
 
 
+
+
+### Test ###
+
+#stage_bin = '\x7D\x05\x15\x63\x00\x00\x02\x01\x63\x00\x00\x03\x63\x00\x00\x04\x05\x00\x00\x01\x63\x00\x00\x05\x63\x00\x00\x06\x63\x00\x00\x07\x03\x63\x00\x00\x08\x01\x08\x3F\xF0\x00\x00\x00\x00\x00\x00\x05\x00\x00\x05\x00\x00\x01\x63\x00\x00\x09\x05\x00\x64\x05\x00\x3C\x63\x00\x00\x0A\x63\x00\x00\x0B'
+#stage = user_object.parse(stage_bin)
+
+bytes = open('/Users/tim/Code/python/kurt/tests/var.sprite').read()
+ot = obj_table.parse(bytes)
+
+# ot = ObjectNetworkAdapter._decode(obj_network, objects, None) 
+# objects1 = ObjectNetworkAdapter._encode(obj_network, ot, None)

@@ -1,6 +1,9 @@
 from construct import Container
 
 class UserObject(object):
+    """A user-class object with a variable number of fields.
+    Supports dot notation for accessing fields. Each class lists its field order in _fields.
+    """
     _fields = []
     
     def to_construct(self, context):
@@ -16,6 +19,10 @@ class UserObject(object):
         return cls(obj.field_values, version=obj.version)
     
     def __init__(self, field_values=None, **args):
+        """Initalize a UserObject.
+        @param field_values: (optional) list of fields as parsed from a file.
+        @param **args: field values.
+        """
         self.fields = {}
         
         self.version = 1
@@ -75,111 +82,127 @@ class UserObject(object):
         return '<%s(%s)>' % (self.__class__.__name__, objName)
     
 
-class Script(list):
-    def __init__(self, array):
-        self.pos, blocks = array
-        list.__init__(self, blocks)
-    
-    def __repr__(self):
-        return '<Script(%i blocks)>' % len(self)
-    
-    def to_array(self):
-        return [self.pos] + [tuple(block) for block in self.blocks]
+# class Script(list):
+#     """Wrapper for script tuples. Currently unused."""
+#     def __init__(self, array):
+#         self.pos, blocks = array
+#         list.__init__(self, blocks)
+#     
+#     def __repr__(self):
+#         return '<Script(%i blocks)>' % len(self)
+#     
+#     def to_array(self):
+#         return [self.pos] + [tuple(block) for block in self.blocks]
 
 
-class Morph(UserObject):
-    classID = 100
+class BaseMorph(UserObject):
     _fields = ["bounds", "owner", "submorphs", "color", "flags", "properties"]
-class BorderedMorph(Morph):
+
+class Morph(BaseMorph):
+    """Base class for most UserObjects."""
+    classID = 100
+class BorderedMorph(BaseMorph):
     classID = 101
     _fields = Morph._fields + ["borderWidth", "borderColor"]
-class RectangleMorph(Morph):
+class RectangleMorph(BaseMorph):
     classID = 102
-class EllipseMorph(Morph):
+class EllipseMorph(BaseMorph):
     classID = 103
-class AlignmentMorph(Morph):
+class AlignmentMorph(BaseMorph):
     classID = 104
-class StringMorph(Morph):
+class StringMorph(BaseMorph):
     classID = 105
-class UpdatingStringMorph(Morph):
+class UpdatingStringMorph(BaseMorph):
     classID = 106
-class SimpleSliderMorph(Morph):
+class SimpleSliderMorph(BaseMorph):
     classID = 107
-class SimpleButtonMorph(Morph):
+class SimpleButtonMorph(BaseMorph):
     classID = 108
-class SampledSound(Morph):
+class SampledSound(BaseMorph):
     classID = 109
-class ImageMorph(Morph):
+class ImageMorph(BaseMorph):
     classID = 110
-class SketchMorph(Morph):
+class SketchMorph(BaseMorph):
     classID = 111
 
 
-class ScriptableScratchMorph(Morph):
+class ScriptableScratchMorph(BaseMorph):
     _fields = Morph._fields + ["objName", "vars", "blocksBin", "isClone", "media", "costume"]
+    
+    @property
+    def scripts(self):
+        """Alias for blocksBin."""
+        return self.blocksBin
 
-class SensorBoardMorph(Morph):
+class SensorBoardMorph(BaseMorph):
     classID = 123
+
 class ScratchSpriteMorph(ScriptableScratchMorph):
     classID = 124
     _fields = ScriptableScratchMorph._fields + ["zoom", "hPan", "vPan", "obsoleteSavedState", "sprites", "volume", "tempoBPM", "sceneStates", "lists"]
+
 class ScratchStageMorph(ScriptableScratchMorph):
     classID = 125
     _fields = ScriptableScratchMorph._fields + ["visibility", "scalePoint", "rotationDegrees", "rotationStyle", "volume", "tempoBPM", "draggable", "sceneStates", "lists"]
-
-class ChoiceArgMorph(Morph):
+    
+    @property
+    def sprites(self):
+        """Alias for submorphs."""
+        return self.submorphs
+    
+class ChoiceArgMorph(BaseMorph):
     classID = 140
-class ColorArgMorph(Morph):
+class ColorArgMorph(BaseMorph):
     classID = 141
-class ExpressionArgMorph(Morph):
+class ExpressionArgMorph(BaseMorph):
     classID = 142
-class SpriteArgMorph(Morph):
+class SpriteArgMorph(BaseMorph):
     classID = 145
-class BlockMorph(Morph):
+class BlockMorph(BaseMorph):
     classID = 147
-class CommandBlockMorph(Morph):
+class CommandBlockMorph(BaseMorph):
     classID = 148
-class CBlockMorph(Morph):
+class CBlockMorph(BaseMorph):
     classID = 149
-class HatBlockMorph(Morph):
+class HatBlockMorph(BaseMorph):
     classID = 151
 class ScratchScriptsMorph(BorderedMorph):
     classID = 153
-class ScratchSliderMorph(Morph):
+class ScratchSliderMorph(BaseMorph):
     classID = 154
-class WatcherMorph(Morph):
+class WatcherMorph(BaseMorph):
     classID = 155
-class SetterBlockMorph(Morph):
+class SetterBlockMorph(BaseMorph):
     classID = 157
-class EventHatMorph(Morph):
+class EventHatMorph(BaseMorph):
     classID = 158
-class VariableBlockMorph(Morph):
+class VariableBlockMorph(BaseMorph):
     classID = 160
-class ImageMedia(Morph):
+class ImageMedia(BaseMorph):
     classID = 162
     _fields = ["mediaName", "form", "rotationCenter", "textBox", "jpegBytes", "compositeForm"]
-class MovieMedia(Morph):
+class MovieMedia(BaseMorph):
     classID = 163
-class SoundMedia(Morph):
+class SoundMedia(BaseMorph):
     classID = 164
     _fields = ["mediaName", "originalSound", "volume", "balance", "compressedSampleRate", "compressedBitsPerSample", "compressedData"]
-class KeyEventHatMorph(Morph):
+class KeyEventHatMorph(BaseMorph):
     classID = 165
-class BooleanArgMorph(Morph):
+class BooleanArgMorph(BaseMorph):
     classID = 166
-class EventTitleMorph(Morph):
+class EventTitleMorph(BaseMorph):
     classID = 167
-class MouseClickEventHatMorph(Morph):
+class MouseClickEventHatMorph(BaseMorph):
     classID = 168
-class ExpressionArgMorphWithMenu(Morph):
+class ExpressionArgMorphWithMenu(BaseMorph):
     classID = 169
-class ReporterBlockMorph(Morph):
+class ReporterBlockMorph(BaseMorph):
     classID = 170
-class MultilineStringMorph(Morph):
+class MultilineStringMorph(BaseMorph):
     classID = 171
-class ToggleButton(Morph):
+class ToggleButton(BaseMorph):
     classID = 172
-class WatcherReadoutFrameMorph(Morph):
+class WatcherReadoutFrameMorph(BaseMorph):
     classID = 173
-class WatcherSliderMorph(Morph):
+class WatcherSliderMorph(BaseMorph):
     classID = 174

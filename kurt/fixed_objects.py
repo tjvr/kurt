@@ -1,12 +1,14 @@
 from construct import Container, Struct, Embed, Rename
-from construct import PascalString, UBInt32, UBInt8
-from construct import MetaRepeater, StrictRepeater
+from construct import PascalString, UBInt32, UBInt16, UBInt8
+from construct import Array as StrictRepeater, Array as MetaRepeater
+# We can't import the name Array, as we use it. -_-
 
 from inline_objects import field
 
 
 
 class FixedObject(object):
+    """A primitive fixed-format object - eg String, Dictionary."""
     def __init__(self, value):
         self.value = value
     
@@ -34,7 +36,7 @@ class FixedObject(object):
         return repr(self)
     
     def __repr__(self):
-        return "%s(%s)" % (self.__class__.__name__, repr(self.value))
+        return "%s(%s)" % (self.__class__.__name__, self.value)
 
 
 class ContainsRefs: pass
@@ -55,40 +57,52 @@ class FixedObjectWithRepeater(FixedObject):
         return cls(obj.items)
 
 
+class FixedObjectByteArray(FixedObject):
+    def __repr__(self):
+        name = self.__class__.__name__
+        value = repr(self.value)
+        if len(value) > 60:
+            value = value[:97] + '...'
+            return "<%s(%s)>" % (name, value)
+        else:
+            return "%s(%s)" % (name, value)
 
 # Bytes
-class String(FixedObject):
+class String(FixedObjectByteArray):
     classID = 9
     _construct = PascalString("value", length_field=UBInt32("length"))
 
 
-class Symbol(FixedObject):
+class Symbol(FixedObjectByteArray):
     classID = 10
     _construct = PascalString("value", length_field=UBInt32("length"))
     def __repr__(self):
         return "<#%s>" % self.value
 
 
-class ByteArray(FixedObject):
+class ByteArray(FixedObjectByteArray):
     classID = 11
     _construct = PascalString("value", length_field=UBInt32("length"))
+    
+    def __repr__(self):
+        return '<%s(%i bytes)>' % (self.__class__.__name__, len(self.value))
 
 
-class SoundBuffer(FixedObjectWithRepeater):
+class SoundBuffer(FixedObjectByteArray, FixedObjectWithRepeater):    
     classID = 12
     _construct = Struct("",
         UBInt32("length"),
-        MetaRepeater(lambda ctx: ctx.length * 2, UBInt8("items")),
+        MetaRepeater(lambda ctx: ctx.length, UBInt16("items")),
     )
 
-class Bitmap(FixedObjectWithRepeater):
+class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
     classID = 13
     _construct = Struct("",
         UBInt32("length"),
         MetaRepeater(lambda ctx: ctx.length, UBInt32("items")),
     )
 
-class UTF8(FixedObject):
+class UTF8(FixedObjectByteArray):
     classID = 14
     _construct = PascalString("value", length_field=UBInt32("length"), encoding="utf8")
 

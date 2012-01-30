@@ -1,11 +1,21 @@
 from construct import *
-
+from construct import Array as MetaRepeater
+# We can't import the name Array, as we use it. -_-
 
 
 ### inline fields & Refs ###
 
 class Ref(object):
+    """A reference to an object located in a serialized object table.
+    Used internally for parsing obj_tables.
+    Allows for complex interlinked object networks to be serialized to a list of objects.
+    Found in UserObjects and certain FixedObjects.
+    """
     def __init__(self, index):
+        """Initialise a reference.
+        @param index: the index in the object table that the reference points to.
+        Note that the first index is 1.
+        """
         self.index = int(index)
     
     @classmethod
@@ -105,3 +115,7 @@ field = FieldAdapter(Struct("field",
         )),
     })
 ))
+field.__doc__ = """Construct for simple inline field values and references.
+Converts pythonic types - eg None, True, int - to binary data.
+Encoded inline and not stored directly in an object table. Do not contain references.
+"""

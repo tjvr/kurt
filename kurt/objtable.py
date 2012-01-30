@@ -22,18 +22,20 @@ class PrintContext(Construct):
 class ObjectAdapter(Adapter):
     """Decodes a construct to a pythonic class representation.
     The class must have a from_construct classmethod and a to_construct instancemethod.
-    Arguments: a class, list of classes, or a dictionary of obj.classID name to class mapping.
-        eg ObjectAdapter({"String": String, "Array": Collection}, <subcon>)
-    NB: Must use new-style objects.
     """
     def __init__(self, classes, *args, **kwargs):
+        """Initialize an adapter for a new type/object(s).
+        @param classes: class, list of classes, or dict of obj.classID name to class mapping.
+            eg ObjectAdapter({"String": String, "Array": Collection}, <subcon>)
+        Note: Must use new-style objects, ie. subclasses of object.
+        """
         Adapter.__init__(self, *args, **kwargs)
         
         if isinstance(classes, list):
             classes = dict((cls.__name__, cls) for cls in classes)
         self.classes = classes
     
-    def get_class(self, classID):
+    def _get_class(self, classID):
         if inspect.isclass(self.classes):
             return self.classes
         else:
@@ -50,17 +52,23 @@ class ObjectAdapter(Adapter):
             return obj
     
     def _decode(self, obj, context):
-        cls = self.get_class(obj.classID)
+        """Initialises a new Python class from a construct using the mapping passed to the adapter.
+        """
+        cls = self._get_class(obj.classID)
         return cls.from_construct(obj, context)
 
 
 def obj_classes_from_module(module):
+    """Return a list of classes in a module that have a 'classID' attribute."""
     for name in dir(module):
         if not name.startswith('_'):
             cls = getattr(module, name)
             if getattr(cls, 'classID', None):
                 yield (name, cls)
 
+
+
+### Fixed-format objects ###
 
 fixed_object_classes = []
 fixed_object_ids_by_name = {}
@@ -77,7 +85,8 @@ fixed_object = FixedObjectAdapter(Struct("fixed_object",
     Enum(UBInt8("classID"), **fixed_object_ids_by_name),
     Switch("value", lambda ctx: ctx.classID, fixed_object_cons_by_name),
 ))
-
+fixed_object.__doc__ = """Construct for FixedObjects.
+Stored in the object table. May contain references."""
 
 
 ### User-class objects ###
@@ -99,10 +108,11 @@ user_object = UserObjectAdapter(Struct("user_object",
     UBInt8("length"),
     Rename("field_values", MetaRepeater(lambda ctx: ctx.length, field)),
 ))
+user_object.__doc__ = """Construct for UserObjects.
+Stored in the object table. May contain references."""
 
 
-
-### Objects ###
+### Object Table ###
 
 class ObjectAdapter(Adapter):
     def _encode(self, obj, context):
@@ -119,13 +129,15 @@ class ObjectAdapter(Adapter):
     def _decode(self, obj, context):
         return obj.object
 
-an_obj = ObjectAdapter(Struct("object",
+obj_entry = ObjectAdapter(Struct("object",
     Peek(UBInt8("classID")),
     IfThenElse("object", lambda ctx: ctx.classID < 99,
         fixed_object,
         user_object,
     ),
 ))
+obj_entry.__doc__ = """Construct for object table entries, both UserObjects and FixedObjects."""
+
 
 class ObjectTableAdapter(Adapter):
     def _encode(self, objects, context):
@@ -141,7 +153,7 @@ class ObjectTableAdapter(Adapter):
 
 
 class ObjectNetworkAdapter(Adapter):
-    """Object network <--> list of objects containing Refs"""
+    """Object network <--> object table listing objects containing Refs"""
     def _encode(self, root, context):
         def get_ref(value):            
             """Returns the index of the given object in the object table, adding it if needed."""
@@ -172,6 +184,9 @@ class ObjectNetworkAdapter(Adapter):
             if isinstance(obj, UserObject):
                 field_values = [get_ref(value) for value in obj.field_values]
                 fixed_obj = obj.__class__(field_values, version = obj.version)
+            
+            elif isinstance(obj, Dictionary):
+                fixed_obj = obj.__class__(dict((get_ref(field), get_ref(value)) for (field, value) in obj.value.items()))
                 
             elif isinstance(obj, Form):
                 fixed_obj = obj.__class__(**dict((field, get_ref(value)) for (field, value) in obj.value.items()))
@@ -207,34 +222,31 @@ class ObjectNetworkAdapter(Adapter):
                     value = obj.fields[field_name]
                     value = resolve_ref(value)
                     obj.fields[field_name] = value
+            
+            elif isinstance(obj, Dictionary):
+                obj.value = dict((resolve_ref(field), resolve_ref(value)) for (field, value) in obj.value.items())
+            
             elif isinstance(obj, Form):
                 for field in obj.value:
                     value = getattr(obj, field)
                     value = resolve_ref(value)
                     setattr(obj, field, value)
+            
             elif isinstance(obj, ContainsRefs):
                 obj.value = [resolve_ref(field) for field in obj.value]
         
         root = objects[0]
         return root
 
-obj_table = ObjectTableAdapter(Struct("object_table",
+_obj_table_entries = ObjectTableAdapter(Struct("object_table",
     Const(Bytes("header", 10), "ObjS\x01Stch\x01"),
     UBInt32("length"),
-    Rename("objects", MetaRepeater(lambda ctx: ctx.length, an_obj)),
+    Rename("objects", MetaRepeater(lambda ctx: ctx.length, obj_entry)),
 ))
 
-obj_network = ObjectNetworkAdapter(obj_table)
+obj_table = ObjectNetworkAdapter(_obj_table_entries)
+obj_table.__doc__ = """Construct for parsing a binary object table to pythonic object(s).
+Includes "ObjS\\x01Stch\\x01" header.
+"""
 
-
-
-### Test ###
-
-stage_bin = '\x7D\x05\x15\x63\x00\x00\x02\x01\x63\x00\x00\x03\x63\x00\x00\x04\x05\x00\x00\x01\x63\x00\x00\x05\x63\x00\x00\x06\x63\x00\x00\x07\x03\x63\x00\x00\x08\x01\x08\x3F\xF0\x00\x00\x00\x00\x00\x00\x05\x00\x00\x05\x00\x00\x01\x63\x00\x00\x09\x05\x00\x64\x05\x00\x3C\x63\x00\x00\x0A\x63\x00\x00\x0B'
-stage = user_object.parse(stage_bin)
-
-bytes = open('/Users/tim/Code/python/kurt/tests/var.sprite').read()
-ot = obj_network.parse(bytes)
-
-# ot = ObjectNetworkAdapter._decode(obj_network, objects, None) 
-# objects1 = ObjectNetworkAdapter._encode(obj_network, ot, None)
+__all__ = ['obj_table', '_obj_table_entries', 'UserObject', 'FixedObject'] + [cls.__name__ for cls in fixed_object_classes + user_object_classes]
