@@ -244,9 +244,9 @@ _obj_table_entries = ObjectTableAdapter(Struct("object_table",
     Rename("objects", MetaRepeater(lambda ctx: ctx.length, obj_entry)),
 ))
 
-obj_table = ObjectNetworkAdapter(_obj_table_entries)
-obj_table.__doc__ = """Construct for parsing a binary object table to pythonic object(s).
+ObjTable = ObjectNetworkAdapter(_obj_table_entries)
+ObjTable.__doc__ = """Construct for parsing a binary object table to pythonic object(s).
 Includes "ObjS\\x01Stch\\x01" header.
 """
 
-__all__ = ['obj_table', '_obj_table_entries', 'UserObject', 'FixedObject'] + [cls.__name__ for cls in fixed_object_classes + user_object_classes]
+__all__ = ['ObjTable', 'ObjTable', '_obj_table_entries', 'UserObject', 'FixedObject'] + [cls.__name__ for cls in fixed_object_classes + user_object_classes]

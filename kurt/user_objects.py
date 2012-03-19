@@ -1,3 +1,4 @@
+#coding=utf8
 from construct import Container
 
 class UserObject(object):
@@ -206,3 +207,7 @@ class WatcherReadoutFrameMorph(BaseMorph):
     classID = 173
 class WatcherSliderMorph(BaseMorph):
     classID = 174
+class WatcherSliderMorph(BorderedMorph):
+    classID = 175
+class ScrollingStringMorph(BaseMorph):
+    classID = 176

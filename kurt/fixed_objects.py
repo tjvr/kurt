@@ -129,6 +129,9 @@ class Collection(FixedObjectWithRepeater, ContainsRefs):
     
     def __delitem__(self, index):
         del self.value[index]
+    
+    def __len__(self):
+        return len(self.value)
 
 class Array(Collection):
     classID = 20
@@ -159,6 +162,9 @@ class Dictionary(Collection):
     def from_value(cls, obj):
         value = dict([(item.key, item.value) for item in obj.items])
         return cls(value)
+    
+    def __getattr__(self, name):
+        return getattr(self.value, name)
 
 class IdentityDictionary(Dictionary):
     classID = 25

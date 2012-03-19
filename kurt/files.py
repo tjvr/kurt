@@ -1,15 +1,6 @@
 from construct import *
-from objtable import obj_table, _obj_table_entries
+from objtable import ObjTable
 
-
-scratch_file = Struct("scratch_file",
-    Const(Bytes("header", 10), "ScratchV01"),
-    UBInt32("info_size"),
-    Rename("info", _obj_table_entries),
-    # object store for info (author, notes, thumbnail, etc.)
-    Rename("contents", obj_table),
-    # object store for contents, including the stage, sprites, and media
-)
 
 
 class File(object):
@@ -66,14 +57,45 @@ class File(object):
 #     "scratch-version"   the version of Scratch that saved the project
 
 
+import pdb
+
 class ScratchProjectFile(File):
+    """A Scratch Project file.
+    Arguments: path
+    """
+    HEADER = "ScratchV02"
+    _construct = Struct("scratch_file",
+        Const(Bytes("header", 10), HEADER),
+        
+        UBInt32("info_size"),
+        Rename("info", ObjTable),
+        # object store for info (author, notes, thumbnail, etc.)
+        
+        #Pointer(lambda ctx: 14, 
+        # this should go before the info ObjTable, hence the Pointer
+        
+        Rename("stage", ObjTable),
+        # object store for contents, including the stage, sprites, and media
+    )
+
     def _load(self, bytes):
-        project = scratch_file.parse(bytes)
+        project = self._construct.parse(bytes)
         self.info = project.info
+        self.stage = project.stage
     
     def _save(self):
-        pass
+        project = Container(
+            header = self.HEADER,
+            info = self.info,
+            stage = self.stage,
+        )
+        return self._construct.build(project)
 
 
 class ScratchSpriteFile(File):
     pass
+
+
+__all__ = ['ScratchProjectFile', 'ScratchSpriteFile']
+
+
