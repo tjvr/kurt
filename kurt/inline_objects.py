@@ -37,6 +37,9 @@ class Ref(object):
     
     def __ne__(self, other):
         return not self == other
+    
+    def __hash__(self):
+        return hash(self.index)
 
 
 class RefAdapter(Adapter):
@@ -82,7 +85,7 @@ class FieldAdapter(Adapter):
             return obj.value
 
 
-field = FieldAdapter(Struct("field",
+Field = FieldAdapter(Struct("field",
     Enum(UBInt8("classID"),
         nil = 1,
         true = 2,
@@ -115,7 +118,10 @@ field = FieldAdapter(Struct("field",
         )),
     })
 ))
-field.__doc__ = """Construct for simple inline field values and references.
+Field.__doc__ = """Construct for simple inline field values and references.
 Converts pythonic types - eg None, True, int - to binary data.
 Encoded inline and not stored directly in an object table. Do not contain references.
 """
+
+
+

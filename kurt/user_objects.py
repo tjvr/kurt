@@ -3,7 +3,11 @@ from construct import Container
 
 class UserObject(object):
     """A user-class object with a variable number of fields.
-    Supports dot notation for accessing fields. Each class lists its field order in _fields.
+    Supports dot notation for accessing fields. 
+    Use .fields to see available fields [dir() won't show them.]
+    
+    Each class lists its field order in _fields. 
+    Unknown fields not in this list are named "undefined-%i", where i is the field index.
     """
     _fields = []
     
@@ -32,7 +36,7 @@ class UserObject(object):
         
         if field_values:
             defined_fields = self._fields[:]
-            defined_fields += ("undefined%i" % i for i in range(len(defined_fields), len(field_values)))
+            defined_fields += ("undefined-%i" % i for i in range(len(defined_fields), len(field_values)))
             self.fields.update(zip(defined_fields, field_values))
         
         self.fields.update(args)
@@ -69,7 +73,8 @@ class UserObject(object):
             ordered_fields.append((field_name, value))
             
         # leftover undefined fields
-        for field_name, value in sorted(fields.items()):
+        fields = sorted(fields.items(), key=lambda (field,value): int(field.split('-')[1]))
+        for field_name, value in fields:
             ordered_fields.append((field_name, value))
              
         return ordered_fields
@@ -143,6 +148,10 @@ class ScratchSpriteMorph(ScriptableScratchMorph):
     _fields = ScriptableScratchMorph._fields + ["zoom", "hPan", "vPan", "obsoleteSavedState", "sprites", "volume", "tempoBPM", "sceneStates", "lists"]
 
 class ScratchStageMorph(ScriptableScratchMorph):
+    """The project stage. Also contains project contents, including sprites and media.
+    Attributes include .sprites, an alias for submorphs.
+    Use .fields to see all available fields.
+    """
     classID = 125
     _fields = ScriptableScratchMorph._fields + ["visibility", "scalePoint", "rotationDegrees", "rotationStyle", "volume", "tempoBPM", "draggable", "sceneStates", "lists"]
     
@@ -210,4 +219,5 @@ class WatcherSliderMorph(BaseMorph):
 class WatcherSliderMorph(BorderedMorph):
     classID = 175
 class ScrollingStringMorph(BaseMorph):
+    """unused"""
     classID = 176

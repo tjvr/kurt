@@ -3,7 +3,7 @@ from construct import PascalString, UBInt32, UBInt16, UBInt8
 from construct import Array as StrictRepeater, Array as MetaRepeater
 # We can't import the name Array, as we use it. -_-
 
-from inline_objects import field
+from inline_objects import Field
 
 
 
@@ -111,7 +111,7 @@ class UTF8(FixedObjectByteArray):
 class Collection(FixedObjectWithRepeater, ContainsRefs):
     _construct = Struct("",
         UBInt32("length"),
-        MetaRepeater(lambda ctx: ctx.length, Rename("items", field)),
+        MetaRepeater(lambda ctx: ctx.length, Rename("items", Field)),
     )
     
     def __iter__(self):
@@ -149,8 +149,8 @@ class Dictionary(Collection):
     _construct = Struct("dictionary",
         UBInt32("length"),
         MetaRepeater(lambda ctx: ctx.length, Struct("items",
-            Rename("key", field),
-            Rename("value", field),
+            Rename("key", Field),
+            Rename("value", Field),
         )),
     )
     
@@ -173,7 +173,7 @@ class IdentityDictionary(Dictionary):
 # Color
 class Color(FixedObject):
     classID = 30
-    _construct = UBInt32("value")
+    _construct = StrictRepeater(4, UBInt8("value"))
 
 class TranslucentColor(FixedObject):
     classID = 31
@@ -184,8 +184,8 @@ class TranslucentColor(FixedObject):
 class Point(FixedObject):  
     classID = 32
     _construct = Struct("",
-        Rename("x", field),
-        Rename("y", field),
+        Rename("x", Field),
+        Rename("y", Field),
     )
     
     def __init__(self, x, y=None):
@@ -209,18 +209,18 @@ class Point(FixedObject):
 
 class Rectangle(FixedObject):
     classID = 33
-    _construct = StrictRepeater(4, field)
+    _construct = StrictRepeater(4, Field)
 
 
 # Form
 class Form(FixedObject, ContainsRefs):
     classID = 34
     _construct = Struct("form",
-        Rename("width", field),
-        Rename("height", field),
-        Rename("depth", field),
-        Rename("privateOffset", field),
-        Rename("bits", field),
+        Rename("width", Field),
+        Rename("height", Field),
+        Rename("depth", Field),
+        Rename("privateOffset", Field),
+        Rename("bits", Field),
     )
     
     @property
@@ -242,6 +242,9 @@ class ColorForm(Form):
     classID = 35
     _construct = Struct("",
         Embed(Form._construct),
-        Rename("colors", field),
+        Rename("colors", Field),
     )
+
+
+
 

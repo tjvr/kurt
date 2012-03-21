@@ -2,7 +2,7 @@ from construct import *
 from functools import partial
 import inspect
 
-from inline_objects import field, Ref
+from inline_objects import Field, Ref
 from fixed_objects import *
 import fixed_objects
 from user_objects import *
@@ -106,7 +106,7 @@ user_object = UserObjectAdapter(Struct("user_object",
     ),
     UBInt8("version"),
     UBInt8("length"),
-    Rename("field_values", MetaRepeater(lambda ctx: ctx.length, field)),
+    Rename("field_values", MetaRepeater(lambda ctx: ctx.length, Field)),
 ))
 user_object.__doc__ = """Construct for UserObjects.
 Stored in the object table. May contain references."""
@@ -129,14 +129,14 @@ class ObjectAdapter(Adapter):
     def _decode(self, obj, context):
         return obj.object
 
-obj_entry = ObjectAdapter(Struct("object",
+_obj_table_entry = ObjectAdapter(Struct("object",
     Peek(UBInt8("classID")),
     IfThenElse("object", lambda ctx: ctx.classID < 99,
         fixed_object,
         user_object,
     ),
 ))
-obj_entry.__doc__ = """Construct for object table entries, both UserObjects and FixedObjects."""
+_obj_table_entry.__doc__ = """Construct for object table entries, both UserObjects and FixedObjects."""
 
 
 class ObjectTableAdapter(Adapter):
@@ -241,12 +241,42 @@ class ObjectNetworkAdapter(Adapter):
 _obj_table_entries = ObjectTableAdapter(Struct("object_table",
     Const(Bytes("header", 10), "ObjS\x01Stch\x01"),
     UBInt32("length"),
-    Rename("objects", MetaRepeater(lambda ctx: ctx.length, obj_entry)),
+    Rename("objects", MetaRepeater(lambda ctx: ctx.length, _obj_table_entry)),
 ))
 
 ObjTable = ObjectNetworkAdapter(_obj_table_entries)
 ObjTable.__doc__ = """Construct for parsing a binary object table to pythonic object(s).
-Includes "ObjS\\x01Stch\\x01" header.
-"""
+""" #Includes "ObjS\\x01Stch\\x01" header.
 
-__all__ = ['ObjTable', 'ObjTable', '_obj_table_entries', 'UserObject', 'FixedObject'] + [cls.__name__ for cls in fixed_object_classes + user_object_classes]
+class InfoTableAdapter(Subconstruct):
+    """Info ObjTable found in the project header.
+    Adds the preceding info_size header (4 bytes).
+    
+    Parses to a Dictionary. Includes the following keys:
+        thumbnail - image showing a small picture of the stage when the project was saved
+        author - name of the user who saved or shared this project
+        comment - author's comments about the project
+        history - a string containing the project save/upload history
+        scratch-version - the version of Scratch that saved the project
+    """
+    info_size = UBInt32("info_size")
+    
+    def _parse(self, stream, context):
+        self.info_size._parse(stream, Container())
+        objtable = self.subcon._parse(stream, context)
+        return objtable
+    
+    def _build(self, obj, stream, context):
+        bytes = self.subcon.build(obj)
+        size = len(bytes)
+        stream.write(self.info_size.build(size))
+        stream.write(bytes)
+        
+InfoTable = InfoTableAdapter(ObjTable)
+
+
+
+__all__ = [
+    'ObjTable', 'ObjTable', '_obj_table_entry', '_obj_table_entries', 
+    'UserObject', 'FixedObject', 'Field'
+] + [cls.__name__ for cls in fixed_object_classes + user_object_classes]
