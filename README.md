@@ -75,3 +75,5 @@ kurt is currently very quick at parsing files; but pretty slow at writing them, 
 
 - Implement some nice Pythonic classes for manipulating scripts.
 - Optimise `ObjectNetworkAdapter` for building large files.
+- Parse images
+- "Default project" for building projects entirely "from scratch" (as it were) in Python code?
