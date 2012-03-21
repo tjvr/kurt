@@ -24,7 +24,6 @@ use .fields to see the available fields on an object.
 
 Tested with Python 2.6.
 Works with Scratch 1.4; not tested with earlier versions, but probably works.
-Scratch is created by the Lifelong Kindergarten Group at the MIT Media Lab. 
-See their website: http://scratch.mit.edu/
+[Scratch](http://scratch.mit.edu/) is created by the Lifelong Kindergarten Group at the MIT Media Lab.
 
 Currently very quick at parsing files; pretty slow at writing them, particularly very large ones.
