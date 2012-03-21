@@ -3,7 +3,7 @@ path_to_lib = os.path.split(os.getcwd())[0]
 sys.path.append(path_to_lib)
 
 from kurt import *
-from kurt.inline_objects import field, Ref
+from kurt.inline_objects import Field, Ref
 from kurt.objtable import fixed_object
 from testing import *
 
@@ -11,22 +11,22 @@ from testing import *
 ### Inline values & references
 
 #nil
-test_cons(field, '\x01', None)
+test_cons(Field, '\x01', None)
 #true
-test_cons(field, '\x02', True)
+test_cons(Field, '\x02', True)
 #false
-test_cons(field, '\x03', False)
+test_cons(Field, '\x03', False)
 #SmallInteger
-test_cons(field, '\x04\x00\x01\x00\x00', 65536)
+test_cons(Field, '\x04\x00\x01\x00\x00', 65536)
 #SmallInteger16
-test_cons(field, '\x05\xff\xff', 65535)
+test_cons(Field, '\x05\xff\xff', 65535)
 #LargePositiveInteger
 #LargeNegativeInteger
 #Float
-test_cons(field, '\x08\x3F\xF0\x00\x00\x00\x00\x00\x00', 1.0)
+test_cons(Field, '\x08\x3F\xF0\x00\x00\x00\x00\x00\x00', 1.0)
 #Ref
-test_cons(field, '\x63\x00\x01\x00', Ref(256))
-test_cons(field, '\x63\x01\x01\x00', Ref(65792))
+test_cons(Field, '\x63\x00\x01\x00', Ref(256))
+test_cons(Field, '\x63\x01\x01\x00', Ref(65792))
 
 
 
@@ -56,7 +56,7 @@ test_cons(fixed_object, '\x18\x00\x00\x00\x01\x05\x00\x01\x05\x00\x42', Dictiona
 # IdentityDictionary - TODO
 
 # Color
-test_cons(fixed_object, '\x1E\x3F\xFF\xFF\xFF', Color(1073741823))
+test_cons(fixed_object, '\x1E\x3F\xFF\xFF\xFF', Color([63, 255, 255, 255]))
 # TranslucentColor
 # Point
 test_cons(fixed_object, '\x20\x05\x00\x00\x05\x00\x00', Point((0, 0)))
@@ -78,22 +78,8 @@ def test_file(path):
     assert bytes == built_bytes
     print 'Tested file! :D'
 
-test_file('/Users/tim/Code/python/kurt/tests/var.sprite')
+#test_file('var.sprite')
 
 
 # print summary
 tests_finish()
-
-
-
-
-### Test ###
-
-#stage_bin = '\x7D\x05\x15\x63\x00\x00\x02\x01\x63\x00\x00\x03\x63\x00\x00\x04\x05\x00\x00\x01\x63\x00\x00\x05\x63\x00\x00\x06\x63\x00\x00\x07\x03\x63\x00\x00\x08\x01\x08\x3F\xF0\x00\x00\x00\x00\x00\x00\x05\x00\x00\x05\x00\x00\x01\x63\x00\x00\x09\x05\x00\x64\x05\x00\x3C\x63\x00\x00\x0A\x63\x00\x00\x0B'
-#stage = user_object.parse(stage_bin)
-
-bytes = open('/Users/tim/Code/python/kurt/tests/var.sprite').read()
-ot = obj_table.parse(bytes)
-
-# ot = ObjectNetworkAdapter._decode(obj_network, objects, None) 
-# objects1 = ObjectNetworkAdapter._encode(obj_network, ot, None)
