@@ -16,14 +16,17 @@ USAGE:
     Most of the objects you're interested in inherit from UserObject. You can 
     use .fields to see the available fields on an object.
     
-    Works with Scratch 1.4; not tested with earlier versions.
+    Tested with Python 2.6.
+    Works with Scratch 1.4; not tested with earlier versions, but probably works.
     Scratch is created by the Lifelong Kindergarten Group at the MIT Media Lab. 
     See their website: http://scratch.mit.edu/
-
+    
+    Currently very quick at parsing files; pretty slow at writing them, particularly very large ones.
 """
 # TODO:
 #   - Fill out all the _fields lists in user_objects.
 #   - Implement some nice Pythonic classes for manipulating scripts.
+#   - Optimise ObjectNetworkAdapter for building large files.
 
 from kurt.objtable import *
 from kurt.files import *

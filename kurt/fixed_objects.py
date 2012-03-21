@@ -53,7 +53,7 @@ class FixedObjectWithRepeater(FixedObject):
     
     @classmethod
     def from_value(cls, obj):
-        assert len(obj.items) == obj.length # DEBUG
+        assert len(obj.items) == obj.length, "File corrupt?"
         return cls(obj.items)
 
 

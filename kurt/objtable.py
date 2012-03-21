@@ -9,16 +9,6 @@ from user_objects import *
 import user_objects
 
 
-### DEBUG
-class PrintContext(Construct):
-    def _parse(self, stream, context):
-        print 'parse', context
-    
-    def _build(self, obj, stream, context):
-        print 'build', context
-###
-
-
 class ObjectAdapter(Adapter):
     """Decodes a construct to a pythonic class representation.
     The class must have a from_construct classmethod and a to_construct instancemethod.
@@ -79,7 +69,7 @@ for (name, cls) in obj_classes_from_module(fixed_objects):
     fixed_object_ids_by_name[name] = cls.classID
     fixed_object_cons_by_name[name] = cls._construct
 
-FixedObjectAdapter = partial(ObjectAdapter, fixed_object_classes)
+FixedObjectAdapter = partial(ObjectAdapter, fixed_object_classes)       
 
 fixed_object = FixedObjectAdapter(Struct("fixed_object",
     Enum(UBInt8("classID"), **fixed_object_ids_by_name),
@@ -114,6 +104,25 @@ Stored in the object table. May contain references."""
 
 ### Object Table ###
 
+class PythonicAdapter(Adapter):
+    """Converts from FixedObject classes to native Python types.
+    Currently just from String and UTF8 classes to python strings/unicode"""
+    def _encode(self, obj, context):
+        if isinstance(obj, str):
+            return String(obj)
+        elif isinstance(obj, unicode):
+            return UTF8(obj)
+        else:
+            return obj
+    
+    def _decode(self, obj, context):
+        if isinstance(obj, String):
+            return str(obj.value)
+        elif isinstance(obj, UTF8):
+            return unicode(obj.value)
+        else:
+            return obj
+
 class ObjectAdapter(Adapter):
     def _encode(self, obj, context):
         classID = obj.classID
@@ -129,13 +138,13 @@ class ObjectAdapter(Adapter):
     def _decode(self, obj, context):
         return obj.object
 
-_obj_table_entry = ObjectAdapter(Struct("object",
+_obj_table_entry = PythonicAdapter(ObjectAdapter(Struct("object",
     Peek(UBInt8("classID")),
     IfThenElse("object", lambda ctx: ctx.classID < 99,
         fixed_object,
         user_object,
     ),
-))
+)))
 _obj_table_entry.__doc__ = """Construct for object table entries, both UserObjects and FixedObjects."""
 
 
@@ -148,7 +157,7 @@ class ObjectTableAdapter(Adapter):
         )
     
     def _decode(self, table, context):
-        assert table.length == len(table.objects) # DEBUG
+        assert table.length == len(table.objects), "File corrupt?"
         return table.objects
 
 
@@ -157,8 +166,13 @@ class ObjectNetworkAdapter(Adapter):
     def _encode(self, root, context):
         def get_ref(value):            
             """Returns the index of the given object in the object table, adding it if needed."""
+            # This is really slow at the moment, particularly if we have lots of objects.
             objects = self._objects
-            if isinstance(value, UserObject) or isinstance(value, FixedObject): # or isinstance(obj, ContainsRefs):
+            
+            value = PythonicAdapter(Pass)._encode(value, context)
+            # Convert strs to FixedObjects here to make sure they get encoded correctly
+            
+            if isinstance(value, UserObject) or isinstance(value, FixedObject):
                 # must handle both back and forward refs.
                 proc_objects = [getattr(obj, '_made_from', None) for obj in objects]
                 

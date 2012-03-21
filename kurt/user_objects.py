@@ -4,7 +4,7 @@ from construct import Container
 class UserObject(object):
     """A user-class object with a variable number of fields.
     Supports dot notation for accessing fields. 
-    Use .fields to see available fields [dir() won't show them.]
+    Use .fields.keys() to see available fields [dir() won't show them.]
     
     Each class lists its field order in _fields. 
     Unknown fields not in this list are named "undefined-%i", where i is the field index.
@@ -84,7 +84,7 @@ class UserObject(object):
         return [value for (field_name, value) in self.ordered_fields]
     
     def __repr__(self):
-        objName = getattr(getattr(self, 'objName', ''), 'value', '')
+        objName = getattr(self, 'objName', '')
         return '<%s(%s)>' % (self.__class__.__name__, objName)
     
 
@@ -150,7 +150,7 @@ class ScratchSpriteMorph(ScriptableScratchMorph):
 class ScratchStageMorph(ScriptableScratchMorph):
     """The project stage. Also contains project contents, including sprites and media.
     Attributes include .sprites, an alias for submorphs.
-    Use .fields to see all available fields.
+    Use .fields.keys() to see all available fields.
     """
     classID = 125
     _fields = ScriptableScratchMorph._fields + ["visibility", "scalePoint", "rotationDegrees", "rotationStyle", "volume", "tempoBPM", "draggable", "sceneStates", "lists"]

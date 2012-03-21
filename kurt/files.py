@@ -62,8 +62,8 @@ class ScratchProjectFile(File):
     @param path: path to .sb file.
     
     Attributes:
-        info - a Dictionary containing project info (author, notes, thumbnail, etc.)
-        stage - the project stage. Contains project contents, including sprites and media.
+        info - a Dictionary containing project info (author, notes, thumbnail...)
+        stage - the stage. Contains project contents, including sprites and media.
     """
     
     EXTENSION = "sb"
