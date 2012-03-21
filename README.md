@@ -8,7 +8,7 @@ Python library for parsing Scratch format project (.sb) and sprite files.
 
 * [construct](http://construct.wikispaces.com/) — for defining the format. Available as "construct" in the Python package index, so if you have pip you can simply do:
     
-    sudo pip install construct
+        sudo pip install construct
 
 
 ## Usage
