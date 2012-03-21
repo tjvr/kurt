@@ -1,17 +1,22 @@
-kurt
+
+# kurt
+
 Python library for parsing Scratch format project (.sb) and sprite files.
 
 
-DEPENDENCIES:
-construct - for defining the format. 
-            Homepage: http://construct.wikispaces.com/
-            ["construct" in the Python package index]
+## Dependencies
+
+* [construct](http://construct.wikispaces.com/) — for defining the format. Available as "construct" in the Python package index, so if you have pip you can simply do:
+    
+    sudo pip install construct
 
 
-USAGE:
+## Usage
+
 You'll probably just want to use the provided ScratchProjectFile and 
 ScratchSpriteFile classes. Pass them the path to the file and use their 
 provided .save() methods. Access them using:
+
     from kurt.files import *
 
 Most of the objects you're interested in inherit from UserObject. You can 
