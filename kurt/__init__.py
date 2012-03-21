@@ -4,7 +4,8 @@ kurt
 Python library for parsing Scratch format project (.sb) and sprite files.
 
 DEPENDENCIES:
-    construct - for defining the format. See: http://construct.wikispaces.com/
+    construct - for defining the format. 
+                Homepage: http://construct.wikispaces.com/
                 ["construct" in the Python package index]
 
 USAGE:
