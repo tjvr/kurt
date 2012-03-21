@@ -8,7 +8,7 @@ The code should be pretty self-documenting; but if you're interested, check out 
 
 ## Dependencies
 
-You'll need the awesome [Construct](http://construct.wikispaces.com/) library — used for defining the format. It's available as `construct` in the Python package index.
+You'll need the awesome [Construct](http://construct.wikispaces.com/) library — used for defining the format. Make sure you get the latest version, which currently appears to be available [here](http://pypi.python.org/pypi/construct).
 
 
 ## Usage
