@@ -5,7 +5,7 @@ Python library for parsing Scratch format project (.sb) and sprite files.
 
 ## Dependencies
 
-You'll need the awesome [Construct](http://construct.wikispaces.com/) library — used for defining the format. It's available as "construct" in the Python package index.
+You'll need the awesome [Construct](http://construct.wikispaces.com/) library — used for defining the format. It's available as `construct` in the Python package index.
 
 
 ## Usage
@@ -52,7 +52,7 @@ Save:
 
 Now re-open the project with Scratch!
 
-If the changes don't save, or the file gets corrupted; please file an issue, and I'll take a look! (:
+Everything should, of course, work perfectly; if you have any problems, please file an issue, and I'll take a look! (:
 
 ## Details
 
