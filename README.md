@@ -3,6 +3,9 @@
 
 Python library for parsing Scratch format project (.sb) and sprite files.
 
+The code should be pretty self-documenting; but if you're interested, check out the little [wiki](http://scratchformat.wikispaces.com/) where I documented the file format in a more readable form.
+
+
 ## Dependencies
 
 You'll need the awesome [Construct](http://construct.wikispaces.com/) library — used for defining the format. It's available as `construct` in the Python package index.
@@ -54,6 +57,7 @@ Now re-open the project with Scratch!
 
 Everything should, of course, work perfectly; if you have any problems, please file an issue, and I'll take a look! (:
 
+
 ## Details
 
 Tested with Python 2.6.
@@ -61,6 +65,7 @@ Works with Scratch 1.4; not tested with earlier versions, but probably works.
 [Scratch](http://scratch.mit.edu/) is created by the Lifelong Kindergarten Group at the MIT Media Lab.
 
 kurt is currently very quick at parsing files; but pretty slow at writing them, particularly very large ones.
+
 
 ## Todo
 
