@@ -11,14 +11,14 @@ You'll need the awesome [construct](http://construct.wikispaces.com/) library â€
 
 ## Usage
 
-You'll probably just want to use the provided ScratchProjectFile and 
-ScratchSpriteFile classes. Pass them the path to the file and use their 
-provided .save() methods. Access them using:
+You'll probably just want to use the provided `ScratchProjectFile` and `ScratchSpriteFile` classes. Construct them by passing them the path to the file and use their provided `.save()` methods.
+
+You can import just these classes them using:
 
     from kurt.files import *
 
-Most of the objects you're interested in inherit from UserObject. You can 
-use .fields to see the available fields on an object.
+Most of the objects you're interested in inherit from `UserObject`. You can 
+use `.fields.keys()` to see the available fields on one of these objects.
 
 Tested with Python 2.6.
 Works with Scratch 1.4; not tested with earlier versions, but probably works.
