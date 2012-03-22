@@ -17,6 +17,8 @@ USAGE:
     Most of the objects you're interested in inherit from UserObject. You can 
     use .fields to see the available fields on an object.
     
+    FixedObjects have a .value property to access their value. Inline objects, such as int and bool, are converted to their Pythonic counterparts.
+    
     Tested with Python 2.6.
     Works with Scratch 1.4; not tested with earlier versions, but probably works.
     Scratch is created by the Lifelong Kindergarten Group at the MIT Media Lab. 

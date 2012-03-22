@@ -12,16 +12,32 @@ class UserObject(object):
     _fields = []
     
     def to_construct(self, context):
+        field_values = self._encode_fields()
+        
         return Container(
             classID = self.__class__.__name__,
-            field_values = self.field_values,
-            length = len(self.fields),
+            field_values = field_values,
+            length = len(field_values),
             version = self.version,
         )
     
+    def _encode_fields(self):
+        """Return a list of field values that should be saved.
+        Override this in subclass to modify building of specific fields.
+        """
+        return self.field_values
+    
     @classmethod
     def from_construct(cls, obj, context):
-        return cls(obj.field_values, version=obj.version)
+        field_values = cls._decode_fields(obj.field_values)
+        return cls(field_values, version=obj.version)
+    
+    @classmethod
+    def _decode_fields(cls, field_values):
+        """Return list of field values passed to object's constructor.
+        Override this in subclass to modify specific fields.
+        """
+        return field_values
     
     def __init__(self, field_values=None, **args):
         """Initalize a UserObject.
@@ -88,17 +104,6 @@ class UserObject(object):
         return '<%s(%s)>' % (self.__class__.__name__, objName)
     
 
-# class Script(list):
-#     """Wrapper for script tuples. Currently unused."""
-#     def __init__(self, array):
-#         self.pos, blocks = array
-#         list.__init__(self, blocks)
-#     
-#     def __repr__(self):
-#         return '<Script(%i blocks)>' % len(self)
-#     
-#     def to_array(self):
-#         return [self.pos] + [tuple(block) for block in self.blocks]
 
 
 class BaseMorph(UserObject):
@@ -130,6 +135,7 @@ class ImageMorph(BaseMorph):
     classID = 110
 class SketchMorph(BaseMorph):
     classID = 111
+
 
 
 class ScriptableScratchMorph(BaseMorph):

@@ -236,6 +236,9 @@ class Form(FixedObject, ContainsRefs):
     
     def __init__(self, **fields):
         self.__dict__.update(fields)
+    
+    def __repr__(self):
+        return "<%s>" % self.__class__.__name__
 
 
 class ColorForm(Form):

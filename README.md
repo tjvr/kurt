@@ -25,7 +25,7 @@ Load a file (you'll find a preview file, `game.sb`, saved in the `tests` directo
 	project = ScratchProjectFile('tests/game.sb')
 	
     # You can reload the file at any time with .load()
-    
+
 Inspect project:
 
     project.info['author'] # u'blob8108'
@@ -38,17 +38,19 @@ Inspect project:
     project.stage.tempoBPM # 100
     
     # "sprites" as alias for "submorphs":
-    project.stage.sprites # Array([<WatcherMorph()>, <ScratchSpriteMorph(ScratchCat)>])
+    project.stage.sprites # [<WatcherMorph()>, <ScratchSpriteMorph(ScratchCat)>]
 
 Most of the objects you're interested in, like `ScratchStageMorph` and `ScratchSpriteMorph`, inherit from `UserObject`. You can 
 use `.fields.keys()` to see the available fields on one of these objects.
+
+`FixedObjects` have a `.value` property to access their value. Inline objects, such as `int` and `bool`, are converted to their Pythonic counterparts.
     
 Make changes:
 
     cat = project.stage.sprites[1]
-    cat.vars # Dictionary({u'vx': 0.0})
+    cat.vars # {u'vx': 0.0}
     cat.vars['vx'] = 100
-    
+
 Save:
 
     project.save()

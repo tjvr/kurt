@@ -106,12 +106,20 @@ Stored in the object table. May contain references."""
 
 class PythonicAdapter(Adapter):
     """Converts from FixedObject classes to native Python types.
-    Currently just from String and UTF8 classes to python strings/unicode"""
+    * String - python str
+    * UTF8 - python unicode
+    * Dictionary - dict #TODO
+    * Array - list #TODO
+    """
     def _encode(self, obj, context):
         if isinstance(obj, str):
             return String(obj)
         elif isinstance(obj, unicode):
             return UTF8(obj)
+        elif isinstance(obj, dict):
+            return Dictionary(obj)
+        elif isinstance(obj, list):
+            return Array(obj)
         else:
             return obj
     
@@ -120,6 +128,10 @@ class PythonicAdapter(Adapter):
             return str(obj.value)
         elif isinstance(obj, UTF8):
             return unicode(obj.value)
+        elif isinstance(obj, Dictionary):
+            return obj.value
+        elif isinstance(obj, Array):
+            return obj.value
         else:
             return obj
 
@@ -176,12 +188,12 @@ class ObjectNetworkAdapter(Adapter):
                 # must handle both back and forward refs.
                 proc_objects = [getattr(obj, '_made_from', None) for obj in objects]
                 
-                for i in range(len(objects)):
+                for i in xrange(len(objects)-1, -1, -1):
                     if value is objects[i]:
                         index = i + 1 # first entry's index is 1
                         break
                 else:
-                    for i in range(len(proc_objects)):
+                    for i in xrange(len(proc_objects)-1, -1, -1):
                         if value is proc_objects[i]:
                             index = i + 1
                             break
@@ -195,12 +207,21 @@ class ObjectNetworkAdapter(Adapter):
                 return value
         
         def fix_fields(obj):
+            obj = PythonicAdapter(Pass)._encode(obj, context)
+            # Convert strs to FixedObjects here to make sure they get encoded correctly
+            
             if isinstance(obj, UserObject):
                 field_values = [get_ref(value) for value in obj.field_values]
                 fixed_obj = obj.__class__(field_values, version = obj.version)
             
             elif isinstance(obj, Dictionary):
                 fixed_obj = obj.__class__(dict((get_ref(field), get_ref(value)) for (field, value) in obj.value.items()))
+                
+            elif isinstance(obj, dict):
+                fixed_obj = dict((get_ref(field), get_ref(value)) for (field, value) in obj.items())
+                
+            elif isinstance(obj, list):
+                fixed_obj = [get_ref(field) for field in obj]
                 
             elif isinstance(obj, Form):
                 fixed_obj = obj.__class__(**dict((field, get_ref(value)) for (field, value) in obj.value.items()))
@@ -230,7 +251,10 @@ class ObjectNetworkAdapter(Adapter):
             else:
                 return obj
         
-        for obj in objects:
+        # Reading the ObjTable backwards somehow makes more sense.
+        for i in xrange(len(objects)-1, -1, -1):
+            obj = objects[i]
+            
             if isinstance(obj, UserObject):
                 for field_name in obj.fields:
                     value = obj.fields[field_name]
@@ -240,6 +264,12 @@ class ObjectNetworkAdapter(Adapter):
             elif isinstance(obj, Dictionary):
                 obj.value = dict((resolve_ref(field), resolve_ref(value)) for (field, value) in obj.value.items())
             
+            elif isinstance(obj, dict):
+                obj = dict((resolve_ref(field), resolve_ref(value)) for (field, value) in obj.items())
+            
+            elif isinstance(obj, list):
+                obj = [resolve_ref(field) for field in obj]
+            
             elif isinstance(obj, Form):
                 for field in obj.value:
                     value = getattr(obj, field)
@@ -248,6 +278,8 @@ class ObjectNetworkAdapter(Adapter):
             
             elif isinstance(obj, ContainsRefs):
                 obj.value = [resolve_ref(field) for field in obj.value]
+            
+            objects[i] = obj
         
         root = objects[0]
         return root

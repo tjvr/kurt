@@ -80,7 +80,7 @@ class ScratchProjectFile(File):
     def _load(self, bytes):
         project = self._construct.parse(bytes)
         self.info = project.info
-        self.info.__doc__ = InfoTable.__doc__
+        #self.info.__doc__ = InfoTable.__doc__
         self.stage = project.stage
     
     def _save(self):
