@@ -4,7 +4,7 @@ from objtable import ObjTable, InfoTable
 
 
 
-class File(object):
+class BinaryFile(object):
     """File(path)
     Implements a basic file with save() function.
     Subclasses override _load() and _save()."""
@@ -21,7 +21,9 @@ class File(object):
     def load(self):
         """Reload the file from disk, replacing any changes in memory.
         """
-        bytes = open(self.path).read()
+        f = open(self.path, "rb")
+        bytes = f.read()
+        f.close()
         self._load(bytes)
     
     def _load(self, bytes):
@@ -45,7 +47,7 @@ class File(object):
             print "Can't write zero bytes to file, aborting"
             return
         
-        f = open(self.path, 'w')
+        f = open(self.path, 'wb')
         f.write(bytes)
         f.flush()
         f.close()
@@ -57,7 +59,7 @@ class File(object):
         raise NotImplementedError()
 
 
-class ScratchProjectFile(File):
+class ScratchProjectFile(BinaryFile):
     """A Scratch Project file.
     @param path: path to .sb file.
     
@@ -92,7 +94,7 @@ class ScratchProjectFile(File):
         return self._construct.build(project)
 
 
-class ScratchSpriteFile(File):
+class ScratchSpriteFile(BinaryFile):
     """A Scratch sprite file.
     @param path: path to .sprite file.
     
