@@ -12,7 +12,13 @@ class UserObject(object):
     _fields = []
     
     def to_construct(self, context):
-        field_values = self._encode_fields()
+        field_values = self.field_values[:]
+        
+        for i in range(len(field_values)):
+            value = field_values[i]
+            if i < len(self._fields):
+                field = self._fields[i]
+                field_values[i] = self._encode_field(field, value)
         
         return Container(
             classID = self.__class__.__name__,
@@ -21,23 +27,27 @@ class UserObject(object):
             version = self.version,
         )
     
-    def _encode_fields(self):
-        """Return a list of field values that should be saved.
+    def _encode_field(self, name, value):
+        """Modify the field with the given name before saving, if necessary.
         Override this in subclass to modify building of specific fields.
         """
-        return self.field_values
+        return value
     
     @classmethod
     def from_construct(cls, obj, context):
-        field_values = cls._decode_fields(obj.field_values)
-        return cls(field_values, version=obj.version)
+        return cls(obj.field_values, version=obj.version)
     
-    @classmethod
-    def _decode_fields(cls, field_values):
-        """Return list of field values passed to object's constructor.
+    def _decode_field(cls, name, value):
+        """Return value of named field passed to object's constructor.
         Override this in subclass to modify specific fields.
         """
-        return field_values
+        return value
+    
+    def built(self):
+        for field in self._fields:
+            if field in self.fields:
+                value = self.fields[field]
+                self.fields[field] = self._decode_field(field, value)
     
     def __init__(self, field_values=None, **args):
         """Initalize a UserObject.
@@ -138,13 +148,36 @@ class SketchMorph(BaseMorph):
 
 
 
+from scripts import Script
+
+
+
 class ScriptableScratchMorph(BaseMorph):
     _fields = Morph._fields + ["objName", "vars", "blocksBin", "isClone", "media", "costume"]
     
+    def _encode_field(self, name, value):
+        """Return a list of field values that should be saved.
+        Override this in subclass to modify building of specific fields.
+        """
+        if name == 'blocksBin':
+            return [script.to_array() for script in value]
+        else:
+            return value
+
+    def _decode_field(cls, name, value):
+        """Return list of field values passed to object's constructor.
+        Override this in subclass to modify specific fields.
+        """
+        if name == 'blocksBin':
+            return [Script.from_array(script) for script in value]
+        else:
+            return value
+
     @property
     def scripts(self):
         """Alias for blocksBin."""
         return self.blocksBin
+
 
 class SensorBoardMorph(BaseMorph):
     classID = 123

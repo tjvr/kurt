@@ -106,10 +106,10 @@ Stored in the object table. May contain references."""
 
 class PythonicAdapter(Adapter):
     """Converts from FixedObject classes to native Python types.
-    * String - python str
-    * UTF8 - python unicode
-    * Dictionary - dict #TODO
-    * Array - list #TODO
+    * String -- python str
+    * UTF8 -- python unicode
+    * Dictionary -- dict #TODO
+    * Array -- list <- tuple #TODO
     """
     def _encode(self, obj, context):
         if isinstance(obj, str):
@@ -118,7 +118,7 @@ class PythonicAdapter(Adapter):
             return UTF8(obj)
         elif isinstance(obj, dict):
             return Dictionary(obj)
-        elif isinstance(obj, list):
+        elif isinstance(obj, list) or isinstance(obj, tuple):
             return Array(obj)
         else:
             return obj
@@ -211,8 +211,9 @@ class ObjectNetworkAdapter(Adapter):
             # Convert strs to FixedObjects here to make sure they get encoded correctly
             
             if isinstance(obj, UserObject):
-                field_values = [get_ref(value) for value in obj.field_values]
-                fixed_obj = obj.__class__(field_values, version = obj.version)
+                fixed_obj = obj.to_construct(Container())
+                fixed_obj.field_values = [get_ref(value) for value in fixed_obj.field_values]
+                #fixed_obj = obj.__class__(field_values, version = obj.version)
             
             elif isinstance(obj, Dictionary):
                 fixed_obj = obj.__class__(dict((get_ref(field), get_ref(value)) for (field, value) in obj.value.items()))
@@ -280,6 +281,10 @@ class ObjectNetworkAdapter(Adapter):
                 obj.value = [resolve_ref(field) for field in obj.value]
             
             objects[i] = obj
+        
+        for obj in objects:
+            if isinstance(obj, UserObject):
+                obj.built()
         
         root = objects[0]
         return root
