@@ -5,6 +5,7 @@ Python library for parsing Scratch format project (.sb) and sprite files.
 
 The code should be pretty self-documenting; but if you're interested, check out the little [wiki](http://scratchformat.wikispaces.com/) where I documented the file format in a more readable form.
 
+**WARNING**: Make sure you take a backup of your Scratch projects before saving anything with kurt! kurt is by no means fully tested. I can't accept responsibility for corrupting your files.
 
 ## Dependencies
 
