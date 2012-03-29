@@ -108,8 +108,8 @@ class PythonicAdapter(Adapter):
     """Converts from FixedObject classes to native Python types.
     * String -- python str
     * UTF8 -- python unicode
-    * Dictionary -- dict #TODO
-    * Array -- list <- tuple #TODO
+    * Dictionary -- dict
+    * Array -- list/tuple
     """
     def _encode(self, obj, context):
         if isinstance(obj, str):

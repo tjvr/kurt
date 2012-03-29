@@ -172,6 +172,11 @@ class ScriptableScratchMorph(BaseMorph):
             return [Script.from_array(script) for script in value]
         else:
             return value
+    #def _decode_field(cls, name, value):
+    #    """Return list of field values passed to object's constructor.
+    #    Override this in subclass to modify specific fields.
+    #    """
+    #    if name == 'blocksBin':
 
     @property
     def scripts(self):
@@ -199,6 +204,11 @@ class ScratchStageMorph(ScriptableScratchMorph):
         """Alias for submorphs."""
         return self.submorphs
     
+
+
+from scripts import Script # Yes, this is stupid. Circular dependencies ftw. -_-
+
+
 class ChoiceArgMorph(BaseMorph):
     classID = 140
 class ColorArgMorph(BaseMorph):
