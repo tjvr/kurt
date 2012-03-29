@@ -1,3 +1,29 @@
+#coding=utf8
+
+# Copyright © 2012 Tim Radvan
+# 
+# This file is part of Kurt.
+# 
+# Kurt is free software: you can redistribute it and/or modify it under the 
+# terms of the GNU Lesser General Public License as published by the Free 
+# Software Foundation, either version 3 of the License, or (at your option) any 
+# later version.
+# 
+# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY 
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more 
+# details.
+# 
+# You should have received a copy of the GNU Lesser General Public License along 
+# with Kurt. If not, see <http://www.gnu.org/licenses/>.
+
+"""ObjTable - for de/serialising an object and its related objects.
+
+(You probably want to use the classes in kurt.files directly.)
+
+Otherwise, the main class in this file is ObjTable.
+"""
+
 from construct import *
 from functools import partial
 import inspect
@@ -328,6 +354,6 @@ InfoTable = InfoTableAdapter(ObjTable)
 
 
 __all__ = [
-    'ObjTable', 'ObjTable', '_obj_table_entry', '_obj_table_entries', 
+    'ObjTable', '_obj_table_entry', '_obj_table_entries', 
     'UserObject', 'FixedObject', 'Field'
 ] + [cls.__name__ for cls in fixed_object_classes + user_object_classes]

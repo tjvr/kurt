@@ -1,19 +1,37 @@
+#coding=utf8
+
+# Copyright © 2012 Tim Radvan
+# 
+# This file is part of Kurt.
+# 
+# Kurt is free software: you can redistribute it and/or modify it under the 
+# terms of the GNU Lesser General Public License as published by the Free 
+# Software Foundation, either version 3 of the License, or (at your option) any 
+# later version.
+# 
+# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY 
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more 
+# details.
+# 
+# You should have received a copy of the GNU Lesser General Public License along 
+# with Kurt. If not, see <http://www.gnu.org/licenses/>.
+
 """Block plugin formatter: read all the scripts in a Scratch project file and output [scratchblocks] formatted code for Scratch forums/wiki.
 
     Usage: python block_plugin.py [path/to/project_file.sb]
 """
 
-"""
-Known block plugin bugs:
-    - some booleans have to be encoded as reporters.
-         'touching?', 'touchingcolor?', 'coloristouching?', 'mousedown?', 'keypressed?'
-    - Can't have spaces in variable names inside not block.
-        - <not <mouse down?>>
-        - <not<(Current Type)=(Type)>>
-    - <(var) < (var)> gt & lt are really weird inside and, or, not, etc.
-        eg: if <<<(x) > [-1]> and <(y) > [-1]>> and <<(x) < [20]> and <(y) < [14]>>>
-    - Can't have empty dropdowns eg. broadcast [ v]
-"""
+# Known block plugin bugs:
+# - some booleans have to be encoded as reporters.
+#      'touching?', 'touchingcolor?', 'coloristouching?', 'mousedown?',
+#      'keypressed?'
+# - Can't have spaces in variable names inside not block.
+#     - <not <mouse down?>>
+#     - <not<(Current Type)=(Type)>>
+# - <(var) < (var)> gt & lt are really weird inside and, or, not, etc.
+#     if <<<(x) > [-1]> and <(y) > [-1]>> and <<(x) < [20]> and <(y) < [14]>>>
+# - Can't have empty dropdowns eg. broadcast [ v]
 
 try:
     import kurt

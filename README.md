@@ -1,11 +1,23 @@
 
 # kurt
 
-Python library for parsing Scratch format project (.sb) and sprite files.
+Kurt is a Python library for reading/writing Scratch project (.sb) and sprite files.
 
-The code should be pretty self-documenting; but if you're interested, check out the little [wiki](http://scratchformat.wikispaces.com/) where I documented the file format in a more readable form.
+If you're interested in technical details of how the format works: the code should be pretty self-documenting; but check out the little [wiki](http://scratchformat.wikispaces.com/) where I documented the format in a more readable form.
 
 **WARNING**: Make sure you take a backup of your Scratch projects before saving anything with kurt! kurt is by no means fully tested. I can't accept responsibility for corrupting your files.
+
+
+## Recent Changes 
+
+###v1.1: 
+
+* `Script` and `Block` classes for manipulating scripts.
+* **Block plugin** formatter — reads all the scripts in a project file and outputs `[scratchblocks]` syntax code for posting on the Scratch forums/wiki.
+* Filled out the `_fields` list for most of the objects in `user_objects` from the Squeak source (not the unused ones), so there should now be no "undefined" fields.
+* `Color` is now parsed correctly
+* Added `ScratchProjectFile.sprites` shortcut as an alias for `project.stage.sprites`
+
 
 ## Dependencies
 
@@ -23,7 +35,7 @@ You can import just these classes them using:
 Load a file (you'll find a preview file, `game.sb`, saved in the `tests` directory; but feel free to try it with any Scratch project file).
 
 	# Just pass in the absolute or relative path to the file:
-	project = ScratchProjectFile('tests/game.sb')
+	project = ScratchProjectFile("tests/game.sb")
 	
     # You can reload the file at any time with .load()
 
@@ -39,12 +51,11 @@ Inspect project:
     project.stage.tempoBPM # 100
     
     # "sprites" as alias for "submorphs":
-    project.stage.sprites # [<WatcherMorph()>, <ScratchSpriteMorph(ScratchCat)>]
+    project.stage.sprites # [<WatcherMorph(ScratchCat vx)>, <ScratchSpriteMorph(ScratchCat)>]
 
-Most of the objects you're interested in, like `ScratchStageMorph` and `ScratchSpriteMorph`, inherit from `UserObject`. You can 
-use `.fields.keys()` to see the available fields on one of these objects.
+Most of the objects you're interested in, like `ScratchStageMorph` and `ScratchSpriteMorph`, inherit from `UserObject`. You can use `.fields.keys()` to see the available fields on one of these objects.
 
-`FixedObjects` have a `.value` property to access their value. Inline objects, such as `int` and `bool`, are converted to their Pythonic counterparts.
+`FixedObjects` have a `.value` property to access their value. Inline objects, such as `int` and `bool`, are converted to their Pythonic counterparts. `Array` and `Dictionary` are now converted to `list` and `dict`, too.
     
 Make changes:
 
@@ -63,20 +74,23 @@ Everything should, of course, work perfectly; if you have any problems, please f
 
 ## Details
 
-Tested with Python 2.6.
-Works with Scratch 1.4; not tested with earlier versions, but probably works.
+Tested with **Python 2.6**. Works with **Scratch 1.4**; not tested with earlier versions, but possibly works.
+
 [Scratch](http://scratch.mit.edu/) is created by the Lifelong Kindergarten Group at the MIT Media Lab.
 
-kurt is currently very quick at parsing files; but pretty slow at writing them, particularly very large ones.
+
+## Licence
+
+Kurt is released under the [LGPL](www.gnu.org/licenses/lgpl), version 3.
+
+I'm not a lawyer; but I _think_ this means you can use Kurt in your own, non-GPL'd code, but any Kurt modifications must be distributed under the (L)GPL and include the source code. <small>(This is not legal advice and does not affect the terms as stated in the licence...)</small>
 
 
 ## Todo
 
-- Fill out the `_fields` list for each object in `user_objects`.
-	
-	(Need to look at the Squeak source to find the field names.)
+- Optimise `ObjectNetworkAdapter` for building large files.	
 
-- Implement some nice Pythonic classes for manipulating scripts.
-- Optimise `ObjectNetworkAdapter` for building large files.
+	Kurt is currently very quick at parsing files; but pretty slow at writing them, particularly very large ones.
+
 - Parse images
 - "Default project" for building projects entirely "from scratch" (as it were) in Python code?

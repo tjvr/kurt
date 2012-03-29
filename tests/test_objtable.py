@@ -1,6 +1,29 @@
-import os, sys
-path_to_lib = os.path.split(os.getcwd())[0]
-sys.path.append(path_to_lib)
+#coding=utf8
+
+# Copyright © 2012 Tim Radvan
+# 
+# This file is part of Kurt.
+# 
+# Kurt is free software: you can redistribute it and/or modify it under the 
+# terms of the GNU Lesser General Public License as published by the Free 
+# Software Foundation, either version 3 of the License, or (at your option) any 
+# later version.
+# 
+# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY 
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more 
+# details.
+# 
+# You should have received a copy of the GNU Lesser General Public License along 
+# with Kurt. If not, see <http://www.gnu.org/licenses/>.
+
+try:
+    import kurt
+except ImportError: # try and find kurt directory
+    import os, sys
+    path_to_file = os.path.join(os.getcwd(), __file__)
+    path_to_lib = os.path.split(os.path.split(path_to_file)[0])[0]
+    sys.path.append(path_to_lib)
 
 from kurt import *
 from kurt.inline_objects import Field, Ref
@@ -19,7 +42,7 @@ test_cons(Field, '\x03', False)
 #SmallInteger
 test_cons(Field, '\x04\x00\x01\x00\x00', 65536)
 #SmallInteger16
-test_cons(Field, '\x05\xff\xff', 65535)
+test_cons(Field, '\x05\x7f\xff', 32767)
 #LargePositiveInteger
 #LargeNegativeInteger
 #Float
@@ -56,7 +79,7 @@ test_cons(fixed_object, '\x18\x00\x00\x00\x01\x05\x00\x01\x05\x00\x42', Dictiona
 # IdentityDictionary - TODO
 
 # Color
-test_cons(fixed_object, '\x1E\x3F\xFF\xFF\xFF', Color([63, 255, 255, 255]))
+test_cons(fixed_object, '\x1E\x3F\xFF\xFF\xFF', Color((1023, 1023, 1023)))
 # TranslucentColor
 # Point
 test_cons(fixed_object, '\x20\x05\x00\x00\x05\x00\x00', Point((0, 0)))

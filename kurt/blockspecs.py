@@ -1,15 +1,36 @@
-"""blockspecs
+#coding=utf8
 
-Provides information about block types.
+# Copyright © 2012 Tim Radvan
+# 
+# This file is part of Kurt.
+# 
+# Kurt is free software: you can redistribute it and/or modify it under the 
+# terms of the GNU Lesser General Public License as published by the Free 
+# Software Foundation, either version 3 of the License, or (at your option) any 
+# later version.
+# 
+# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY 
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more 
+# details.
+# 
+# You should have received a copy of the GNU Lesser General Public License along 
+# with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
+"""Provides information about block types.
+Classes:
+    BlockType - information about a single type of block.
+
+Values:
     blocks - list of BlockType objects.
-    blocks_by_cmd - dict of BlockType objects, indexed by their `command` attribute.
+    blocks_by_cmd - dict of BlockType objects indexed by their `command`.
 
-Other functions:
-    block_plugin_inserts - format strings for insert types, used in Block.to_block_plugin()
+Other values:
+    block_plugin_inserts - format strings for insert types, used in 
+                           Block.to_block_plugin()
 
-The blocks list is compiled by parsing blockspecs copied directly from Scratch's Squeak source 
-code.
+The blocks list is compiled by parsing blockspecs copied directly from Scratch's 
+Squeak source code.
 """
 from construct import *
 from construct.text import *
@@ -102,12 +123,13 @@ squeak_obsolete_blockspecs = """'obsolete number blocks' ('abs %n' #r #abs #-) (
 class BlockType:
     """Information about a single type of block.
     Attributes:
-        command - the command used in Squeak to run the block. Corresponds to Block.name
-        text - the text that appears on the block. Contains inserts in starting with % signs.
-        parts - the text that appears on the block, split up into text segments and inserts.
+        command - the command used in Squeak to run the block. (see Block.name)
+        text - text that appears on the block. 
+               Contains inserts starting with % signs.
+        parts - text, split up into text segments and inserts.
         flag - a single char describing the kind of block.
-        category - str, names the category in Scratch's interface where this block is found.
-        defaults - list of default values for block inserts. Corresponds to block.args
+        category - where this block is found in Scratch's interface.
+        defaults - list of default values for block inserts. (see Block.args)
     """
     INSERT_RE = re.compile(r'(%.)')
     

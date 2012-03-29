@@ -1,4 +1,29 @@
 #coding=utf8
+
+# Copyright © 2012 Tim Radvan
+# 
+# This file is part of Kurt.
+# 
+# Kurt is free software: you can redistribute it and/or modify it under the 
+# terms of the GNU Lesser General Public License as published by the Free 
+# Software Foundation, either version 3 of the License, or (at your option) any 
+# later version.
+# 
+# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY 
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more 
+# details.
+# 
+# You should have received a copy of the GNU Lesser General Public License along 
+# with Kurt. If not, see <http://www.gnu.org/licenses/>.
+
+"""Classes for saving/loading Scratch files.
+Construct them by passing them a path.
+
+    ScratchProjectFile - .sb
+    ScratchSpriteFile - .sprite
+"""
+
 from construct import Container, Struct, Bytes, Rename
 from construct.text import Literal
 from objtable import ObjTable, InfoTable

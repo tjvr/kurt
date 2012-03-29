@@ -1,10 +1,42 @@
 #coding=utf8
+
+# Copyright © 2012 Tim Radvan
+# 
+# This file is part of Kurt.
+# 
+# Kurt is free software: you can redistribute it and/or modify it under the 
+# terms of the GNU Lesser General Public License as published by the Free 
+# Software Foundation, either version 3 of the License, or (at your option) any 
+# later version.
+# 
+# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY 
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more 
+# details.
+# 
+# You should have received a copy of the GNU Lesser General Public License along 
+# with Kurt. If not, see <http://www.gnu.org/licenses/>.
+
+"""Classes for manipulating scripts.
+    Script - a stack; contains a list of blocks.
+    Block - a single block.
+"""
+
 from fixed_objects import Symbol, Color
 from user_objects import BaseMorph
 
 
 
 class Block(object):
+    """A single block.
+    Arguments:
+        script - the parent script that this block belongs to
+        name - the named command that the block performs (see BlockType.command)
+        args - list of arguments for each of the block's inserts (see 
+               BlockType.defaults)
+    Attributes:
+        type - BlockType instance (found to match self.name)
+    """
     def __init__(self, script, name=None, *args):
         self.script = script
         if isinstance(name, Symbol):
@@ -201,7 +233,8 @@ class Block(object):
 
 class Script(object):
     """A single script (stack of blocks).
-    Attributes:
+    Arguments/attributes:
+        morph - ScriptableScratchMorph instance that this script belongs to
         pos - x, y position of script in blocks bin.
         blocks - list of blocks.
     """
