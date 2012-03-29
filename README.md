@@ -52,6 +52,7 @@ Inspect project:
     
     # "sprites" as alias for "submorphs":
     project.stage.sprites # [<WatcherMorph(ScratchCat vx)>, <ScratchSpriteMorph(ScratchCat)>]
+    # note: you can now use project.sprites instead
 
 Most of the objects you're interested in, like `ScratchStageMorph` and `ScratchSpriteMorph`, inherit from `UserObject`. You can use `.fields.keys()` to see the available fields on one of these objects.
 
@@ -83,16 +84,16 @@ Tested with **Python 2.6**. Works with **Scratch 1.4**; not tested with earlier 
 
 Kurt is released under the [LGPL](www.gnu.org/licenses/lgpl), version 3.
 
-I'm not a lawyer; but I _think_ this means you can use Kurt in your own, non-GPL'd code, but any Kurt modifications must be distributed under the (L)GPL and include the source code. _(This is not legal advice and does not affect the terms as stated in the licence...)_
+I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, non-GPL'd code, any Kurt modifications must be distributed under the (L)GPL and include the source code. _(This is not legal advice and does not affect the terms as stated in the licence...)_
 
 
 ## Todo
 
-- Optimise `ObjectNetworkAdapter` for building large files.	
+* Optimise `ObjectNetworkAdapter` for building large files.	
 
 	Kurt is currently very quick at parsing files; but pretty slow at writing them, particularly ones with very long scripts.
 
-- Parse images
-- "Default project" for building projects entirely "from scratch" (as it were) in Python code?
+* Parse images
+* "Default project" for building projects entirely "from scratch" (as it were) in Python code?
 
 
