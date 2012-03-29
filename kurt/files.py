@@ -1,5 +1,6 @@
 #coding=utf8
-from construct import Container, Struct, Const, Bytes, Rename
+from construct import Container, Struct, Bytes, Rename
+from construct.text import Literal
 from objtable import ObjTable, InfoTable
 
 
@@ -57,6 +58,10 @@ class BinaryFile(object):
         @return: str containing the bytes to be saved to disk.
         """
         raise NotImplementedError()
+    
+    def __repr__(self):
+        return "%s(%s)" % (self.__class__.__name__, repr(self.path))
+
 
 
 class ScratchProjectFile(BinaryFile):
@@ -70,12 +75,9 @@ class ScratchProjectFile(BinaryFile):
     
     EXTENSION = "sb"
     
-    HEADER = "ScratchV02"
     _construct = Struct("scratch_file",
-        Const(Bytes("header", 10), HEADER),
-        
+        Literal("ScratchV02"),
         Rename("info", InfoTable),
-        
         Rename("stage", ObjTable),
     )
 
@@ -87,11 +89,14 @@ class ScratchProjectFile(BinaryFile):
     
     def _save(self):
         project = Container(
-            header = self.HEADER,
             info = self.info,
             stage = self.stage,
         )
         return self._construct.build(project)
+    
+    @property
+    def sprites(self):
+        return self.stage.sprites
 
 
 class ScratchSpriteFile(BinaryFile):
