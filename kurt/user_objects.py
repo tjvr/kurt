@@ -1,6 +1,8 @@
 #coding=utf8
 from construct import Container
 
+
+
 class UserObject(object):
     """A user-class object with a variable number of fields.
     Supports dot notation for accessing fields. 
@@ -62,7 +64,7 @@ class UserObject(object):
         
         if field_values:
             defined_fields = self._fields[:]
-            defined_fields += ("undefined-%i" % i for i in range(len(defined_fields), len(field_values)))
+            defined_fields += tuple("undefined-%i" % i for i in range(len(defined_fields), len(field_values)))
             self.fields.update(zip(defined_fields, field_values))
         
         self.fields.update(args)
@@ -109,51 +111,76 @@ class UserObject(object):
     def field_values(self):
         return [value for (field_name, value) in self.ordered_fields]
     
+    @property
+    def name(self):
+        return getattr(self, 'objName')
+    
     def __repr__(self):
-        objName = getattr(self, 'objName', '')
-        return '<%s(%s)>' % (self.__class__.__name__, objName)
+        name = getattr(self, "name", "")
+        return "<%s(%s)>" % (self.__class__.__name__, name)
     
 
 
-
+### Squeak & Morphic classes ###
 class BaseMorph(UserObject):
-    _fields = ["bounds", "owner", "submorphs", "color", "flags", "properties"]
+    _fields = ("bounds", "owner", "submorphs", "color", "flags", "properties")
 
 class Morph(BaseMorph):
     """Base class for most UserObjects."""
     classID = 100
+
 class BorderedMorph(BaseMorph):
     classID = 101
-    _fields = Morph._fields + ["borderWidth", "borderColor"]
-class RectangleMorph(BaseMorph):
+    _fields = Morph._fields + ("borderWidth", "borderColor")
+
+class RectangleMorph(BorderedMorph):
     classID = 102
-class EllipseMorph(BaseMorph):
+
+class EllipseMorph(BorderedMorph):
     classID = 103
-class AlignmentMorph(BaseMorph):
+
+class AlignmentMorph(RectangleMorph):
     classID = 104
+    _fields = RectangleMorph._fields + ("orientation", "centering", "hResizing", "vResizing", "inset") 
+
 class StringMorph(BaseMorph):
     classID = 105
-class UpdatingStringMorph(BaseMorph):
+    _fields = Morph._fields + ("font_with_size", "emphasis", "contents")
+
+class UpdatingStringMorph(StringMorph):
     classID = 106
-class SimpleSliderMorph(BaseMorph):
+
+class SimpleSliderMorph(BorderedMorph):
     classID = 107
-class SimpleButtonMorph(BaseMorph):
+    _fields = BorderedMorph._fields + ("slider", "value", "setValueSelector", "sliderShadow", "sliderColor", "descending", "model", "target", "actionSelector", "arguments", "actWhen")
+
+class SimpleButtonMorph(RectangleMorph):
     classID = 108
-class SampledSound(BaseMorph):
+    _fields = RectangleMorph._fields + ("target", "actionSelector", "arguments", "actWhen")
+
+class SampledSound(UserObject):
     classID = 109
+    _fields = ("envelopes", "scaledVol", "initialCount", "samples", "originalSamplingRate", "samplesSize", "scaledIncrement", "scaledInitialIndex")
+
 class ImageMorph(BaseMorph):
     classID = 110
+    _fields = Morph._fields + ("form", "transparency")
+
 class SketchMorph(BaseMorph):
     classID = 111
+    _fields = Morph._fields + ("originalForm", "rotationCenter", "rotationDegrees", "rotationStyle", "scalePoint", "offsetWhenRotated")
 
 
 
-from scripts import Script
 
-
+### Scratch-specific classes ###
 
 class ScriptableScratchMorph(BaseMorph):
-    _fields = Morph._fields + ["objName", "vars", "blocksBin", "isClone", "media", "costume"]
+    _fields = Morph._fields + ("objName", "vars", "blocksBin", "isClone", "media", "costume")
+    
+    def built(self):
+        UserObject.built(self)
+        self.blocksBin = [Script.from_array(self, script) for script in self.blocksBin]
     
     def _encode_field(self, name, value):
         """Return a list of field values that should be saved.
@@ -164,14 +191,6 @@ class ScriptableScratchMorph(BaseMorph):
         else:
             return value
 
-    def _decode_field(cls, name, value):
-        """Return list of field values passed to object's constructor.
-        Override this in subclass to modify specific fields.
-        """
-        if name == 'blocksBin':
-            return [Script.from_array(script) for script in value]
-        else:
-            return value
     #def _decode_field(cls, name, value):
     #    """Return list of field values passed to object's constructor.
     #    Override this in subclass to modify specific fields.
@@ -184,12 +203,14 @@ class ScriptableScratchMorph(BaseMorph):
         return self.blocksBin
 
 
+
 class SensorBoardMorph(BaseMorph):
     classID = 123
+    _fields = BaseMorph._fields + ("unknown",) # TODO — I have NO idea what this does.
 
 class ScratchSpriteMorph(ScriptableScratchMorph):
     classID = 124
-    _fields = ScriptableScratchMorph._fields + ["zoom", "hPan", "vPan", "obsoleteSavedState", "sprites", "volume", "tempoBPM", "sceneStates", "lists"]
+    _fields = ScriptableScratchMorph._fields + ("zoom", "hPan", "vPan", "obsoleteSavedState", "sprites", "volume", "tempoBPM", "sceneStates", "lists")
 
 class ScratchStageMorph(ScriptableScratchMorph):
     """The project stage. Also contains project contents, including sprites and media.
@@ -197,76 +218,174 @@ class ScratchStageMorph(ScriptableScratchMorph):
     Use .fields.keys() to see all available fields.
     """
     classID = 125
-    _fields = ScriptableScratchMorph._fields + ["visibility", "scalePoint", "rotationDegrees", "rotationStyle", "volume", "tempoBPM", "draggable", "sceneStates", "lists"]
+    _fields = ScriptableScratchMorph._fields + ("visibility", "scalePoint", "rotationDegrees", "rotationStyle", "volume", "tempoBPM", "draggable", "sceneStates", "lists")
     
     @property
     def sprites(self):
-        """Alias for submorphs."""
+        """Alias for submorphs.
+        Note that this also includes variable/list watchers, as well as sprites.
+        """
         return self.submorphs
-    
 
 
 from scripts import Script # Yes, this is stupid. Circular dependencies ftw. -_-
 
 
+
+
 class ChoiceArgMorph(BaseMorph):
+    """unused?"""
     classID = 140
+
 class ColorArgMorph(BaseMorph):
+    """unused?"""
     classID = 141
+
 class ExpressionArgMorph(BaseMorph):
+    """unused?"""
     classID = 142
+
 class SpriteArgMorph(BaseMorph):
+    """unused?"""
     classID = 145
+
 class BlockMorph(BaseMorph):
+    """unused?"""
     classID = 147
-class CommandBlockMorph(BaseMorph):
+    _fields = Morph._fields + ("isSpecialForm", "oldColor")
+
+class CommandBlockMorph(BlockMorph):
+    """unused?"""
     classID = 148
+    _fields = BlockMorph._fields + ("commandSpec", "argMorphs", "titleMorph", "receiver", "selector", "isReporter", "isTimed", "wantsName", "wantsPossession")
+
 class CBlockMorph(BaseMorph):
+    """unused?"""
     classID = 149
+
 class HatBlockMorph(BaseMorph):
+    """unused?"""
     classID = 151
+
 class ScratchScriptsMorph(BorderedMorph):
+    """unused?"""
     classID = 153
+
 class ScratchSliderMorph(BaseMorph):
+    """unused?"""
     classID = 154
-class WatcherMorph(BaseMorph):
+
+class WatcherMorph(AlignmentMorph):
+    """A variable watcher."""
     classID = 155
+    _fields = AlignmentMorph._fields + ("titleMorph", "readout", "readoutFrame", "scratchSlider", "watcher", "isSpriteSpecific", "unused", "sliderMin", "sliderMax", "isLarge")
+    
+    @property
+    def name(self):
+        return self.titleMorph.contents
+
 class SetterBlockMorph(BaseMorph):
+    """unused?"""
     classID = 157
+
 class EventHatMorph(BaseMorph):
+    """unused?"""
     classID = 158
-class VariableBlockMorph(BaseMorph):
+
+class VariableBlockMorph(CommandBlockMorph):
+    """unused?"""
     classID = 160
-class ImageMedia(BaseMorph):
+    _fields = CommandBlockMorph._fields + ("isBoolean",)
+
+
+
+
+class ScratchMedia(UserObject):
+    _fields = ("mediaName",)
+    
+    @property
+    def name(self):
+        return getattr(self, 'mediaName')
+
+class ImageMedia(ScratchMedia):
     classID = 162
-    _fields = ["mediaName", "form", "rotationCenter", "textBox", "jpegBytes", "compositeForm"]
-class MovieMedia(BaseMorph):
+    _fields = ScratchMedia._fields + ("form", "rotationCenter", "textBox", "jpegBytes", "compositeForm")
+
+class MovieMedia(ScratchMedia):
+    """unused?"""
     classID = 163
-class SoundMedia(BaseMorph):
+    _fields = ScratchMedia._fields + ("fileName", "fade", "fadeColor", "zoom", "hPan", "vPan", "msecsPerFrame", "currentFrame", "moviePlaying")
+
+class SoundMedia(ScratchMedia):
     classID = 164
-    _fields = ["mediaName", "originalSound", "volume", "balance", "compressedSampleRate", "compressedBitsPerSample", "compressedData"]
+    _fields = ScratchMedia._fields + ("originalSound", "volume", "balance", "compressedSampleRate", "compressedBitsPerSample", "compressedData")
+
+
+
+
 class KeyEventHatMorph(BaseMorph):
+    """unused?"""
     classID = 165
+
 class BooleanArgMorph(BaseMorph):
+    """unused?"""
     classID = 166
+
 class EventTitleMorph(BaseMorph):
+    """unused?"""
     classID = 167
+
 class MouseClickEventHatMorph(BaseMorph):
+    """unused?"""
     classID = 168
+
 class ExpressionArgMorphWithMenu(BaseMorph):
+    """unused?"""
     classID = 169
+
 class ReporterBlockMorph(BaseMorph):
+    """unused?"""
     classID = 170
+
 class MultilineStringMorph(BaseMorph):
+    """unused?"""
     classID = 171
-class ToggleButton(BaseMorph):
+
+class ToggleButton(SimpleButtonMorph):
+    """unused?"""
     classID = 172
-class WatcherReadoutFrameMorph(BaseMorph):
+
+class WatcherReadoutFrameMorph(BorderedMorph):
+    """unused?"""
     classID = 173
-class WatcherSliderMorph(BaseMorph):
+
+class WatcherSliderMorph(SimpleSliderMorph):
+    """unused?"""
     classID = 174
-class WatcherSliderMorph(BorderedMorph):
+
+class ScratchListMorph(BorderedMorph):
+    """List of items.
+    Attributes:
+        items - (alias for cellMorphs)
+    """
     classID = 175
+    _fields = BorderedMorph._fields + ("listName", "cellMorphs", "target")
+	#cellMorphs asArray collect: [:t3 | t3 firstSubmorph contents].
+	
+    @property
+    def name(self):
+        return getattr(self, 'listName')
+    
+    @property
+    def items(self):
+        return self.cellMorphs
+
+
+
 class ScrollingStringMorph(BaseMorph):
     """unused"""
     classID = 176
+
+
+
+
