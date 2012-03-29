@@ -1,5 +1,6 @@
 from construct import Container, Struct, Embed, Rename
 from construct import PascalString, UBInt32, UBInt16, UBInt8
+from construct import BitStruct, Padding, Bits
 from construct import Array as StrictRepeater, Array as MetaRepeater
 # We can't import the name Array, as we use it. -_-
 
@@ -173,11 +174,32 @@ class IdentityDictionary(Dictionary):
 # Color
 class Color(FixedObject):
     classID = 30
-    _construct = StrictRepeater(4, UBInt8("value"))
+    _construct = BitStruct("value",
+        Padding(2),
+        Bits("r", 10),
+        Bits("g", 10),
+        Bits("b", 10),
+    ) #StrictRepeater(4, UBInt8("value"))
+    
+    def to_value(self):
+        r, g, b = self.value
+        return Container(r=r, g=g, b=b)
+    
+    @classmethod
+    def from_value(cls, value):
+        return cls((value.r, value.g, value.b))
+    
+    def hexcode(self):
+        hexcode = ""
+        for x in self.value:
+            part = hex(x / 4)[2:]
+            if len(part) < 2: part = "0" + part
+            hexcode += part
+        return hexcode
 
 class TranslucentColor(FixedObject):
     classID = 31
-    _construct = Struct("", UBInt32("color"), UBInt8("more_color"))
+    _construct = StrictRepeater(5, UBInt8("value"))
 
 
 # Dimensions
