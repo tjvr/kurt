@@ -83,14 +83,16 @@ Tested with **Python 2.6**. Works with **Scratch 1.4**; not tested with earlier 
 
 Kurt is released under the [LGPL](www.gnu.org/licenses/lgpl), version 3.
 
-I'm not a lawyer; but I _think_ this means you can use Kurt in your own, non-GPL'd code, but any Kurt modifications must be distributed under the (L)GPL and include the source code. <small>(This is not legal advice and does not affect the terms as stated in the licence...)</small>
+I'm not a lawyer; but I _think_ this means you can use Kurt in your own, non-GPL'd code, but any Kurt modifications must be distributed under the (L)GPL and include the source code. _(This is not legal advice and does not affect the terms as stated in the licence...)_
 
 
 ## Todo
 
 - Optimise `ObjectNetworkAdapter` for building large files.	
 
-	Kurt is currently very quick at parsing files; but pretty slow at writing them, particularly very large ones.
+	Kurt is currently very quick at parsing files; but pretty slow at writing them, particularly ones with very long scripts.
 
 - Parse images
 - "Default project" for building projects entirely "from scratch" (as it were) in Python code?
+
+
