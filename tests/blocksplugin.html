@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="text/javascript" src="http://wiki.scratch.mit.edu/blocksplugin/blocksplugin.js"></script>
+    
+    <style type="text/css">
+    body {
+        margin: 1em;
+        margin-bottom: 100%;
+    }
+    textarea {
+        font-size: 1em;
+        margin-bottom: 1em;
+        min-width: 30em;
+        min-height: 15em;
+    }
+    button {
+        display: block;
+        font-size: 1.25em;
+        margin-bottom: 1em;
+    }
+    #preview {
+        margin: 1em;
+    }
+    </style>
+</head>
+
+<body>
+    <textarea id="code"></textarea>
+    
+    <button id="render">Render</button>
+    
+    <pre id="preview" class="blocks"></pre>
+    
+    
+    <script type="text/javascript">
+    code = document.getElementById('code');
+    preview = document.getElementById('preview');
+    
+    function refresh () {
+        preview.innerHTML = code.value;
+        scratchBlocksPlugin.parse({
+            containerTag: 'pre',
+        	containerClass: 'blocks',
+        	staticDir: 'http://wiki.scratch.mit.edu/blocksplugin/',
+        });
+    }
+    
+    document.getElementById('render').onmousedown = refresh;
+    code.onkeyup = refresh;
+    refresh();
+    </script>
+</body>
+</html>
