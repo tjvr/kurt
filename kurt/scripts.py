@@ -127,9 +127,9 @@ class Block(object):
                         insert_fmt = "(%s)"
                     elif insert_type == "%b":
                         #if block.name not in ( "list:contains:", "<", "=", ">", "&", "|", "not"):
-                        if (block.type and block.type.flag != 'b') or block.name in (
-                            "touching:", "touchingColor:", "color:sees:", "mousePressed", "keyPressed:",
-                        ): # BUG: some booleans have to be encoded as reporters
+                        if (block.type and block.type.flag != 'b'): # or block.name in (
+                        #    "touching:", "touchingColor:", "color:sees:", "mousePressed", "keyPressed:",
+                        #): # BUG: some booleans have to be encoded as reporters
                             insert_fmt = "(%s)"
                             
                             

@@ -23,18 +23,6 @@
 """
 
 # Known block plugin bugs:
-# - some booleans have to be encoded as reporters.
-#      'touching?', 'touchingcolor?', 'coloristouching?', 'mousedown?',
-#      'keypressed?'
-#
-# - Can't have spaces inside not block.
-#     <not<(Current Type)=(Type)>>
-#     <not<(a) = (b)>>
-#
-# - Can't have spaces in "mouse down?"
-#     if <mouse down?>
-#     
-#
 # - <(var) < (var)> gt & lt are really weird inside and, or, not, etc.
 #     if <<<(x) > [-1]> and <(y) > [-1]>> and <<(x) < [20]> and <(y) < [14]>>>
 #

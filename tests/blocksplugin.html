@@ -30,20 +30,30 @@
     
     <button id="render">Render</button>
     
+    <pre id="codepreview"></pre>
+    
     <pre id="preview" class="blocks"></pre>
     
     
     <script type="text/javascript">
     code = document.getElementById('code');
     preview = document.getElementById('preview');
+    codepreview = document.getElementById('codepreview');
     
     function refresh () {
-        preview.innerHTML = code.value;
+        script = code.value;
+        script = script.replace(/&/g, '&amp;');
+		script = script.replace(/</g, '&lt;');
+		script = script.replace(/>/g, '&gt;');
+		script = script.replace(/"/g, '&quot;');
+        preview.innerHTML = script;
+        //codepreview.innerHTML = script;
+        
         scratchBlocksPlugin.parse({
             containerTag: 'pre',
-        	containerClass: 'blocks',
-        	staticDir: 'http://wiki.scratch.mit.edu/blocksplugin/',
-        });
+            containerClass: 'blocks',
+            staticDir: 'http://wiki.scratch.mit.edu/blocksplugin/',
+        })
     }
     
     document.getElementById('render').onmousedown = refresh;
