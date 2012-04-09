@@ -231,11 +231,12 @@ class ScriptableScratchMorph(BaseMorph):
 
 class SensorBoardMorph(BaseMorph):
     classID = 123
-    _fields = BaseMorph._fields + ("unknown",) # TODO — I have NO idea what this does.
+    _fields = BaseMorph._fields + ("unknown",) # TODO — I have NO idea what this does.
 
 class ScratchSpriteMorph(ScriptableScratchMorph):
     classID = 124
-    _fields = ScriptableScratchMorph._fields + ("zoom", "hPan", "vPan", "obsoleteSavedState", "sprites", "volume", "tempoBPM", "sceneStates", "lists")
+    _fields = ScriptableScratchMorph._fields + ("visibility", "scalePoint", "rotationDegrees", "rotationStyle", "volume", "tempoBPM", "draggable", "sceneStates", "lists")
+
 
 class ScratchStageMorph(ScriptableScratchMorph):
     """The project stage. Also contains project contents, including sprites and media.
@@ -243,7 +244,7 @@ class ScratchStageMorph(ScriptableScratchMorph):
     Use .fields.keys() to see all available fields.
     """
     classID = 125
-    _fields = ScriptableScratchMorph._fields + ("visibility", "scalePoint", "rotationDegrees", "rotationStyle", "volume", "tempoBPM", "draggable", "sceneStates", "lists")
+    _fields = ScriptableScratchMorph._fields + ("zoom", "hPan", "vPan", "obsoleteSavedState", "sprites", "volume", "tempoBPM", "sceneStates", "lists")
     
     @property
     def sprites(self):
