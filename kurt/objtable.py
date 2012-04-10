@@ -309,7 +309,7 @@ class ObjectNetworkAdapter(Adapter):
             objects[i] = obj
         
         for obj in objects:
-            if isinstance(obj, UserObject):
+            if isinstance(obj, UserObject) or isinstance(obj, Form):
                 obj.built()
         
         root = objects[0]

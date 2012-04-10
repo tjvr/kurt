@@ -39,15 +39,15 @@ class Ref(object):
         """
         self.index = int(index)
     
-    @classmethod
-    def to_construct(self, context):
-        index1 = self.index % 65536
-        index2 = (self.index - index1) >> 16
-        return Container(classID = 'Ref', _index1 = index1, _index2 = index2)
+    def to_construct(self):
+        #index1 = self.index % 65536
+        #index2 = (self.index - index1) >> 16
+        #return Container(classID = 'Ref', _index1 = index1, _index2 = index2)
+        return Container(classID="Ref", index=self.index)
     
     @classmethod
-    def from_construct(cls, obj, context):
-        index = int(obj._index2 << 16) + obj._index1
+    def from_construct(cls, obj):
+        index = obj.index #int(obj._index2 << 16) + obj._index1
         return Ref(index)
     
     def __repr__(self):
@@ -63,14 +63,20 @@ class Ref(object):
         return hash(self.index)
 
 
-class RefAdapter(Adapter):
+class RefAdapter(Adapter): # TODO: remove UNUSED
     def _encode(self, obj, context):
         assert isinstance(obj, Ref)
+        return obj.to_construct()
+        
+        #TODO: remove
         index1 = obj.index % 65536
         index2 = (obj.index - index1) >> 16
         return Container(classID = 'Ref', _index1=index1, _index2=index2)
         
     def _decode(self, obj, context):
+        return Ref.from_construct(obj)
+
+        #TODO: remove
         index = int(obj._index2 << 16) + obj._index1
         return Ref(index)
 
@@ -133,9 +139,10 @@ Field = FieldAdapter(Struct("field",
             MetaRepeater(lambda ctx: ctx.length, UBInt8("data")),
         ),
         "Float": BFloat64(""),
-        "Ref": RefAdapter(Struct("",
-            UBInt8("_index2"),
-            UBInt16("_index1"),
+        "Ref": RefAdapter(BitStruct("",
+            BitField("index", 24),
+            #UBInt8("_index2"),
+            #UBInt16("_index1"),
         )),
     })
 ))
