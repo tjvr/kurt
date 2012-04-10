@@ -79,7 +79,7 @@ test_cons(fixed_object, '\x18\x00\x00\x00\x01\x05\x00\x01\x05\x00\x42', Dictiona
 # IdentityDictionary - TODO
 
 # Color
-test_cons(fixed_object, '\x1E\x3F\xFF\xFF\xFF', Color((1023, 1023, 1023)))
+test_cons(fixed_object, '\x1E\x3F\xFF\xFF\xFF', Color(1023, 1023, 1023))
 # TranslucentColor
 # Point
 test_cons(fixed_object, '\x20\x05\x00\x00\x05\x00\x00', Point((0, 0)))

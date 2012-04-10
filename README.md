@@ -82,7 +82,7 @@ Tested with **Python 2.6**. Works with **Scratch 1.4**; not tested with earlier 
 
 ## Licence
 
-Kurt is released under the [LGPL](www.gnu.org/licenses/lgpl), version 3.
+Kurt is released under the [LGPL](http://www.gnu.org/licenses/lgpl), version 3.
 
 I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, non-GPL'd code, any Kurt modifications must be distributed under the (L)GPL and include the source code. _(This is not legal advice and does not affect the terms as stated in the licence...)_
 
@@ -94,6 +94,7 @@ I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, n
 	Kurt is currently very quick at parsing files; but pretty slow at writing them, particularly ones with very long scripts.
 
 * Parse images
+* Split Sprite.media into separate costumes/sounds lists.
 * "Default project" for building projects entirely "from scratch" (as it were) in Python code?
 
 
