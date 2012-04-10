@@ -193,6 +193,13 @@ for block in blocks:
     cmd = block.command
     blocks_by_cmd[cmd] = block
 
+blocks_by_text = {}
+for block in blocks:
+    text = ''.join(part.replace(" ", "") for part in blocks[20].parts
+                    if part and not part[0] == "%") # Remove spaces and inserts
+    if text not in blocks_by_text:
+        # Some blocks have same text
+        blocks_by_text[text] = block
 
 block_plugin_inserts = {
     "%b": "<%s>",
