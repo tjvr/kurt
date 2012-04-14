@@ -17,7 +17,8 @@
 # You should have received a copy of the GNU Lesser General Public License along 
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
-"""Block plugin formatter: read all the scripts in a Scratch project file and output [scratchblocks] formatted code for Scratch forums/wiki.
+"""Block plugin formatter: reads all the scripts in a Scratch project file and
+outputs [scratchblocks] formatted code for Scratch forums/wiki.
 
     Usage: python block_plugin.py [path/to/project_file.sb]
 """
