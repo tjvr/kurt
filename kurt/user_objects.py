@@ -240,18 +240,11 @@ class ScratchSpriteMorph(ScriptableScratchMorph):
 
 class ScratchStageMorph(ScriptableScratchMorph):
     """The project stage. Also contains project contents, including sprites and media.
-    Attributes include .sprites, an alias for submorphs.
+    Attributes include .sprites — note that this also includes variable/list watchers.
     Use .fields.keys() to see all available fields.
     """
     classID = 125
     _fields = ScriptableScratchMorph._fields + ("zoom", "hPan", "vPan", "obsoleteSavedState", "sprites", "volume", "tempoBPM", "sceneStates", "lists")
-    
-    @property
-    def sprites(self):
-        """Alias for submorphs.
-        Note that this also includes variable/list watchers, as well as sprites.
-        """
-        return self.submorphs
 
 
 from scripts import Script # Yes, this is stupid. Circular dependencies ftw. -_-
