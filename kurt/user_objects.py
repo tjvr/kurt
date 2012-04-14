@@ -208,19 +208,10 @@ class ScriptableScratchMorph(BaseMorph):
         self.blocksBin = [Script.from_array(self, script) for script in self.blocksBin]
     
     def _encode_field(self, name, value):
-        """Return a list of field values that should be saved.
-        Override this in subclass to modify building of specific fields.
-        """
         if name == 'blocksBin':
             return [script.to_array() for script in value]
         else:
             return value
-
-    #def _decode_field(cls, name, value):
-    #    """Return list of field values passed to object's constructor.
-    #    Override this in subclass to modify specific fields.
-    #    """
-    #    if name == 'blocksBin':
 
     @property
     def scripts(self):
@@ -236,11 +227,36 @@ class SensorBoardMorph(BaseMorph):
 class ScratchSpriteMorph(ScriptableScratchMorph):
     classID = 124
     _fields = ScriptableScratchMorph._fields + ("visibility", "scalePoint", "rotationDegrees", "rotationStyle", "volume", "tempoBPM", "draggable", "sceneStates", "lists")
-
+    
+    def __init__(self, field_values=None, **args):
+        ScriptableScratchMorph.__init__(self, field_values, **args)
+        self.costumes = []
+        self.sounds = []
+    
+    def built(self):
+        ScriptableScratchMorph.built(self)
+        
+        sprite_media = self.media
+        self.media = []
+        for media in sprite_media:
+            if isinstance(media, SoundMedia):
+                self.sounds.append(media)
+            elif isinstance(media, ImageMedia):
+                self.costumes.append(media)
+            else:
+                self.media.append(media)
+    
+    def _encode_field(self, name, value):
+        if name == 'media':
+            return self.sounds + self.costumes + self.media
+        else:
+            return value
 
 class ScratchStageMorph(ScriptableScratchMorph):
     """The project stage. Also contains project contents, including sprites and media.
-    Attributes include .sprites — note that this also includes variable/list watchers.
+    Main attributes:
+        sprites - ordered list of sprites.
+        submorphs - everything on the stage, including sprites & variable/list watchers.
     Use .fields.keys() to see all available fields.
     """
     classID = 125

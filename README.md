@@ -10,6 +10,8 @@ If you're interested in technical details of how the format works: the code shou
 
 ## Recent Changes 
 
+* Split Sprite.media into separate costumes/sounds lists.
+
 ###v1.1: 
 
 * `Script` and `Block` classes for manipulating scripts.
@@ -94,7 +96,6 @@ I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, n
 	Kurt is currently very quick at parsing files; but pretty slow at writing them, particularly ones with very long scripts.
 
 * Parse images
-* Split Sprite.media into separate costumes/sounds lists.
 * "Default project" for building projects entirely "from scratch" (as it were) in Python code?
 
 
