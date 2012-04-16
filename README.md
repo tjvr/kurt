@@ -91,11 +91,14 @@ I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, n
 
 ## Todo
 
+* Parse images
+
+* Make some decent tests
+
 * Optimise `ObjectNetworkAdapter` for building large files.	
 
 	Kurt is currently very quick at parsing files; but pretty slow at writing them, particularly ones with very long scripts.
 
-* Parse images
 * "Default project" for building projects entirely "from scratch" (as it were) in Python code?
 
 

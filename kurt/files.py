@@ -28,6 +28,8 @@ from construct import Container, Struct, Bytes, Rename
 from construct.text import Literal
 from objtable import ObjTable, InfoTable
 
+import os.path
+
 
 
 class BinaryFile(object):
@@ -43,6 +45,14 @@ class BinaryFile(object):
         """
         self.path = path
         self.load()
+    
+    @property
+    def name(self):
+        (folder, name) = os.path.split(self.path)
+        trimmed_name = ''.join(name.split('.')[:-1]) # Trim extension
+        if trimmed_name:
+            name = trimmed_name
+        return name
     
     def load(self):
         """Reload the file from disk, replacing any changes in memory.
@@ -143,7 +153,7 @@ class ScratchSpriteFile(BinaryFile):
     
     @property
     def sprite(self):
-        return self.stage.sprites[0]
+        return self.stage.submorphs[0]
 
 
 

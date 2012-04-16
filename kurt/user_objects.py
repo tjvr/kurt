@@ -224,6 +224,7 @@ class SensorBoardMorph(BaseMorph):
     classID = 123
     _fields = BaseMorph._fields + ("unknown",) # TODO — I have NO idea what this does.
 
+
 class ScratchSpriteMorph(ScriptableScratchMorph):
     classID = 124
     _fields = ScriptableScratchMorph._fields + ("visibility", "scalePoint", "rotationDegrees", "rotationStyle", "volume", "tempoBPM", "draggable", "sceneStates", "lists")
@@ -251,6 +252,7 @@ class ScratchSpriteMorph(ScriptableScratchMorph):
             return self.sounds + self.costumes + self.media
         else:
             return value
+
 
 class ScratchStageMorph(ScriptableScratchMorph):
     """The project stage. Also contains project contents, including sprites and media.
@@ -303,8 +305,10 @@ class HatBlockMorph(BaseMorph):
     classID = 151
 
 class ScratchScriptsMorph(BorderedMorph):
-    """unused?"""
     classID = 153
+    
+    def __iter__(self):
+        return iter(self.submorphs)
 
 class ScratchSliderMorph(BaseMorph):
     """unused?"""
