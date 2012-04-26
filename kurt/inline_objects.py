@@ -63,22 +63,13 @@ class Ref(object):
         return hash(self.index)
 
 
-class RefAdapter(Adapter): # TODO: remove UNUSED
+class RefAdapter(Adapter):
     def _encode(self, obj, context):
         assert isinstance(obj, Ref)
         return obj.to_construct()
         
-        #TODO: remove
-        index1 = obj.index % 65536
-        index2 = (obj.index - index1) >> 16
-        return Container(classID = 'Ref', _index1=index1, _index2=index2)
-        
     def _decode(self, obj, context):
         return Ref.from_construct(obj)
-
-        #TODO: remove
-        index = int(obj._index2 << 16) + obj._index1
-        return Ref(index)
 
 
 class FieldAdapter(Adapter):
@@ -141,8 +132,6 @@ Field = FieldAdapter(Struct("field",
         "Float": BFloat64(""),
         "Ref": RefAdapter(BitStruct("",
             BitField("index", 24),
-            #UBInt8("_index2"),
-            #UBInt16("_index1"),
         )),
     })
 ))
