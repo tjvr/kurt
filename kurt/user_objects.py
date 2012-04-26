@@ -27,6 +27,8 @@ available fields [dir() won't show them.]
 from construct import Container
 import os
 
+from fixed_objects import OrderedCollection
+
 
 
 class UserObject(object):
@@ -250,7 +252,7 @@ class ScratchSpriteMorph(ScriptableScratchMorph):
     
     def _encode_field(self, name, value):
         if name == 'media':
-            return self.sounds + self.costumes + self.media
+            return OrderedCollection(self.sounds + self.costumes + self.media)
         else:
             return value
 
