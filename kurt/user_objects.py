@@ -206,13 +206,31 @@ class SketchMorph(BaseMorph):
 class ScriptableScratchMorph(BaseMorph):
     _fields = Morph._fields + ("objName", "vars", "blocksBin", "isClone", "media", "costume")
     
+    def __init__(self, *args, **kwargs):
+        UserObject.__init__(self, *args, **kwargs)
+        
+        self.images = []
+        self.sounds = []
+    
     def built(self):
         UserObject.built(self)
         self.blocksBin = [Script.from_array(self, script) for script in self.blocksBin]
+        
+        media = self.media
+        self.media = []
+        for media in media:
+            if isinstance(media, SoundMedia):
+                self.sounds.append(media)
+            elif isinstance(media, ImageMedia):
+                self.images.append(media)
+            else:
+                self.media.append(media)
     
     def _encode_field(self, name, value):
         if name == 'blocksBin':
             return [script.to_array() for script in value]
+        elif name == 'media':
+            return OrderedCollection(self.sounds + self.images + self.media)
         else:
             return value
 
@@ -229,32 +247,21 @@ class SensorBoardMorph(BaseMorph):
 
 
 class ScratchSpriteMorph(ScriptableScratchMorph):
+    """A sprite.
+    Main attributes:
+        scripts
+        vars
+        lists
+        costumes
+        sounds
+    Use .fields.keys() to see all available fields.
+    """
     classID = 124
     _fields = ScriptableScratchMorph._fields + ("visibility", "scalePoint", "rotationDegrees", "rotationStyle", "volume", "tempoBPM", "draggable", "sceneStates", "lists")
     
-    def __init__(self, field_values=None, **args):
-        ScriptableScratchMorph.__init__(self, field_values, **args)
-        self.costumes = []
-        self.sounds = []
-    
-    def built(self):
-        ScriptableScratchMorph.built(self)
-        
-        sprite_media = self.media
-        self.media = []
-        for media in sprite_media:
-            if isinstance(media, SoundMedia):
-                self.sounds.append(media)
-            elif isinstance(media, ImageMedia):
-                self.costumes.append(media)
-            else:
-                self.media.append(media)
-    
-    def _encode_field(self, name, value):
-        if name == 'media':
-            return OrderedCollection(self.sounds + self.costumes + self.media)
-        else:
-            return value
+    @property
+    def costumes(self):
+        return self.images
 
 
 class ScratchStageMorph(ScriptableScratchMorph):
@@ -262,10 +269,19 @@ class ScratchStageMorph(ScriptableScratchMorph):
     Main attributes:
         sprites - ordered list of sprites.
         submorphs - everything on the stage, including sprites & variable/list watchers.
+        scripts
+        vars
+        lists
+        backgrounds
+        sounds
     Use .fields.keys() to see all available fields.
     """
     classID = 125
     _fields = ScriptableScratchMorph._fields + ("zoom", "hPan", "vPan", "obsoleteSavedState", "sprites", "volume", "tempoBPM", "sceneStates", "lists")
+    
+    @property
+    def backgrounds(self):
+        return self.images
 
 
 from scripts import Script
@@ -351,10 +367,30 @@ class ScratchMedia(UserObject):
         return getattr(self, 'mediaName')
 
 class ImageMedia(ScratchMedia):
+    """An image file, used for costumes and backgrounds.
+    Methods:
+        save(path) — save the image to an external file.
+    
+    Image data is stored internally on the "form" attribute.
+    """
     classID = 162
     _fields = ScratchMedia._fields + ("form", "rotationCenter", "textBox", "jpegBytes", "compositeForm")
     
+    def __getattr__(self, name):
+        value = ScratchMedia.__getattr__(self, name)
+        if value: 
+            return value
+        
+        if name in ("width", "height"):
+            return getattr(self.form, name)
+    
     def save(self, path, format=None):
+        """Save the image data to an external file.
+        Arguments:
+            path - the absolute or relative path to save to. Does not require extension.
+            format - the extension to save as, "png" or "jpg". May throw an error if 
+                     image format is different.
+        """
         (folder, name) = os.path.split(path)
         if not format and "." in name:
             format = name.split('.')[-1]
@@ -374,10 +410,8 @@ class ImageMedia(ScratchMedia):
         
         save_func(path)
     
-    
     def save_png(self, path):
-        self.form.save_png(path)
-    
+        self.form.save_png(path)    
         
     def save_jpg(self, path):
         if not self.jpegBytes:
