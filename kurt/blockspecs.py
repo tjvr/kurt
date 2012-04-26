@@ -101,7 +101,7 @@ category = Struct("category",
 
 blockspecs = Struct("blockspecs",
     Rename("categories", OptionalGreedyRepeater(category)),
-    #StringAdapter(OptionalGreedyRange(Char("leftovers"))), #DEBUG 
+    #StringAdapter(OptionalGreedyRange(Char("leftovers"))), # used for DEBUG
     Terminator,
 )
 

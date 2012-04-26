@@ -265,7 +265,8 @@ class ScratchStageMorph(ScriptableScratchMorph):
     _fields = ScriptableScratchMorph._fields + ("zoom", "hPan", "vPan", "obsoleteSavedState", "sprites", "volume", "tempoBPM", "sceneStates", "lists")
 
 
-from scripts import Script # Yes, this is stupid. Circular dependencies ftw. -_-
+from scripts import Script
+# Yes, this is stupid. Circular dependencies ftw. -_-
 
 
 

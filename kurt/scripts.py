@@ -290,6 +290,7 @@ class Script(object):
 
 
 
-from blockspecs import blocks_by_cmd, block_plugin_inserts, BlockType # YES THIS IS STUPID
+from blockspecs import blocks_by_cmd, block_plugin_inserts, BlockType
+# YES THIS IS STUPID
 
 
