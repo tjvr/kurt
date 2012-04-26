@@ -483,7 +483,8 @@ class Form(FixedObject, ContainsRefs):
         
         if self.depth == 32:
             for pixel in (pixel_bytes[i:i+4] for i in range(0, len(pixel_bytes), 4)):
-                yield TranslucentColor.from_32bit_raw(pixel)
+                color = TranslucentColor.from_32bit_raw(pixel)
+                yield color 
         
         else:
             if self.depth == 16:
@@ -510,7 +511,20 @@ class Form(FixedObject, ContainsRefs):
         pixel_count = 0
         num_pixels = self.width * self.height
         
-        for color in self._to_pixels():
+        skip = 0
+        if self.depth <= 8:
+            pixels_per_byte = 8 / self.depth
+            pixels_in_last_byte = self.width % pixels_per_byte
+            skip = pixels_per_byte - pixels_in_last_byte
+        
+        x = 0
+        pixels = self._to_pixels()
+        while 1:
+            try:
+                color = pixels.next()
+            except StopIteration:
+                break
+            
             if isinstance(color, TranslucentColor):
                 (r, g, b, a) = color.to_8bit()
             else:
@@ -523,10 +537,16 @@ class Form(FixedObject, ContainsRefs):
             rgba.append(a)
             
             pixel_count += 1
+            x += 1            
+            if x >= self.width:
+                for i in xrange(skip):
+                    pixel = pixels.next()
+                x = 0
         
         #if pixel_count > num_pixels: # DEBUG
         #    raise ValueError, "More pixels than expected"
         
+        # Width must be a multiple of depth?
         return (self.width, self.height, rgba)
     
     def save_png(self, path):
