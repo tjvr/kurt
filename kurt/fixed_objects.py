@@ -47,7 +47,6 @@ class FixedObject(object):
     @classmethod
     def from_construct(cls, obj, context):
         fixed_obj = cls.from_value(obj.value)
-        fixed_obj._orig_container = obj # DEBUG
         return fixed_obj
     
     def to_value(self):
@@ -360,15 +359,6 @@ class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
 
     def to_value(self):
         return Container(items = self.value, length = (len(self.value) + 2) / 4)
-
-    @classmethod
-    def make_construct(depth):
-        pass
-    
-    @classmethod
-    def encode_pixels(cls, depth):
-        pass # must pass raw bytes to Bitmap constructor.
-        # length must be a multiple of 4.
     
     _int = Struct("int",
         UBInt8("_value"),
@@ -420,52 +410,17 @@ class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
     )
     
     @classmethod
-    def decode_pixels(cls, bytes):
-        """Decodes bitmap and yields a sequence of 32-bit values.
-        Their specific encoding depends on Form.depth."""
+    def from_byte_array(cls, bytes):
+        """Decodes a run-length encoded ByteArray and returns a Bitmap.
+        The ByteArray decompresses to a sequence of 32-bit values, which are stored as 
+        a byte string. (The specific encoding depends on Form.depth.)
+        """
         runs = cls._length_run_coding.parse(bytes)
-        
+        data = "" 
         for run in runs.data:
             for pixel in run.pixels:
-                yield pixel
-    
-    @classmethod
-    def from_byte_array(cls, bytes):
-        data = ""
-        for pixel in cls.decode_pixels(bytes):
-            data += pixel
+                data += pixel
         return cls(data)
-
-    def old_decode_pixels(self, depth, colors=None):
-        if depth == 32:
-            assert colors is None
-            length = len(self.value) / 4
-
-            for i in range(length):
-                i *= 4
-                raw = self.value[i: i + 4]
-                color = TranslucentColor.from_32bit_raw(raw)
-                yield color
-        
-        else:
-            assert colors is not None
-            length = len(self.value) * 8 / depth
-            _construct = BitStruct("",
-                MetaRepeater(length,
-                    Bits("pixels", depth),
-                ),
-            )
-            for pixel in _construct.parse(self.value).pixels:
-                yield pixel
-        
-        # [Color(1008, 0, 8), Color(1023, 960, 0), Color(1008, 63, 850), Color(1008, 16, 767)]
-        # red, yellow, pink, pink
-
-        # 000008 black
-        # 0042ff blue
-        # 00ce42 green
-        # ff0000 red
-        # ffffff white
 
 
 
@@ -479,6 +434,7 @@ class Form(FixedObject, ContainsRefs):
     
     Note: do not modify the dict returned from the .value property.
     """
+    
     classID = 34
     _construct = Struct("form",
         Rename("width", Field),
@@ -488,6 +444,7 @@ class Form(FixedObject, ContainsRefs):
         Rename("bits", Field), # Bitmap
     )
     
+    # TODO: default color values
     #_squeak_colors = [-1, -1, -1, 0, 0, 0, -1, -1, -1, -128, -128, -128, -1, 0, 0, 0, -1, 0, 0, 0, -1, 0, -1, -1, -1, -1, 0, -1, 0, -1, 32, 32, 32, 64, 64, 64, 96, 96, 96, -97, -97, -97, -65, -65, -65, -33, -33, -33, 8, 8, 8, 16, 16, 16, 24, 24, 24, 40, 40, 40, 48, 48, 48, 56, 56, 56, 72, 72, 72, 80, 80, 80, 88, 88, 88, 104, 104, 104, 112, 112, 112, 120, 120, 120, -121, -121, -121, -113, -113, -113, -105, -105, -105, -89, -89, -89, -81, -81, -81, -73, -73, -73, -57, -57, -57, -49, -49, -49, -41, -41, -41, -25, -25, -25, -17, -17, -17, -9, -9, -9, 0, 0, 0, 0, 51, 0, 0, 102, 0, 0, -103, 0, 0, -52, 0, 0, -1, 0, 0, 0, 51, 0, 51, 51, 0, 102, 51, 0, -103, 51, 0, -52, 51, 0, -1, 51, 0, 0, 102, 0, 51, 102, 0, 102, 102, 0, -103, 102, 0, -52, 102, 0, -1, 102, 0, 0, -103, 0, 51, -103, 0, 102, -103, 0, -103, -103, 0, -52, -103, 0, -1, -103, 0, 0, -52, 0, 51, -52, 0, 102, -52, 0, -103, -52, 0, -52, -52, 0, -1, -52, 0, 0, -1, 0, 51, -1, 0, 102, -1, 0, -103, -1, 0, -52, -1, 0, -1, -1, 51, 0, 0, 51, 51, 0, 51, 102, 0, 51, -103, 0, 51, -52, 0, 51, -1, 0, 51, 0, 51, 51, 51, 51, 51, 102, 51, 51, -103, 51, 51, -52, 51, 51, -1, 51, 51, 0, 102, 51, 51, 102, 51, 102, 102, 51, -103, 102, 51, -52, 102, 51, -1, 102, 51, 0, -103, 51, 51, -103, 51, 102, -103, 51, -103, -103, 51, -52, -103, 51, -1, -103, 51, 0, -52, 51, 51, -52, 51, 102, -52, 51, -103, -52, 51, -52, -52, 51, -1, -52, 51, 0, -1, 51, 51, -1, 51, 102, -1, 51, -103, -1, 51, -52, -1, 51, -1, -1, 102, 0, 0, 102, 51, 0, 102, 102, 0, 102, -103, 0, 102, -52, 0, 102, -1, 0, 102, 0, 51, 102, 51, 51, 102, 102, 51, 102, -103, 51, 102, -52, 51, 102, -1, 51, 102, 0, 102, 102, 51, 102, 102, 102, 102, 102, -103, 102, 102, -52, 102, 102, -1, 102, 102, 0, -103, 102, 51, -103, 102, 102, -103, 102, -103, -103, 102, -52, -103, 102, -1, -103, 102, 0, -52, 102, 51, -52, 102, 102, -52, 102, -103, -52, 102, -52, -52, 102, -1, -52, 102, 0, -1, 102, 51, -1, 102, 102, -1, 102, -103, -1, 102, -52, -1, 102, -1, -1, -103, 0, 0, -103, 51, 0, -103, 102, 0, -103, -103, 0, -103, -52, 0, -103, -1, 0, -103, 0, 51, -103, 51, 51, -103, 102, 51, -103, -103, 51, -103, -52, 51, -103, -1, 51, -103, 0, 102, -103, 51, 102, -103, 102, 102, -103, -103, 102, -103, -52, 102, -103, -1, 102, -103, 0, -103, -103, 51, -103, -103, 102, -103, -103, -103, -103, -103, -52, -103, -103, -1, -103, -103, 0, -52, -103, 51, -52, -103, 102, -52, -103, -103, -52, -103, -52, -52, -103, -1, -52, -103, 0, -1, -103, 51, -1, -103, 102, -1, -103, -103, -1, -103, -52, -1, -103, -1, -1, -52, 0, 0, -52, 51, 0, -52, 102, 0, -52, -103, 0, -52, -52, 0, -52, -1, 0, -52, 0, 51, -52, 51, 51, -52, 102, 51, -52, -103, 51, -52, -52, 51, -52, -1, 51, -52, 0, 102, -52, 51, 102, -52, 102, 102, -52, -103, 102, -52, -52, 102, -52, -1, 102, -52, 0, -103, -52, 51, -103, -52, 102, -103, -52, -103, -103, -52, -52, -103, -52, -1, -103, -52, 0, -52, -52, 51, -52, -52, 102, -52, -52, -103, -52, -52, -52, -52, -52, -1, -52, -52, 0, -1, -52, 51, -1, -52, 102, -1, -52, -103, -1, -52, -52, -1, -52, -1, -1, -1, 0, 0, -1, 51, 0, -1, 102, 0, -1, -103, 0, -1, -52, 0, -1, -1, 0, -1, 0, 51, -1, 51, 51, -1, 102, 51, -1, -103, 51, -1, -52, 51, -1, -1, 51, -1, 0, 102, -1, 51, 102, -1, 102, 102, -1, -103, 102, -1, -52, 102, -1, -1, 102, -1, 0, -103, -1, 51, -103, -1, 102, -103, -1, -103, -103, -1, -52, -103, -1, -1, -103, -1, 0, -52, -1, 51, -52, -1, 102, -52, -1, -103, -52, -1, -52, -52, -1, -1, -52, -1, 0, -1, -1, 51, -1, -1, 102, -1, -1, -103, -1, -1, -52, -1, -1, -1, -1]
     #_squeak_colors = [_squeak_colors[i:i+4] for i in range(0, len(_squeak_colors), 4)]
     
@@ -525,24 +482,12 @@ class Form(FixedObject, ContainsRefs):
         
         else:
             if self.depth == 16:
-                raise NotImplementedError # TODO
+                raise NotImplementedError # TODO: depth 16
             
             elif self.depth <= 8:
                 if colors is None:
-                    raise NotImplementedError, "squeak_colors"
-                
-                """byte[] arrayOfByte = new byte[width * height];
-                int i = arrayOfInt.length / height;
-                int j = (2 ** depth) - 1;
-                int k = 32 / depth;
-            
-                for (int m = 0; m < height; m++) {
-                    for (int n = 0; n < width; n++) {
-                        int i1 = arrayOfInt[(m * i + n / k)];
-                        int i2 = depth * (k - n % k - 1);
-                        arrayOfByte[(m * width + n)] = (byte)(i1 >> i2 & j);
-                    }
-                }"""
+                    raise NotImplementedError, "TODO: default color values"
+                    # found in squeak_colors
         
                 pixels_construct = BitStruct("",
                     MetaRepeater(length,
@@ -553,14 +498,6 @@ class Form(FixedObject, ContainsRefs):
                 
                 for pixel in pixels:
                     yield colors[pixel]
-    
-    def to_color_map(self):
-        pixels = self._to_pixels()
-        assert len(pixels) == self.width * self.height
-        
-        n = self.width
-        bitmap = [pixels[i:i+n] for i in range(0, len(pixels), n)]
-        return bitmap
     
     def to_array(self):
         rgb = array('B') #unsigned byte
@@ -582,9 +519,7 @@ class Form(FixedObject, ContainsRefs):
             
             pixel_count += 1
             if pixel_count > num_pixels:
-                pass #DEBUG : raise ValueError, "More pixels than expected"
-        
-        #assert pixel_count == num_pixels
+                raise ValueError, "More pixels than expected"
         
         return (self.width, self.height, rgb, has_alpha)
     

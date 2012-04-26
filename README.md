@@ -12,7 +12,10 @@ If you're interested in technical details of how the format works: the code shou
 
 * Split Sprite.media into separate costumes/sounds lists.
 
-###v1.1: 
+###v1.2, images:
+* Can now parse most images! :D
+
+###v1.1, scripts:
 
 * `Script` and `Block` classes for manipulating scripts.
 * **Block plugin** formatter — reads all the scripts in a project file and outputs `[scratchblocks]` syntax code for posting on the Scratch forums/wiki.
@@ -91,7 +94,10 @@ I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, n
 
 ## Todo
 
-* Parse images
+* <s>Parse images</s>
+	* Compress Bitmap to ByteArray on save (using run-length encoding)
+	* Images with depth `16` are not supported *(need an example)*
+	* Default color values `squeak_colors` *(need an example)*
 
 * Make some decent tests
 
