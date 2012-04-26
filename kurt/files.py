@@ -75,7 +75,7 @@ class BinaryFile(object):
         """Save the file to disk.
         @param path: (optional) set new destination path. Future saves will go to the new location.
         """
-        if not path.lower().endswith("."+self.EXTENSION.lower()):
+        if path and not path.lower().endswith("."+self.EXTENSION.lower()):
             path += "."+self.EXTENSION
         if path:
             self.path = path

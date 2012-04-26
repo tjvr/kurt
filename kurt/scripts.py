@@ -36,6 +36,9 @@ class Block(object):
                BlockType.defaults)
     Attributes:
         type - BlockType instance (found to match self.name)
+        
+    Methods:
+        to_block_plugin() — returns the block in scratchblocks format.
     """
     def __init__(self, script, name=None, *args):
         self.script = script
@@ -237,6 +240,8 @@ class Script(object):
         morph - ScriptableScratchMorph instance that this script belongs to
         pos - x, y position of script in blocks bin.
         blocks - list of blocks.
+    Methods:
+        to_block_plugin() — returns the script in scratchblocks format.
     """
     def __init__(self, morph, pos=(0,0), blocks=None):
         self.morph = morph
