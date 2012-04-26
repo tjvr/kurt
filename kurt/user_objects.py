@@ -25,6 +25,7 @@ available fields [dir() won't show them.]
 """
 
 from construct import Container
+import os
 
 
 
@@ -350,6 +351,43 @@ class ScratchMedia(UserObject):
 class ImageMedia(ScratchMedia):
     classID = 162
     _fields = ScratchMedia._fields + ("form", "rotationCenter", "textBox", "jpegBytes", "compositeForm")
+    
+    def save(self, path, format=None):
+        (folder, name) = os.path.split(path)
+        if not format and "." in name:
+            format = name.split('.')[-1]
+        
+        if not format:
+            if self.jpegBytes:
+                format = "jpg"
+            else:
+                format = "png"
+            
+        try:
+            format = format.lstrip(".")
+            save_func = getattr(self, "save_%s"%format)
+            assert callable(save_func)
+        except (AssertionError, AttributeError):
+            raise ValueError, "Invalid format %r" % format
+        
+        save_func(path)
+    
+    
+    def save_png(self, path):
+        self.form.save_png(path)
+    
+        
+    def save_jpg(self, path):
+        if not self.jpegBytes:
+            raise ValueError, "ImageMedia object %r is not in JPEG format"
+        
+        if not path.endswith(".jpg"): path += ".jpg"
+        
+        f = open(path, "w")
+        f.write(self.jpegBytes.value)
+        f.flush()
+        f.close()
+
 
 class MovieMedia(ScratchMedia):
     """unused?"""

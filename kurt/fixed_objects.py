@@ -29,7 +29,10 @@ import construct
 
 # used by Form
 from array import array
-import png
+try:
+    import png
+except ImportError:
+    png = None
 
 from inline_objects import Field
 
@@ -283,8 +286,11 @@ class TranslucentColor(Color):
     @classmethod
     def from_32bit_raw(cls, raw):
         container = cls._construct_32.parse(raw)
-        color = cls.from_value(container)
-        return cls(*(x << 2 for x in color.value))
+        parts = cls.from_value(container)
+        color = cls(*(x << 2 for x in parts.value))
+        if color.alpha == 0 and (color.r > 0 or color.g > 0 or color.b > 0):
+            color.alpha = 1023
+        return color
     
     @property
     def value(self):
@@ -354,7 +360,6 @@ class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
         
     @classmethod
     def from_value(cls, obj):
-        assert len(obj.items) == obj.length * 4, "File corrupt?"
         return cls(obj.items)
 
     def to_value(self):
@@ -485,52 +490,58 @@ class Form(FixedObject, ContainsRefs):
                 raise NotImplementedError # TODO: depth 16
             
             elif self.depth <= 8:
-                if colors is None:
+                if self.colors is None:
                     raise NotImplementedError, "TODO: default color values"
-                    # found in squeak_colors
-        
+                    # default color values are found in squeak_colors
+                
+                length = len(pixel_bytes) * 8 / self.depth
                 pixels_construct = BitStruct("",
                     MetaRepeater(length,
                         Bits("pixels", self.depth),
                     ),
                 )
-                pixels = pixels_construct.parse(pixel_bytes)
+                pixels = pixels_construct.parse(pixel_bytes).pixels
                 
                 for pixel in pixels:
-                    yield colors[pixel]
+                    yield self.colors[pixel]
     
     def to_array(self):
-        rgb = array('B') #unsigned byte
-        has_alpha = None
+        rgba = array('B') #unsigned byte
         pixel_count = 0
         num_pixels = self.width * self.height
         
         for color in self._to_pixels():
             if isinstance(color, TranslucentColor):
-                (r, g, b, alpha) = color.to_8bit()
-                if has_alpha == None: has_alpha = True
+                (r, g, b, a) = color.to_8bit()
             else:
                 (r, g, b) = color.to_8bit()
-                if has_alpha == None: has_alpha = False
-            rgb.append(r)
-            rgb.append(g)
-            rgb.append(b)
-            if has_alpha: rgb.append(alpha)
+                a = 255
+            
+            rgba.append(r)
+            rgba.append(g)
+            rgba.append(b)
+            rgba.append(a)
             
             pixel_count += 1
-            if pixel_count > num_pixels:
-                raise ValueError, "More pixels than expected"
         
-        return (self.width, self.height, rgb, has_alpha)
+        #if pixel_count > num_pixels: # DEBUG
+        #    raise ValueError, "More pixels than expected"
+        
+        return (self.width, self.height, rgba)
     
     def save_png(self, path):
         if not path.endswith(".png"): path += ".png"
+        
+        if not png:
+            raise ValueError, "Missing dependency: pypng library needed for PNG support"
+        
         f = open(path, "wb")
-        (width, height, rgb_array, has_alpha) = self.to_array()
-        writer = png.Writer(width, height, alpha=has_alpha)
+        (width, height, rgb_array) = self.to_array()
+        writer = png.Writer(width, height, alpha=True)
         writer.write_array(f, rgb_array)
         f.flush()
         f.close()
+        
         
 
 
@@ -547,10 +558,6 @@ class ColorForm(Form):
         Embed(Form._construct),
         Rename("colors", Field), # Array
     )
-    
-    def _to_pixels(self):
-        assert len(self.colors) == 2**self.depth
-        return self.bits.decode_pixels(self.depth, self.colors)
 
 
         
