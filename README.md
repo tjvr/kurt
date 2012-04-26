@@ -10,22 +10,22 @@ You could use it for:
 * converting to another format (like the `scratchblocks` converter does)
 * generating Scratch projects using Python code
 * analysing the scripts in a project
-* `(someday, perhaps...)` making a "Scratch IDE" text-based editor for Scratch scripts... :)
+* *(someday, perhaps...)* making a "Scratch IDE" text-based editor for Scratch scripts... :)
 
-(It *can't* yet write images as costumes or read/write sounds, but they're on the to-do list — see below)
+(It *can't* write images as costumes or read/write sounds yet, but they're on the to-do list — see below)
 
 **WARNING**: Make sure you take a backup of your Scratch projects before saving anything with kurt! kurt is by no means fully tested. I can't accept responsibility for corrupting your files.
 
-If you're interested in technical details of how the format works: the code should be pretty self-documenting; but check out the little [wiki](http://scratchformat.wikispaces.com/) where I documented the format in a more readable form.
+If you're interested in technical details of how the format works: the code should be pretty self-documenting; but check out the documentation on the [Scratch wiki](http://wiki.scratch.mit.edu/wiki/Scratch_File_Format), which might be more readable...
 
 
 ## Installation
 
 Download the latest version of Kurt and extract the `kurt` folder somewhere in your `sys.path` — or in the same directory as your code, if you prefer.
 
-You'll need the latest version of the awesome [Construct](http://construct.wikispaces.com/) library — used for defining the format. It currently appears to be available [here](http://pypi.python.org/pypi/construct). (I'm using Construct version 2.04).
+You'll need the **latest version** of the awesome [**Construct**](http://construct.wikispaces.com/) library — used for defining the format. It currently appears to be available [here](http://pypi.python.org/pypi/construct). (I'm using Construct version 2.04).
 
-For saving images, you'll need the [PyPNG](https://code.google.com/p/pypng/) module. Kurt *should* work without it, if you don't want to save images — but it's strongly recommended.
+For saving images, you'll need the [**PyPNG**](https://code.google.com/p/pypng/) module. Kurt *should* work without it, if you don't want to save images — but it's strongly recommended.
 
 Tested with **Python 2.6**. Works with **Scratch 1.4**; not tested with earlier versions, but possibly works.
 
@@ -35,9 +35,9 @@ Tested with **Python 2.6**. Works with **Scratch 1.4**; not tested with earlier 
 ## Recent Changes 
 
 ###v1.2, images:
-* Can now parse most images! :D
+* Can now parse images! :D
 
-	Well, most images. If not, try opening the project with Scratch and saving it again — this sometimes helps.
+	Well, most images. If not, try reloading the project with Scratch and saving it again — this sometimes helps.
 	
 	Unfortunately, Kurt doesn't compress the images when saving them back to the file again (yet), so it may massively increase your file size :P Again, you can just open it in Scratch and save it again, and the file size will be back to normal.
 
@@ -180,7 +180,7 @@ I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, n
 
 ## Todo
 
-* <s>Parse images</s>
+* <s>Parse images</s> DONE! :D
 	* Compress Bitmap to ByteArray on save (using run-length encoding)
 	* Images with depth `16` are not supported *(need an example)*
 	* Images with depth `1` and `2` are buggy
@@ -189,6 +189,8 @@ I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, n
 * Import images from a separate `.png` or `.jpg` file and save them into a Scratch file.
 
 * Make some decent tests
+
+* Read/write external Sound files
 
 * "Default project" for building projects entirely "from scratch" (as it were) in Python code?
 
