@@ -8,12 +8,25 @@ If you're interested in technical details of how the format works: the code shou
 **WARNING**: Make sure you take a backup of your Scratch projects before saving anything with kurt! kurt is by no means fully tested. I can't accept responsibility for corrupting your files.
 
 
+## Installation
+
+You'll need the awesome [Construct](http://construct.wikispaces.com/) library — used for defining the format. Make sure you get the latest version, which currently appears to be available [here](http://pypi.python.org/pypi/construct).
+
+For saving images, 
+
+Tested with **Python 2.6**. Works with **Scratch 1.4**; not tested with earlier versions, but possibly works.
+
+[Scratch](http://scratch.mit.edu/) is created by the Lifelong Kindergarten Group at the MIT Media Lab.
+
+
 ## Recent Changes 
 
 * Split Sprite.media into separate costumes/sounds lists.
 
 ###v1.2, images:
 * Can now parse most images! :D
+
+	Well, most images. If not, try opening the project with Scratch and saving it again — this sometimes helps. No idea why :P
 
 ###v1.1, scripts:
 
@@ -22,11 +35,6 @@ If you're interested in technical details of how the format works: the code shou
 * Filled out the `_fields` list for most of the objects in `user_objects` from the Squeak source (not the unused ones), so there should now be no "undefined" fields.
 * `Color` is now parsed correctly
 * Added `ScratchProjectFile.sprites` shortcut as an alias for `project.stage.sprites`
-
-
-## Dependencies
-
-You'll need the awesome [Construct](http://construct.wikispaces.com/) library — used for defining the format. Make sure you get the latest version, which currently appears to be available [here](http://pypi.python.org/pypi/construct).
 
 
 ## Usage
@@ -76,13 +84,6 @@ Save:
 Now re-open the project with Scratch!
 
 Everything should, of course, work perfectly; if you have any problems, please file an issue, and I'll take a look! (:
-
-
-## Details
-
-Tested with **Python 2.6**. Works with **Scratch 1.4**; not tested with earlier versions, but possibly works.
-
-[Scratch](http://scratch.mit.edu/) is created by the Lifelong Kindergarten Group at the MIT Media Lab.
 
 
 ## Licence
