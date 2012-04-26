@@ -43,10 +43,6 @@ USAGE:
     Scratch is created by the Lifelong Kindergarten Group at the MIT Media Lab. 
     See their website: http://scratch.mit.edu/
 """
-# TODO:
-#   - Fill out all the _fields lists in user_objects.
-#   - Implement some nice Pythonic classes for manipulating scripts.
-#   - Optimise ObjectNetworkAdapter for building large files.
 
 from kurt.objtable import *
 from kurt.files import *
