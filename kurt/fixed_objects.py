@@ -325,6 +325,9 @@ class Point(FixedObject):
     def value(self):
         return (self.x, self.y)
     
+    def __iter__(self):
+        return iter(self.value)
+    
     def __repr__(self):
         return 'Point(%r, %r)' % self.value
     
