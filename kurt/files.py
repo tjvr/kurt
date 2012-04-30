@@ -39,14 +39,16 @@ class BinaryFile(object):
     
     EXTENSION = None
     
-    def __init__(self, path):
+    def __init__(self, path, load=True):
         """Loads a file.
         @param path: the path passed to open().
         """
         if not path.lower().endswith("."+self.EXTENSION.lower()):
             path += "."+self.EXTENSION
         self.path = path
-        self.load()
+        
+        if load:
+            self.load()
     
     @property
     def name(self):
