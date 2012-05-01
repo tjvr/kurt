@@ -34,6 +34,9 @@ Tested with **Python 2.6**. Works with **Scratch 1.4**; not tested with earlier 
 
 ## Recent Changes 
 
+###v1.3, decompiler:
+* Images with depth `1` and `2` now work — (fixed some buggy reverse-engineered code).
+
 ###v1.2, images:
 * Can now parse images! :D
 
@@ -183,7 +186,6 @@ I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, n
 * <s>Parse images</s> DONE! :D
 	* Compress Bitmap to ByteArray on save (using run-length encoding)
 	* Images with depth `16` are not supported *(need an example)*
-	* Images with depth `1` and `2` are buggy
 	* Default color values — `squeak_colors` *(need an example)*
 
 * Import images from a separate `.png` or `.jpg` file and save them into a Scratch file.

@@ -514,11 +514,13 @@ class Form(FixedObject, ContainsRefs):
         pixel_count = 0
         num_pixels = self.width * self.height
         
+        # Rows are rounded to be a whole number of words (32 bits) long.
+        # I *think* this is because Bitmaps are run-length encoded in 32-bit segments.
         skip = 0
         if self.depth <= 8:
-            pixels_per_byte = 8 / self.depth
-            pixels_in_last_byte = self.width % pixels_per_byte
-            skip = pixels_per_byte - pixels_in_last_byte
+            pixels_per_word = 32 / self.depth
+            pixels_in_last_word = self.width % pixels_per_word
+            skip = (pixels_per_word - pixels_in_last_word) % pixels_per_word
         
         x = 0
         pixels = self._to_pixels()
@@ -546,10 +548,6 @@ class Form(FixedObject, ContainsRefs):
                     pixel = pixels.next()
                 x = 0
         
-        #if pixel_count > num_pixels: # DEBUG
-        #    raise ValueError, "More pixels than expected"
-        
-        # Width must be a multiple of depth?
         return (self.width, self.height, rgba)
     
     def save_png(self, path):

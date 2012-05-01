@@ -403,7 +403,7 @@ class ImageMedia(ScratchMedia):
                 format = "jpg"
             else:
                 format = "png"
-            
+        
         try:
             format = format.lstrip(".")
             save_func = getattr(self, "save_%s"%format)
@@ -418,14 +418,12 @@ class ImageMedia(ScratchMedia):
         return name
     
     def save_png(self, path):
-        self.form.save_png(path)    
         if self.compositeForm:
             form = self.compositeForm
-            print form.depth # DEBUG
         else:
             form = self.form
         
-        form.save_png(path, skip)    
+        form.save_png(path)    
         
     def save_jpg(self, path):
         if not self.jpegBytes:

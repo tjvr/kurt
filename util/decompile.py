@@ -56,8 +56,7 @@ def decompile(project):
     
     project.load()
     
-        sprite_dir = os.path.join(project_dir, sprite.name)
-    for sprite in [project.sprites[3]]:
+    for sprite in project.sprites:
         sprite_dir = join_path(project_dir, sprite.name)
         os.mkdir(sprite_dir)
         
@@ -71,6 +70,7 @@ def decompile(project):
             filename = costume.save(costume_path)
             
             costumes_list += "%s\n" % filename
+            costumes_list += "# Original depth: %s\n" % costume.depth
             costumes_list += "\n"
         
         if line_endings != "\n":
