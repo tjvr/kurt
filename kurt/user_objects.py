@@ -419,6 +419,13 @@ class ImageMedia(ScratchMedia):
     
     def save_png(self, path):
         self.form.save_png(path)    
+        if self.compositeForm:
+            form = self.compositeForm
+            print form.depth # DEBUG
+        else:
+            form = self.form
+        
+        form.save_png(path, skip)    
         
     def save_jpg(self, path):
         if not self.jpegBytes:

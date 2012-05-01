@@ -25,12 +25,15 @@ Scripts are converted to scratchblocks format txt files.
 """
 
 import os, sys
+from os.path import join as join_path
+from os.path import split as split_path
+
 
 try:
     import kurt
 except ImportError: # try and find kurt directory
-    path_to_file = os.path.join(os.getcwd(), __file__)
-    path_to_lib = os.path.split(os.path.split(path_to_file)[0])[0]
+    path_to_file = join_path(os.getcwd(), __file__)
+    path_to_lib = split_path(split_path(path_to_file)[0])[0]
     sys.path.append(path_to_lib)
 
 from kurt.files import *
@@ -43,26 +46,42 @@ class FolderExistsException(Exception):
 
 
 def decompile(project):
-    (project_dir, name) = os.path.split(project.path)
-    project_dir = os.path.join(project_dir, "%s files" % project.name)
+    line_endings = "\r\n"
+    
+    (project_dir, name) = split_path(project.path)
+    project_dir = join_path(project_dir, "%s files" % project.name)
     if os.path.exists(project_dir):
         raise FolderExistsException(project_dir)
     os.mkdir(project_dir)
     
     project.load()
     
-    for sprite in project.sprites:
         sprite_dir = os.path.join(project_dir, sprite.name)
+    for sprite in [project.sprites[3]]:
+        sprite_dir = join_path(project_dir, sprite.name)
         os.mkdir(sprite_dir)
         
-        costumes_dir = os.path.join(sprite_dir, "costumes")
+        costumes_dir = join_path(sprite_dir, "costumes")
         os.mkdir(costumes_dir)
         
+        costumes_list = ""
         for costume in sprite.costumes:
-            costume_path = os.path.join(costumes_dir, costume.name)
-            costume.save(costume_path)
+            costume_path = join_path(costumes_dir, costume.name)
+            
+            filename = costume.save(costume_path)
+            
+            costumes_list += "%s\n" % filename
+            costumes_list += "\n"
         
-        scripts_dir = os.path.join(sprite_dir, "scripts")
+        if line_endings != "\n":
+            costumes_list = costumes_list.replace("\n", line_endings)                
+        costume_list_path = join_path(sprite_dir, "costumes.txt")
+        f = open(costume_list_path, "w")
+        f.write(costumes_list)
+        f.flush()
+        f.close()
+        
+        scripts_dir = join_path(sprite_dir, "scripts")
         os.mkdir(scripts_dir)
         
         i = 1
@@ -72,10 +91,10 @@ def decompile(project):
             contents += "\n"
             contents += script.to_block_plugin()
             
-            # Windows-compatible line endings
-            contents.replace("\n", "\r\n")
+            if line_endings != "\n":
+                contents = contents.replace("\n", line_endings)
             
-            script_path = os.path.join(scripts_dir, "script%i.txt" % i)
+            script_path = join_path(scripts_dir, "script%i.txt" % i)
             f = open(script_path, "w")
             f.write(contents)
             f.flush()
