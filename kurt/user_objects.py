@@ -386,13 +386,16 @@ class ImageMedia(ScratchMedia):
     
     def save(self, path, format=None):
         """Save the image data to an external file.
+        Returns the filename with extension.
         Arguments:
             path - the absolute or relative path to save to. Does not require extension.
             format - the extension to save as, "png" or "jpg". May throw an error if 
                      image format is different.
         """
+        guessed_from_extension = False
         (folder, name) = os.path.split(path)
         if not format and "." in name:
+            guessed_from_extension = True
             format = name.split('.')[-1]
         
         if not format:
@@ -407,8 +410,12 @@ class ImageMedia(ScratchMedia):
             assert callable(save_func)
         except (AssertionError, AttributeError):
             raise ValueError, "Invalid format %r" % format
-        
+            
         save_func(path)
+        
+        if not guessed_from_extension:
+            name = name + "." + format
+        return name
     
     def save_png(self, path):
         self.form.save_png(path)    
