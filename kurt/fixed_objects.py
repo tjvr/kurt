@@ -432,6 +432,17 @@ class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
 
 
 
+# Default color values, used by Form
+squeak_color_data = "\xff\xff\xff\x00\x00\x00\xff\xff\xff\x80\x80\x80\xff\x00\x00\x00\xff\x00\x00\x00\xff\x00\xff\xff\xff\xff\x00\xff\x00\xff   @@@```\x9f\x9f\x9f\xbf\xbf\xbf\xdf\xdf\xdf\x08\x08\x08\x10\x10\x10\x18\x18\x18(((000888HHHPPPXXXhhhpppxxx\x87\x87\x87\x8f\x8f\x8f\x97\x97\x97\xa7\xa7\xa7\xaf\xaf\xaf\xb7\xb7\xb7\xc7\xc7\xc7\xcf\xcf\xcf\xd7\xd7\xd7\xe7\xe7\xe7\xef\xef\xef\xf7\xf7\xf7\x00\x00\x00\x003\x00\x00f\x00\x00\x99\x00\x00\xcc\x00\x00\xff\x00\x00\x003\x0033\x00f3\x00\x993\x00\xcc3\x00\xff3\x00\x00f\x003f\x00ff\x00\x99f\x00\xccf\x00\xfff\x00\x00\x99\x003\x99\x00f\x99\x00\x99\x99\x00\xcc\x99\x00\xff\x99\x00\x00\xcc\x003\xcc\x00f\xcc\x00\x99\xcc\x00\xcc\xcc\x00\xff\xcc\x00\x00\xff\x003\xff\x00f\xff\x00\x99\xff\x00\xcc\xff\x00\xff\xff3\x00\x0033\x003f\x003\x99\x003\xcc\x003\xff\x003\x0033333f33\x9933\xcc33\xff33\x00f33f3ff3\x99f3\xccf3\xfff3\x00\x9933\x993f\x993\x99\x993\xcc\x993\xff\x993\x00\xcc33\xcc3f\xcc3\x99\xcc3\xcc\xcc3\xff\xcc3\x00\xff33\xff3f\xff3\x99\xff3\xcc\xff3\xff\xfff\x00\x00f3\x00ff\x00f\x99\x00f\xcc\x00f\xff\x00f\x003f33ff3f\x993f\xcc3f\xff3f\x00ff3fffff\x99ff\xccff\xffff\x00\x99f3\x99ff\x99f\x99\x99f\xcc\x99f\xff\x99f\x00\xccf3\xccff\xccf\x99\xccf\xcc\xccf\xff\xccf\x00\xfff3\xffff\xfff\x99\xfff\xcc\xfff\xff\xff\x99\x00\x00\x993\x00\x99f\x00\x99\x99\x00\x99\xcc\x00\x99\xff\x00\x99\x003\x9933\x99f3\x99\x993\x99\xcc3\x99\xff3\x99\x00f\x993f\x99ff\x99\x99f\x99\xccf\x99\xfff\x99\x00\x99\x993\x99\x99f\x99\x99\x99\x99\x99\xcc\x99\x99\xff\x99\x99\x00\xcc\x993\xcc\x99f\xcc\x99\x99\xcc\x99\xcc\xcc\x99\xff\xcc\x99\x00\xff\x993\xff\x99f\xff\x99\x99\xff\x99\xcc\xff\x99\xff\xff\xcc\x00\x00\xcc3\x00\xccf\x00\xcc\x99\x00\xcc\xcc\x00\xcc\xff\x00\xcc\x003\xcc33\xccf3\xcc\x993\xcc\xcc3\xcc\xff3\xcc\x00f\xcc3f\xccff\xcc\x99f\xcc\xccf\xcc\xfff\xcc\x00\x99\xcc3\x99\xccf\x99\xcc\x99\x99\xcc\xcc\x99\xcc\xff\x99\xcc\x00\xcc\xcc3\xcc\xccf\xcc\xcc\x99\xcc\xcc\xcc\xcc\xcc\xff\xcc\xcc\x00\xff\xcc3\xff\xccf\xff\xcc\x99\xff\xcc\xcc\xff\xcc\xff\xff\xff\x00\x00\xff3\x00\xfff\x00\xff\x99\x00\xff\xcc\x00\xff\xff\x00\xff\x003\xff33\xfff3\xff\x993\xff\xcc3\xff\xff3\xff\x00f\xff3f\xffff\xff\x99f\xff\xccf\xff\xfff\xff\x00\x99\xff3\x99\xfff\x99\xff\x99\x99\xff\xcc\x99\xff\xff\x99\xff\x00\xcc\xff3\xcc\xfff\xcc\xff\x99\xcc\xff\xcc\xcc\xff\xff\xcc\xff\x00\xff\xff3\xff\xfff\xff\xff\x99\xff\xff\xcc\xff\xff\xff\xff"
+squeak_colors = []
+for i in range(0, len(squeak_color_data), 4):
+    color = squeak_color_data[i:i+4]
+    alpha = color[3]
+    rgb = color[0:3]
+    squeak_colors.append(TranslucentColor.from_32bit_raw(alpha + rgb))
+del squeak_color_data
+
+
 class Form(FixedObject, ContainsRefs):
     """A rectangular array of pixels, used for holding images.
     Attributes:
@@ -452,10 +463,6 @@ class Form(FixedObject, ContainsRefs):
         Rename("bits", Field), # Bitmap
     )
     
-    # TODO: default color values
-    #_squeak_colors = [-1, -1, -1, 0, 0, 0, -1, -1, -1, -128, -128, -128, -1, 0, 0, 0, -1, 0, 0, 0, -1, 0, -1, -1, -1, -1, 0, -1, 0, -1, 32, 32, 32, 64, 64, 64, 96, 96, 96, -97, -97, -97, -65, -65, -65, -33, -33, -33, 8, 8, 8, 16, 16, 16, 24, 24, 24, 40, 40, 40, 48, 48, 48, 56, 56, 56, 72, 72, 72, 80, 80, 80, 88, 88, 88, 104, 104, 104, 112, 112, 112, 120, 120, 120, -121, -121, -121, -113, -113, -113, -105, -105, -105, -89, -89, -89, -81, -81, -81, -73, -73, -73, -57, -57, -57, -49, -49, -49, -41, -41, -41, -25, -25, -25, -17, -17, -17, -9, -9, -9, 0, 0, 0, 0, 51, 0, 0, 102, 0, 0, -103, 0, 0, -52, 0, 0, -1, 0, 0, 0, 51, 0, 51, 51, 0, 102, 51, 0, -103, 51, 0, -52, 51, 0, -1, 51, 0, 0, 102, 0, 51, 102, 0, 102, 102, 0, -103, 102, 0, -52, 102, 0, -1, 102, 0, 0, -103, 0, 51, -103, 0, 102, -103, 0, -103, -103, 0, -52, -103, 0, -1, -103, 0, 0, -52, 0, 51, -52, 0, 102, -52, 0, -103, -52, 0, -52, -52, 0, -1, -52, 0, 0, -1, 0, 51, -1, 0, 102, -1, 0, -103, -1, 0, -52, -1, 0, -1, -1, 51, 0, 0, 51, 51, 0, 51, 102, 0, 51, -103, 0, 51, -52, 0, 51, -1, 0, 51, 0, 51, 51, 51, 51, 51, 102, 51, 51, -103, 51, 51, -52, 51, 51, -1, 51, 51, 0, 102, 51, 51, 102, 51, 102, 102, 51, -103, 102, 51, -52, 102, 51, -1, 102, 51, 0, -103, 51, 51, -103, 51, 102, -103, 51, -103, -103, 51, -52, -103, 51, -1, -103, 51, 0, -52, 51, 51, -52, 51, 102, -52, 51, -103, -52, 51, -52, -52, 51, -1, -52, 51, 0, -1, 51, 51, -1, 51, 102, -1, 51, -103, -1, 51, -52, -1, 51, -1, -1, 102, 0, 0, 102, 51, 0, 102, 102, 0, 102, -103, 0, 102, -52, 0, 102, -1, 0, 102, 0, 51, 102, 51, 51, 102, 102, 51, 102, -103, 51, 102, -52, 51, 102, -1, 51, 102, 0, 102, 102, 51, 102, 102, 102, 102, 102, -103, 102, 102, -52, 102, 102, -1, 102, 102, 0, -103, 102, 51, -103, 102, 102, -103, 102, -103, -103, 102, -52, -103, 102, -1, -103, 102, 0, -52, 102, 51, -52, 102, 102, -52, 102, -103, -52, 102, -52, -52, 102, -1, -52, 102, 0, -1, 102, 51, -1, 102, 102, -1, 102, -103, -1, 102, -52, -1, 102, -1, -1, -103, 0, 0, -103, 51, 0, -103, 102, 0, -103, -103, 0, -103, -52, 0, -103, -1, 0, -103, 0, 51, -103, 51, 51, -103, 102, 51, -103, -103, 51, -103, -52, 51, -103, -1, 51, -103, 0, 102, -103, 51, 102, -103, 102, 102, -103, -103, 102, -103, -52, 102, -103, -1, 102, -103, 0, -103, -103, 51, -103, -103, 102, -103, -103, -103, -103, -103, -52, -103, -103, -1, -103, -103, 0, -52, -103, 51, -52, -103, 102, -52, -103, -103, -52, -103, -52, -52, -103, -1, -52, -103, 0, -1, -103, 51, -1, -103, 102, -1, -103, -103, -1, -103, -52, -1, -103, -1, -1, -52, 0, 0, -52, 51, 0, -52, 102, 0, -52, -103, 0, -52, -52, 0, -52, -1, 0, -52, 0, 51, -52, 51, 51, -52, 102, 51, -52, -103, 51, -52, -52, 51, -52, -1, 51, -52, 0, 102, -52, 51, 102, -52, 102, 102, -52, -103, 102, -52, -52, 102, -52, -1, 102, -52, 0, -103, -52, 51, -103, -52, 102, -103, -52, -103, -103, -52, -52, -103, -52, -1, -103, -52, 0, -52, -52, 51, -52, -52, 102, -52, -52, -103, -52, -52, -52, -52, -52, -1, -52, -52, 0, -1, -52, 51, -1, -52, 102, -1, -52, -103, -1, -52, -52, -1, -52, -1, -1, -1, 0, 0, -1, 51, 0, -1, 102, 0, -1, -103, 0, -1, -52, 0, -1, -1, 0, -1, 0, 51, -1, 51, 51, -1, 102, 51, -1, -103, 51, -1, -52, 51, -1, -1, 51, -1, 0, 102, -1, 51, 102, -1, 102, 102, -1, -103, 102, -1, -52, 102, -1, -1, 102, -1, 0, -103, -1, 51, -103, -1, 102, -103, -1, -103, -103, -1, -52, -103, -1, -1, -103, -1, 0, -52, -1, 51, -52, -1, 102, -52, -1, -103, -52, -1, -52, -52, -1, -1, -52, -1, 0, -1, -1, 51, -1, -1, 102, -1, -1, -103, -1, -1, -52, -1, -1, -1, -1]
-    #_squeak_colors = [_squeak_colors[i:i+4] for i in range(0, len(_squeak_colors), 4)]
-    
     @property
     def value(self):
         return dict((k, getattr(self, k)) for k in self.__dict__ if not k.startswith("_"))
@@ -468,6 +475,7 @@ class Form(FixedObject, ContainsRefs):
         return cls(**dict(value))
     
     def __init__(self, **fields):
+        self.colors = None
         self.__dict__.update(fields)
     
     def __repr__(self):
@@ -495,8 +503,7 @@ class Form(FixedObject, ContainsRefs):
             
             elif self.depth <= 8:
                 if self.colors is None:
-                    raise NotImplementedError, "TODO: default color values"
-                    # default color values are found in squeak_colors
+                    self.colors = squeak_colors # default color values
                 
                 length = len(pixel_bytes) * 8 / self.depth
                 pixels_construct = BitStruct("",
