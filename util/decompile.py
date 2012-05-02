@@ -28,6 +28,10 @@ import os, sys
 from os.path import join as join_path
 from os.path import split as split_path
 
+import codecs
+def open(file, mode):
+    return codecs.open(file, mode, "utf-8")
+
 
 try:
     import kurt
@@ -40,9 +44,69 @@ from kurt.files import *
 
 
 
+class InvalidProject(Exception):
+    pass
+
 class FolderExistsException(Exception):
     pass
 
+
+
+def log(msg):
+    print msg
+
+
+def write_file(path, contents, line_endings):
+    if line_endings != "\n":
+        contents = contents.replace("\n", line_endings)                
+    
+    f = open(path, "w")
+    f.write(contents)
+    f.flush()
+    f.close()
+
+
+def export_sprite(parent_dir, sprite, line_endings):
+    log("* "+sprite.name)
+    
+    sprite_dir = join_path(parent_dir, sprite.name)
+    os.mkdir(sprite_dir)
+
+    # Scripts
+    scripts_dir = join_path(sprite_dir, "scripts")
+    os.mkdir(scripts_dir)
+    
+    scripts = sorted(sprite.scripts, key=lambda script: script.pos.y)
+    
+    count = 1
+    for script in scripts:
+        (x, y) = script.pos
+        contents = "# Position: %s, %s \n" % (x, y)
+        contents += "\n"
+        contents += script.to_block_plugin()
+        
+        script_path = join_path(scripts_dir, "script%i.txt" % count)
+        write_file(script_path, contents, line_endings)
+        
+        count += 1
+    
+    # Costumes/Backgrounds
+    costumes_dir = join_path(sprite_dir, "costumes")
+    os.mkdir(costumes_dir)
+    
+    costumes_list = ""
+    for costume in sprite.images:
+        costume_path = join_path(costumes_dir, costume.name)
+        
+        filename = costume.save(costume_path)
+        
+        (rx, ry) = costume.rotationCenter
+        costumes_list += "%s\n" % filename
+        costumes_list += "rotationCenter: %i, %i\n" % (rx, ry)
+        costumes_list += "\n"
+        
+    costume_list_path = join_path(sprite_dir, "costumes.txt")
+    write_file(costume_list_path, costumes_list, line_endings)
 
 
 def decompile(project):
@@ -54,53 +118,19 @@ def decompile(project):
         raise FolderExistsException(project_dir)
     os.mkdir(project_dir)
     
+    log("Loading project %s..." % project.path)
     project.load()
     
+    log("Exporting sprites...")
+    export_sprite(project_dir, project.stage, line_endings)
+    
     for sprite in project.sprites:
-        sprite_dir = join_path(project_dir, sprite.name)
-        os.mkdir(sprite_dir)
+        if sprite.name == "Stage": # disallow this!
+            raise InvalidProject("Can't have sprite named 'Stage'")
         
-        costumes_dir = join_path(sprite_dir, "costumes")
-        os.mkdir(costumes_dir)
-        
-        costumes_list = ""
-        for costume in sprite.costumes:
-            costume_path = join_path(costumes_dir, costume.name)
-            
-            filename = costume.save(costume_path)
-            
-            costumes_list += "%s\n" % filename
-            costumes_list += "# Original depth: %s\n" % costume.depth
-            costumes_list += "\n"
-        
-        if line_endings != "\n":
-            costumes_list = costumes_list.replace("\n", line_endings)                
-        costume_list_path = join_path(sprite_dir, "costumes.txt")
-        f = open(costume_list_path, "w")
-        f.write(costumes_list)
-        f.flush()
-        f.close()
-        
-        scripts_dir = join_path(sprite_dir, "scripts")
-        os.mkdir(scripts_dir)
-        
-        i = 1
-        for script in sorted(sprite.scripts, key=lambda script: script.pos.y):
-            (x, y) = script.pos
-            contents = "# Position: %s, %s \n" % (x, y)
-            contents += "\n"
-            contents += script.to_block_plugin()
-            
-            if line_endings != "\n":
-                contents = contents.replace("\n", line_endings)
-            
-            script_path = join_path(scripts_dir, "script%i.txt" % i)
-            f = open(script_path, "w")
-            f.write(contents)
-            f.flush()
-            f.close()
-            
-            i += 1
+        export_sprite(project_dir, sprite, line_endings)
+    
+    log("Done!")
 
 
 
@@ -118,4 +148,7 @@ if __name__ == '__main__':
     except FolderExistsException, e:
         print "Folder exists: %r" % str(e)
         exit(1)
+    except InvalidProject, e:
+        print "Invalid project: %r" % str(e)
+        exit(2)
 
