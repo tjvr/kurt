@@ -384,6 +384,13 @@ class ImageMedia(ScratchMedia):
         if name in ("width", "height"):
             return getattr(self.form, name)
     
+    @property
+    def form_with_text(self):
+        if self.compositeForm:
+            return self.compositeForm
+        else:
+            return self.form
+    
     def save(self, path, format=None):
         """Save the image data to an external file.
         Returns the filename with extension.
@@ -418,12 +425,7 @@ class ImageMedia(ScratchMedia):
         return name
     
     def save_png(self, path):
-        if self.compositeForm:
-            form = self.compositeForm
-        else:
-            form = self.form
-        
-        form.save_png(path)    
+        self.form_with_text.save_png(path)    
         
     def save_jpg(self, path):
         if not self.jpegBytes:

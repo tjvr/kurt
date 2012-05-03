@@ -219,6 +219,13 @@ class Color(FixedObject):
         Bits("b", 10),
     )
     
+    _construct_32_rgba = Struct("",
+        UBInt8("r"),
+        UBInt8("g"),
+        UBInt8("b"),
+        UBInt8("alpha"),
+    )
+    
     def __init__(self, r, g, b):
         self.r = r
         self.g = g
@@ -244,6 +251,10 @@ class Color(FixedObject):
     def to_8bit(self):
         """Returns value with components between 0-256."""
         return tuple(x >> 2 for x in self.value)
+    
+    def to_rgba_array(self):
+        (r, g, b) = self.to_8bit()
+        return array('B', (r, g, b, 255))
     
     def hexcode(self):
         """Returns the color value in hex/HTML format.
@@ -284,13 +295,16 @@ class TranslucentColor(Color):
         return cls(value.r, value.g, value.b, value.alpha)
     
     @classmethod
-    def from_32bit_raw(cls, raw):
+    def from_32bit_raw_argb(cls, raw):
         container = cls._construct_32.parse(raw)
         parts = cls.from_value(container)
         color = cls(*(x << 2 for x in parts.value))
         if color.alpha == 0 and (color.r > 0 or color.g > 0 or color.b > 0):
             color.alpha = 1023
         return color
+    
+    def to_rgba_array(self):
+        return array('B', self.to_8bit())
     
     @property
     def value(self):
@@ -437,9 +451,10 @@ squeak_color_data = "\xff\xff\xff\x00\x00\x00\xff\xff\xff\x80\x80\x80\xff\x00\x0
 squeak_colors = []
 for i in range(0, len(squeak_color_data), 4):
     color = squeak_color_data[i:i+4]
-    alpha = color[3]
-    rgb = color[0:3]
-    squeak_colors.append(TranslucentColor.from_32bit_raw(alpha + rgb))
+    squeak_colors.append(array("B", (ord(x) for x in color[i:i+4])))
+#    alpha = color[3]
+#    rgb = color[0:3]
+#    squeak_colors.append(TranslucentColor.from_32bit_raw(alpha + rgb))
 del squeak_color_data
 
 
@@ -490,12 +505,21 @@ class Form(FixedObject, ContainsRefs):
         assert isinstance(self.bits, Bitmap)
     
     def _to_pixels(self):
-        pixel_bytes = self.bits.value #decode_pixels()
+        pixel_bytes = self.bits.value
         
         if self.depth == 32:
-            for pixel in (pixel_bytes[i:i+4] for i in range(0, len(pixel_bytes), 4)):
-                color = TranslucentColor.from_32bit_raw(pixel)
-                yield color 
+            for i in range(0, len(pixel_bytes), 4):
+                (a, r, g, b) = (ord(x) for x in pixel_bytes[i:i+4])
+                if a == 0 and (r > 0 or g > 0 or b > 0):
+                    a = 255
+                yield array("B", (r, g, b, a))
+                
+                #alpha = argb[0]
+                #rgb = argb[1:4]
+                #if alpha == "\x00" and rgb != "\x00\x00\x00":
+                #    alpha = "\xff"
+                #rgba = rgb + alpha
+                #yield rgba
         
         else:
             if self.depth == 16:
@@ -503,7 +527,9 @@ class Form(FixedObject, ContainsRefs):
             
             elif self.depth <= 8:
                 if self.colors is None:
-                    self.colors = squeak_colors # default color values
+                    colors = squeak_colors # default color values
+                else:
+                    colors = [color.to_rgba_array() for color in self.colors]
                 
                 length = len(pixel_bytes) * 8 / self.depth
                 pixels_construct = BitStruct("",
@@ -514,7 +540,7 @@ class Form(FixedObject, ContainsRefs):
                 pixels = pixels_construct.parse(pixel_bytes).pixels
                 
                 for pixel in pixels:
-                    yield self.colors[pixel]
+                    yield colors[pixel]
     
     def to_array(self):
         rgba = array('B') #unsigned byte
@@ -537,16 +563,17 @@ class Form(FixedObject, ContainsRefs):
             except StopIteration:
                 break
             
-            if isinstance(color, TranslucentColor):
-                (r, g, b, a) = color.to_8bit()
-            else:
-                (r, g, b) = color.to_8bit()
-                a = 255
+            #if isinstance(color, TranslucentColor):
+            #    (r, g, b, a) = color.to_8bit()
+            #else:
+            #    (r, g, b) = color.to_8bit()
+            #    a = 255
             
-            rgba.append(r)
-            rgba.append(g)
-            rgba.append(b)
-            rgba.append(a)
+            rgba += color
+            #rgba.append(r)
+            #rgba.append(g)
+            #rgba.append(b)
+            #rgba.append(a)
             
             pixel_count += 1
             x += 1            
