@@ -84,7 +84,7 @@ class UserObject(object):
         @param field_values: (optional) list of fields as parsed from a file.
         @param **args: field values.
         """
-        self.fields = {}
+        self.fields = dict(zip(self._fields, [None] * len(self._fields)))
         
         self.version = 1
         if 'version' in args:
@@ -141,7 +141,11 @@ class UserObject(object):
     
     @property
     def name(self):
-        return getattr(self, 'objName')
+        return getattr(self, "objName")
+    
+    @name.setter
+    def name(self, value):
+        setattr(self, "objName", value)
     
     def __repr__(self):
         name = getattr(self, "name", "")
@@ -238,6 +242,11 @@ class ScriptableScratchMorph(BaseMorph):
     def scripts(self):
         """Alias for blocksBin."""
         return self.blocksBin
+    
+    @scripts.setter
+    def scripts(self, value):
+        """Alias for blocksBin."""
+        self.blocksBin = value
 
 
 
@@ -262,6 +271,10 @@ class ScratchSpriteMorph(ScriptableScratchMorph):
     @property
     def costumes(self):
         return self.images
+        
+    @costumes.setter
+    def costumes(self, value):
+        self.images = value
 
 
 class ScratchStageMorph(ScriptableScratchMorph):
@@ -282,6 +295,10 @@ class ScratchStageMorph(ScriptableScratchMorph):
     @property
     def backgrounds(self):
         return self.images
+    
+    @backgrounds.setter
+    def backgrounds(self, value):
+        self.images = value
 
 
 from scripts import Script
@@ -342,6 +359,10 @@ class WatcherMorph(AlignmentMorph):
     @property
     def name(self):
         return self.titleMorph.contents
+    
+    @name.setter
+    def name(self, value):
+        self.titleMorph.contents = value
 
 class SetterBlockMorph(BaseMorph):
     """unused?"""
@@ -364,7 +385,12 @@ class ScratchMedia(UserObject):
     
     @property
     def name(self):
-        return getattr(self, 'mediaName')
+        return getattr(self, "mediaName")
+    
+    @name.setter
+    def name(self, value):
+        setattr(self, "mediaName", value)
+
 
 class ImageMedia(ScratchMedia):
     """An image file, used for costumes and backgrounds.
@@ -475,9 +501,10 @@ class ReporterBlockMorph(BaseMorph):
     """unused?"""
     classID = 170
 
-class MultilineStringMorph(BaseMorph):
-    """unused?"""
+class MultilineStringMorph(BorderedMorph):
+    """Used for costume text."""
     classID = 171
+    _fields = BorderedMorph._fields + ("font", "textColor", "selectionColor", "lines")
 
 class ToggleButton(SimpleButtonMorph):
     """unused?"""
@@ -502,7 +529,11 @@ class ScratchListMorph(BorderedMorph):
 	
     @property
     def name(self):
-        return getattr(self, 'listName')
+        return getattr(self, "listName")
+    
+    @name.setter
+    def name(self, value):
+        setattr(self, "listName", value)
     
     @property
     def items(self):
