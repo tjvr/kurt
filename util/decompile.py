@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Lesser General Public License along 
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
-"""Decompiles a Scratch project to a folders for each sprite containing its contents.
+"""Decompiles a Scratch project to folders containing its contents.
 Images are exported to PNG or JPG format files.
 Scripts are converted to scratchblocks format txt files.
 
@@ -120,7 +120,7 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
         
         (rx, ry) = costume.rotationCenter
         costumes_list += "%s\n" % filename
-        costumes_list += "rotation_center: %i, %i\n" % (rx, ry)
+        costumes_list += "rotationCenter: %i, %i\n" % (rx, ry)
         if costume == sprite.costume:
             costumes_list += "selected\n"
         
