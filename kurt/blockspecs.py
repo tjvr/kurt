@@ -37,6 +37,7 @@ from construct.text import *
 
 import re
 
+from fixed_objects import Symbol
 
 
 string = QuotedString("string", start_quote="'", end_quote="'", esc_char="\\")
@@ -109,7 +110,7 @@ blockspecs = Struct("blockspecs",
 
 ### Taken from Squeak source, with modifications.
 # Note: apostrophes ' and slashes \ need special escaping.
-squeak_blockspecs = """'control' ('when green flag clicked' #S #EventHatMorph) ('when %k key pressed' #K #KeyEventHatMorph) ('when %m clicked' #M #MouseClickEventHatMorph) #- ('wait %n secs' #t #wait:elapsed:from: 1) #- ('forever' #c #doForever) ('repeat %n' #c #doRepeat 10) #- ('broadcast %e' #- #broadcast:) ('broadcast %e and wait' #s #doBroadcastAndWait) ('when I receive %e' #E #-) #- ('forever if %b' #c #doForeverIf) ('if %b' #c #doIf) ('if %b' #c #doIfElse) ('wait until %b' #s #doWaitUntil) ('repeat until %b' #c #doUntil) #- ('stop script' #s #doReturn) ('stop all' #- #stopAll) 'operators' ('%n + %n' #r #+ #- #-) ('%n - %n' #r #- #- #-) ('%n * %n' #r #* #- #-) ('%n / %n' #r #/ #- #-) #- ('pick random %n to %n' #r #randomFrom:to: 1 10) #- ('%s < %s' #b #< '' '') ('%s = %s' #b #= '' '') ('%s > %s' #b #> '' '') #- ('%b and %b' #b #&) ('%b or %b' #b #|) ('not %b' #b #not) #- ('join %s %s' #r #concatenate:with: 'hello ' 'world') ('letter %n of %s' #r #letter:of: 1 'world') ('length of %s' #r #stringLength: 'world') #- ('%n mod %n' #r #\\\\ #- #-) ('round %n' #r #rounded #-) #- ('%f of %n' #r #computeFunction:of: 'sqrt' 10) ('A block with color %C and color %c' #- #thingwithColor:andColor:) 'sound' ('play sound %S' #- #playSound:) ('play sound %S until done' #s #doPlaySoundAndWait) ('stop all sounds' #- #stopAllSounds) #- ('play drum %D for %n beats' #t #drum:duration:elapsed:from: 48 0.2) ('rest for %n beats' #t #rest:elapsed:from: 0.2) #- ('play note %N for %n beats' #t #noteOn:duration:elapsed:from: 60 0.5) ('set instrument to %I' #- #midiInstrument: 1) #- ('change volume by %n' #- #changeVolumeBy: -10) ('set volume to %n%' #- #setVolumeTo: 100) ('volume' #r #volume) #- ('change tempo by %n' #- #changeTempoBy: 20) ('set tempo to %n bpm' #- #setTempoTo: 60) ('tempo' #r #tempo) 'motor' ('motor on for %n secs' #t #motorOnFor:elapsed:from: 1) ('motor on' #- #allMotorsOn) ('motor off' #- #allMotorsOff) ('motor power %n' #- #startMotorPower: 100) ('motor direction %W' #- #setMotorDirection: 'this way') 'variables' ('show variable %v' #- #showVariable:) ('hide variable %v' #- #hideVariable:) 'list' ('add %s to %L' #- #append:toList: 'thing') #- ('delete %y of %L' #- #deleteLine:ofList: 1) ('insert %s at %i of %L' #- #insert:at:ofList: 'thing' 1) ('replace item %i of %L with %s' #- #setLine:ofList:to: 1 'list' 'thing') #- ('item %i of %L' #r #getLine:ofList: 1) ('length of %L' #r #lineCountOfList:) ('%L contains %s' #b #list:contains: 'list' 'thing')"""
+squeak_blockspecs = """'control' ('when gf clicked' #S #EventHatMorph) ('when %k key pressed' #K #KeyEventHatMorph) ('when %m clicked' #M #MouseClickEventHatMorph) #- ('wait %n secs' #t #wait:elapsed:from: 1) #- ('forever' #c #doForever) ('repeat %n' #c #doRepeat 10) #- ('broadcast %e' #- #broadcast:) ('broadcast %e and wait' #s #doBroadcastAndWait) ('when I receive %e' #E #EventHatMorph) #- ('forever if %b' #c #doForeverIf) ('if %b' #c #doIf) ('if %b' #c #doIfElse) ('wait until %b' #s #doWaitUntil) ('repeat until %b' #c #doUntil) #- ('stop script' #s #doReturn) ('stop all' #- #stopAll) 'operators' ('%n + %n' #r #+ #- #-) ('%n - %n' #r #- #- #-) ('%n * %n' #r #* #- #-) ('%n / %n' #r #/ #- #-) #- ('pick random %n to %n' #r #randomFrom:to: 1 10) #- ('%s < %s' #b #< '' '') ('%s = %s' #b #= '' '') ('%s > %s' #b #> '' '') #- ('%b and %b' #b #&) ('%b or %b' #b #|) ('not %b' #b #not) #- ('join %s %s' #r #concatenate:with: 'hello ' 'world') ('letter %n of %s' #r #letter:of: 1 'world') ('length of %s' #r #stringLength: 'world') #- ('%n mod %n' #r #\\\\ #- #-) ('round %n' #r #rounded #-) #- ('%f of %n' #r #computeFunction:of: 'sqrt' 10) ('A block with color %C and color %c' #- #thingwithColor:andColor:) 'sound' ('play sound %S' #- #playSound:) ('play sound %S until done' #s #doPlaySoundAndWait) ('stop all sounds' #- #stopAllSounds) #- ('play drum %D for %n beats' #t #drum:duration:elapsed:from: 48 0.2) ('rest for %n beats' #t #rest:elapsed:from: 0.2) #- ('play note %N for %n beats' #t #noteOn:duration:elapsed:from: 60 0.5) ('set instrument to %I' #- #midiInstrument: 1) #- ('change volume by %n' #- #changeVolumeBy: -10) ('set volume to %n%' #- #setVolumeTo: 100) ('volume' #r #volume) #- ('change tempo by %n' #- #changeTempoBy: 20) ('set tempo to %n bpm' #- #setTempoTo: 60) ('tempo' #r #tempo) 'motor' ('motor on for %n secs' #t #motorOnFor:elapsed:from: 1) ('motor on' #- #allMotorsOn) ('motor off' #- #allMotorsOff) ('motor power %n' #- #startMotorPower: 100) ('motor direction %W' #- #setMotorDirection: 'this way') 'variables' ('show variable %v' #- #showVariable:) ('hide variable %v' #- #hideVariable:) 'list' ('add %s to %L' #- #append:toList: 'thing') #- ('delete %y of %L' #- #deleteLine:ofList: 1) ('insert %s at %i of %L' #- #insert:at:ofList: 'thing' 1) ('replace item %i of %L with %s' #- #setLine:ofList:to: 1 'list' 'thing') #- ('item %i of %L' #r #getLine:ofList: 1) ('length of %L' #r #lineCountOfList:) ('%L contains %s' #b #list:contains: 'list' 'thing')"""
 
 squeak_stage_blockspecs = """'sensing' ('ask %s and wait' #s #doAsk 'What\\'s your name?') ('answer' #r #answer) #- ('mouse x' #r #mouseX) ('mouse y' #r #mouseY) ('mouse down?' #b #mousePressed) #- ('key %k pressed?' #b #keyPressed: 'space') #- ('reset timer' #- #timerReset) ('timer' #r #timer) #- ('%a of %m' #r #getAttribute:of:) #- ('loudness' #r #soundLevel) ('loud?' #b #isLoud) #~ ('%H sensor value' #r #sensor: 'slider') ('sensor %h?' #b #sensorPressed: 'button pressed') 'looks' ('switch to background %l' #- #showBackground: 'background1') ('next background' #- #nextBackground) ('background #' #r #backgroundIndex) #- ('change %g effect by %n' #- #changeGraphicEffect:by: 'color' 25) ('set %g effect to %n' #- #setGraphicEffect:to: 'color' 0) ('clear graphic effects' #- #filterReset) #- 'pen' ('clear' #- #clearPenTrails)"""
 
@@ -142,7 +143,9 @@ class BlockType:
         self.defaults = defaults
     
     def copy(self):
-        return BlockType(self.command, self.text, self.flag, self.category, self.defaults[:])
+        return BlockType(
+            self.command, self.text, self.flag, self.category, self.defaults[:]
+        )
     
     @property
     def parts(self):
@@ -185,21 +188,47 @@ blocks = (list(parse_blockspec(squeak_blockspecs)) +
 
 blocks += [
     BlockType("readVariable", "%v", "r", "variables"),
-    #BlockType("changeVariable", "change %v by %n", category="variables"),
+    BlockType("changeVariable", "change %v by %n", defaults=[None, Symbol("changeVar:by:"), None], category="variables"),
+    BlockType("changeVariable", "set %v to %s", defaults=[None, Symbol("setVar:to:"), None], category="variables"),
 ]
 
 blocks_by_cmd = {}
 for block in blocks:
     cmd = block.command
-    blocks_by_cmd[cmd] = block
+    if cmd not in blocks_by_cmd:
+        blocks_by_cmd[cmd] = block
+
+blocks_by_cmd['EventHatMorph'].defaults = ["Scratch-StartClicked"]
+
+def strip_block_text(parts):
+    """Returns text with spaces and inserts removed."""
+    text = ''.join(part.replace(" ", "") for part in parts
+                    if part and not part[0] == "%")
+    for chr in "?:-":
+        new_text = text.replace(chr, "")
+        if new_text:
+            text = new_text
+    return text.lower()
+
 
 blocks_by_text = {}
 for block in blocks:
-    text = ''.join(part.replace(" ", "") for part in blocks[20].parts
-                    if part and not part[0] == "%") # Remove spaces and inserts
+    text = strip_block_text(block.parts)
+    
+    # Some blocks have same text
     if text not in blocks_by_text:
-        # Some blocks have same text
-        blocks_by_text[text] = block
+        blocks_by_text[text] = []
+    blocks_by_text[text].append(block)
+
+
+def find_block(text):
+    parts = BlockType.INSERT_RE.split(text)
+    text = strip_block_text(parts)
+    if text in blocks_by_text:
+        return blocks_by_text[text]
+    else:
+        return []
+
 
 block_plugin_inserts = {
     "%b": "<%s>",

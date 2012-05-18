@@ -24,12 +24,13 @@ Scripts are converted to scratchblocks format txt files.
     Usage: python decompile.py [path/to/file.sb]
 """
 
+import time
 import os, sys
 from os.path import join as join_path
 from os.path import split as split_path
 
 import codecs
-def open(file, mode):
+def open(file, mode="r"):
     return codecs.open(file, mode, "utf-8")
 
 
@@ -41,6 +42,7 @@ except ImportError: # try and find kurt directory
     sys.path.append(path_to_lib)
 
 from kurt.files import *
+from kurt import ScratchStageMorph
 
 
 
@@ -52,8 +54,11 @@ class FolderExistsException(Exception):
 
 
 
-def log(msg):
-    print msg
+def log(msg, newline=True):
+    if newline:
+        print msg
+    else:
+        print msg, 
 
 
 def write_file(path, contents, line_endings):
@@ -66,11 +71,16 @@ def write_file(path, contents, line_endings):
     f.close()
 
 
-def export_sprite(parent_dir, sprite, line_endings):
-    log("* "+sprite.name)
+def export_sprite(parent_dir, sprite, number, line_endings, debug):
+    log("* "+sprite.name, False)
+    start_time = time.time()
     
-    sprite_dir = join_path(parent_dir, sprite.name)
+    name = sprite.name
+    #if name == "Stage": name = "_Stage"
+    name = "%i %s" % (number, name)
+    sprite_dir = join_path(parent_dir, name)
     os.mkdir(sprite_dir)
+
 
     # Scripts
     scripts_dir = join_path(sprite_dir, "scripts")
@@ -81,35 +91,75 @@ def export_sprite(parent_dir, sprite, line_endings):
     count = 1
     for script in scripts:
         (x, y) = script.pos
-        contents = "# Position: %s, %s \n" % (x, y)
+        contents = "Position: %s, %s \n" % (x, y)
         contents += "\n"
         contents += script.to_block_plugin()
         
-        script_path = join_path(scripts_dir, "script%i.txt" % count)
+        name = "script%i %s" % (count, script.blocks[0].to_block_plugin())        
+        script_path = join_path(scripts_dir, name+".txt")
         write_file(script_path, contents, line_endings)
         
         count += 1
     
+    
     # Costumes/Backgrounds
-    costumes_dir = join_path(sprite_dir, "costumes")
+    if isinstance(sprite, ScratchStageMorph):
+        costumes_dir = join_path(sprite_dir, "backgrounds")
+    else:
+        costumes_dir = join_path(sprite_dir, "costumes")
+    
     os.mkdir(costumes_dir)
     
+    count = 1
     costumes_list = ""
     for costume in sprite.images:
-        costume_path = join_path(costumes_dir, costume.name)
+        name = "%i %s" % (count, costume.name)
+        costume_path = join_path(costumes_dir, name)
         
         filename = costume.save(costume_path)
         
         (rx, ry) = costume.rotationCenter
         costumes_list += "%s\n" % filename
-        costumes_list += "rotationCenter: %i, %i\n" % (rx, ry)
-        costumes_list += "\n"
+        costumes_list += "rotation_center: %i, %i\n" % (rx, ry)
+        if costume == sprite.costume:
+            costumes_list += "selected\n"
         
-    costume_list_path = join_path(sprite_dir, "costumes.txt")
+        if debug == True: # DEBUG
+            costumes_list += "# depth: %i\n" % costume.form_with_text.depth
+        
+        costumes_list += "\n"
+        count += 1
+    
+    costume_list_path = costumes_dir+".txt"
     write_file(costume_list_path, costumes_list, line_endings)
+    
+    
+    # Variables
+    var_list = ""
+    var_names = sorted(sprite.vars.keys())
+    for var_name in var_names:
+        var_list += var_name + " = " + unicode(sprite.vars[var_name])
+        var_list += "\n"
+    
+    var_list_path = join_path(sprite_dir, "variables.txt")
+    write_file(var_list_path, var_list, line_endings)
+    
+    
+    # Lists
+    lists_dir = join_path(sprite_dir, "lists")
+    os.mkdir(lists_dir)
+    for list in sprite.lists.values():
+        list_path = join_path(lists_dir, list.name+".txt")
+        contents = "\n".join(list.items)
+        write_file(list_path, contents, line_endings)
+    
+    
+    sprite_save_time = time.time() - start_time
+    log(sprite_save_time)
 
 
-def decompile(project):
+
+def decompile(project, debug=True): # DEBUG: set to false
     line_endings = "\r\n"
     
     (project_dir, name) = split_path(project.path)
@@ -122,13 +172,15 @@ def decompile(project):
     project.load()
     
     log("Exporting sprites...")
-    export_sprite(project_dir, project.stage, line_endings)
+    export_sprite(project_dir, project.stage, 0, line_endings, debug)
     
+    number = 1
     for sprite in project.sprites:
-        if sprite.name == "Stage": # disallow this!
+        if sprite.name in ("Stage", "_Stage"): # disallow this!
             raise InvalidProject("Can't have sprite named 'Stage'")
         
-        export_sprite(project_dir, sprite, line_endings)
+        export_sprite(project_dir, sprite, number, line_endings, debug)
+        number += 1
     
     log("Done!")
 

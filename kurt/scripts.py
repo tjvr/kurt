@@ -40,15 +40,21 @@ class Block(object):
     Methods:
         to_block_plugin() — returns the block in scratchblocks format.
     """
-    def __init__(self, script, name=None, *args):
+    def __init__(self, script, type=None, *args):
         self.script = script
-        if isinstance(name, Symbol):
-            name = name.value
-        self.name = name
         
-        if self.name in blocks_by_cmd:
-            block_type = blocks_by_cmd[self.name]
-            self.args = block_type.defaults[:]
+        self.type = None
+        if isinstance(type, BlockType):
+            self.type = type
+        else:
+            if isinstance(type, Symbol):
+                type = type.value
+            
+            if type in blocks_by_cmd:
+                self.type = blocks_by_cmd[type]
+        
+        if self.type:
+            self.args = self.type.defaults[:]
         else:
             self.args = []
         
@@ -107,9 +113,10 @@ class Block(object):
         return string + ')'
     
     @property
-    def type(self):
-        if self.name in blocks_by_cmd:
-            return blocks_by_cmd[self.name]
+    def name(self):
+        if self.type:
+            return self.type.command
+        return ""
     
     def to_block_plugin(self):
         arguments = self.args[:]
@@ -129,10 +136,8 @@ class Block(object):
                     if insert_type in ("%s", "%d", "%l", "%y", "%i"):
                         insert_fmt = "(%s)"
                     elif insert_type == "%b":
-                        #if block.name not in ( "list:contains:", "<", "=", ">", "&", "|", "not"):
-                        if (block.type and block.type.flag != 'b'): # or block.name in (
-                        #    "touching:", "touchingColor:", "color:sees:", "mousePressed", "keyPressed:",
-                        #): # BUG: some booleans have to be encoded as reporters
+                        if (block.type and block.type.flag != 'b'):
+                            # some booleans have to be encoded as reporters
                             insert_fmt = "(%s)"
                             
                             
@@ -169,16 +174,14 @@ class Block(object):
         
         
         block_type = self.type
-        
-        if not block_type:
-            if self.name == "changeVariable":
-                change = arguments.pop(1)
-                if change.value == "setVar:to:":
-                    text = "set %v to %s"
-                elif change.value == "changeVar:by:":
-                    text = "change %v by %n"
-        
-                block_type = BlockType(self.name, text)
+
+        if self.name == "changeVariable":
+            change = arguments.pop(1)
+            if change.value == "setVar:to:":
+                text = "set %v to %s"
+            elif change.value == "changeVar:by:":
+                text = "change %v by %n"
+            block_type = BlockType(self.name, text)
         
         if not block_type:
             string = self.name
@@ -214,15 +217,20 @@ class Block(object):
                 string += part
         
         if block_type.flag == "c":
-            blocks = arguments.pop(0) or []
-            for block in blocks:
-                block_str = block.to_block_plugin()
-                string += "\n\t" + block_str.replace("\n", "\n\t")
+            blocks = []
+            if arguments:
+                blocks = arguments.pop(0)
+            if blocks:
+                for block in blocks:
+                    block_str = block.to_block_plugin()
+                    string += "\n\t" + block_str.replace("\n", "\n\t")
             
             if self.name == 'doIfElse':
                 string += '\nelse'
                 
-                blocks = arguments.pop(0)
+                blocks = []
+                if arguments:
+                    blocks = arguments.pop(0)
                 if blocks:
                     for block in blocks:
                         block_str = block.to_block_plugin()
@@ -235,7 +243,8 @@ class Block(object):
 
 
 class Script(object):
-    """A single script (stack of blocks).
+    """A single stack of blocks.
+    Usually, self.blocks[0] is a "when" block/EventHatMorph.
     Arguments/attributes:
         morph - ScriptableScratchMorph instance that this script belongs to
         pos - x, y position of script in blocks bin.
@@ -248,6 +257,8 @@ class Script(object):
         if blocks is None: blocks = []
         self.pos = pos
         self.blocks = blocks
+        for block in blocks:
+            block.script = self
     
     @classmethod
     def from_array(cls, morph, array):

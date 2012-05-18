@@ -351,6 +351,11 @@ class Point(FixedObject):
     @classmethod
     def from_value(cls, value):
         return cls(value.x, value.y)
+    
+    @classmethod
+    def from_string(cls, string):
+        (x, y) = string.split(",")
+        return cls(float(x), float(y))
 
 class Rectangle(FixedObject):
     classID = 33
