@@ -146,6 +146,11 @@ class Collection(FixedObjectWithRepeater, ContainsRefs):
         MetaRepeater(lambda ctx: ctx.length, Rename("items", Field)),
     )
     
+    def __init__(self, value=None):
+        if value == None:
+            value = []
+        FixedObject.__init__(self, value)
+    
     def __iter__(self):
         return iter(self.value)
     
@@ -187,6 +192,10 @@ class Dictionary(Collection):
             Rename("value", Field),
         )),
     )
+    
+    def __init__(self, value=None):
+        if value == None: value = {}
+        Collection.__init__(self, value)
     
     def to_value(self):
         items = [Container(key=key, value=value) for (key, value) in dict(self.value).items()]
@@ -483,6 +492,16 @@ class Form(FixedObject, ContainsRefs):
         Rename("bits", Field), # Bitmap
     )
     
+    def __init__(self, **fields):
+        self.width = 0
+        self.height = 0
+        self.depth = None
+        self.privateOffset = None
+        self.bits = Bitmap("")
+        self.colors = None
+        
+        self.__dict__.update(fields)
+    
     @property
     def value(self):
         return dict((k, getattr(self, k)) for k in self.__dict__ if not k.startswith("_"))
@@ -493,10 +512,6 @@ class Form(FixedObject, ContainsRefs):
     @classmethod
     def from_value(cls, value):
         return cls(**dict(value))
-    
-    def __init__(self, **fields):
-        self.colors = None
-        self.__dict__.update(fields)
     
     def __repr__(self):
         return "<%s(%ix%i)>" % (

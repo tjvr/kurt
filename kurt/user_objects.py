@@ -27,7 +27,7 @@ available fields [dir() won't show them.]
 from construct import Container
 import os
 
-from fixed_objects import OrderedCollection
+from fixed_objects import OrderedCollection, Form, Bitmap, Point, Rectangle, Symbol, Color
 
 
 
@@ -73,6 +73,12 @@ class UserObject(object):
         """
         return value
     
+    def set_defaults(self):
+        """Set defaults on self. Return nothing.
+        Subclasses can override this to setup default values.
+        """
+        pass
+    
     def built(self):
         for field in self._fields:
             if field in self.fields:
@@ -90,12 +96,20 @@ class UserObject(object):
         if 'version' in args:
             self.version = args.pop('version')
         
+        self.set_defaults()
+        
         if field_values:
             defined_fields = self._fields[:]
             defined_fields += tuple("undefined-%i" % i for i in range(len(defined_fields), len(field_values)))
             self.fields.update(zip(defined_fields, field_values))
         
         self.fields.update(args)
+        
+        if "name" in self.fields:
+            # make sure we use property setter
+            name = self.fields["name"]
+            del self.fields["name"]
+            self.name = name 
     
     def __getattr__(self, name):
         if name in self.fields:
@@ -156,6 +170,11 @@ class UserObject(object):
 ### Squeak & Morphic classes ###
 class BaseMorph(UserObject):
     _fields = ("bounds", "owner", "submorphs", "color", "flags", "properties")
+    
+    def set_defaults(self):
+        self.flags = 0
+        self.submorphs = []
+        self.color = Color(1023, 1023, 1023)
 
 class Morph(BaseMorph):
     """Base class for most UserObjects."""
@@ -164,6 +183,11 @@ class Morph(BaseMorph):
 class BorderedMorph(BaseMorph):
     classID = 101
     _fields = Morph._fields + ("borderWidth", "borderColor")
+    
+    def set_defaults(self):
+        BaseMorph.set_defaults(self)
+        self.borderWidth = 1
+        self.borderColor = Color(0, 0, 0)
 
 class RectangleMorph(BorderedMorph):
     classID = 102
@@ -216,6 +240,19 @@ class ScriptableScratchMorph(BaseMorph):
         self.images = []
         self.sounds = []
     
+    def set_defaults(self):
+        BaseMorph.set_defaults(self)
+        
+        self.blocksBin = []
+        self.media = []
+        self.costume = None # defaults to first ImageMedia in self.media on save
+        self.vars = {}
+        self.lists = {}
+        self.isClone = False
+        
+        self.volume = 100
+        self.tempoBPM = 60
+    
     def built(self):
         UserObject.built(self)
         self.blocksBin = [Script.from_array(self, script) for script in self.blocksBin]
@@ -229,6 +266,21 @@ class ScriptableScratchMorph(BaseMorph):
                 self.images.append(media)
             else:
                 self.media.append(media)
+    
+    def normalize(self):
+        if not self.costume:
+            for media in self.media:
+                if isinstance(media, ImageMedia):
+                    self.costume = media
+                    break
+            else:
+                raise ValueError("%r does not have a costume" % self)
+        
+        for list_name in self.lists:
+            list = self.lists[list_name]
+            list.name = list_name
+            list.owner = list.target = self
+            list.normalize()
     
     def _encode_field(self, name, value):
         if name == 'blocksBin':
@@ -268,6 +320,29 @@ class ScratchSpriteMorph(ScriptableScratchMorph):
     classID = 124
     _fields = ScriptableScratchMorph._fields + ("visibility", "scalePoint", "rotationDegrees", "rotationStyle", "volume", "tempoBPM", "draggable", "sceneStates", "lists")
     
+    def set_defaults(self):
+        ScriptableScratchMorph.set_defaults(self)
+        
+        self.objName = "Sprite1"
+        self.color = Color(0, 0, 1023)
+        # self.owner — Stage
+        # self.bounds = Rectangle() - default to size of costume?
+        
+        self.visibility = 100
+        self.scalePoint = Point(1.0, 1.0)
+        self.rotationDegrees = 0.0
+        self.rotationStyle = Symbol("normal")
+        
+        self.draggable = False
+        self.sceneStates = {}
+        self.submorphs = []
+    
+    def normalize(self):
+        ScriptableScratchMorph.normalize(self)
+        
+        if not self.bounds:
+            self.bounds = Rectangle([0, 0, self.costume.width, self.costume.height])
+    
     @property
     def costumes(self):
         return self.images
@@ -291,6 +366,40 @@ class ScratchStageMorph(ScriptableScratchMorph):
     """
     classID = 125
     _fields = ScriptableScratchMorph._fields + ("zoom", "hPan", "vPan", "obsoleteSavedState", "sprites", "volume", "tempoBPM", "sceneStates", "lists")
+    
+    def set_defaults(self):
+        ScriptableScratchMorph.set_defaults(self)
+        
+        self.objName = "Stage"
+        self.bounds = Rectangle([0, 0, 480, 360])
+        self.color = Color(1023, 1023, 1023)
+        
+        self.zoom = 1.0
+        self.hPan =  0
+        self.vPan =  0
+        self.sprites = OrderedCollection()
+        self.sceneStates = {}
+        
+        image = ImageMedia(
+            name = "background",
+            form = Form(
+                width = 480,
+                height = 360,
+                depth = 32,
+                bits = Bitmap("\xff\xff\xff\xff"*480*360),
+            ),
+        )
+        self.media = [image]
+        self.costume = image
+    
+    def normalize(self):
+        ScriptableScratchMorph.normalize(self)
+        
+        for sprite in self.sprites:
+            if sprite not in self.submorphs:
+                self.submorphs.append(sprite)
+            sprite.owner = self
+            sprite.normalize()
     
     @property
     def backgrounds(self):
@@ -402,6 +511,10 @@ class ImageMedia(ScratchMedia):
     classID = 162
     _fields = ScratchMedia._fields + ("form", "rotationCenter", "textBox", "jpegBytes", "compositeForm")
     
+    def set_defaults(self):
+        ScratchMedia.set_defaults(self)
+        self.rotationCenter = Point(0, 0)
+    
     def __getattr__(self, name):
         value = ScratchMedia.__getattr__(self, name)
         if value: 
@@ -416,6 +529,14 @@ class ImageMedia(ScratchMedia):
             return self.compositeForm
         else:
             return self.form
+    
+    @property
+    def width(self):
+        return self.form.width
+        
+    @property
+    def height(self):
+        return self.form.height
     
     def save(self, path, format=None):
         """Save the image data to an external file.
@@ -521,12 +642,20 @@ class WatcherSliderMorph(SimpleSliderMorph):
 class ScratchListMorph(BorderedMorph):
     """List of items.
     Attributes:
+        name - required
         items - (alias for cellMorphs)
     """
     classID = 175
-    _fields = BorderedMorph._fields + ("listName", "cellMorphs", "target")
-	#cellMorphs asArray collect: [:t3 | t3 firstSubmorph contents].
+    _fields = BorderedMorph._fields + ("listName", "items", "target")
 	
+    def set_defaults(self):
+        self.items = []
+        self.bounds = Rectangle([0, 0, 100, 100]) # ?
+        self.color = Color(774, 786, 798)
+    
+    def normalize(self):
+        self.items = [unicode(item) for item in self.items]
+ 
     @property
     def name(self):
         return getattr(self, "listName")
@@ -534,10 +663,6 @@ class ScratchListMorph(BorderedMorph):
     @name.setter
     def name(self, value):
         setattr(self, "listName", value)
-    
-    @property
-    def items(self):
-        return self.cellMorphs
 
 
 

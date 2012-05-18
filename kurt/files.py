@@ -27,6 +27,7 @@ Construct them by passing them a path.
 from construct import Container, Struct, Bytes, Rename
 from construct.text import Literal
 from objtable import ObjTable, InfoTable
+from user_objects import ScratchStageMorph
 
 import os.path
 
@@ -39,16 +40,18 @@ class BinaryFile(object):
     
     EXTENSION = None
     
-    def __init__(self, path, load=True):
+    def __init__(self, path=None, load=True):
         """Loads a file.
         @param path: the path passed to open().
         """
-        if not path.lower().endswith("."+self.EXTENSION.lower()):
-            path += "."+self.EXTENSION
-        self.path = path
+        self.path = None
+        if path:
+            if not path.lower().endswith("."+self.EXTENSION.lower()):
+                path += "."+self.EXTENSION
+            self.path = path
         
-        if load:
-            self.load()
+            if load:
+                self.load()
     
     @property
     def name(self):
@@ -61,6 +64,9 @@ class BinaryFile(object):
     def load(self):
         """Reload the file from disk, replacing any changes in memory.
         """
+        if not self.path:
+            raise ValueError, "filepath not set."
+        
         f = open(self.path, "rb")
         bytes = f.read()
         f.close()
@@ -121,20 +127,42 @@ class ScratchProjectFile(BinaryFile):
         Rename("info", InfoTable),
         Rename("stage", ObjTable),
     )
+    
+    def __init__(self, *args, **kwargs):
+        BinaryFile.__init__(self, *args, **kwargs)
+        self.info = {
+            "comment": "",
+            "scratch-version": '1.4 of 30-Jun-09',
+            "language": "en",
+            "author": u"blob8108",
+            "isHosting": True,
+            "platform": "", 
+            "os-version": "",
+            "thumbnail": None, #<ColorForm(160x120)>,
+            "history": "",
+        }
 
     def _load(self, bytes):
         project = self._construct.parse(bytes)
-        self.info = project.info
+        self.info.update(project.info)
         #self.info.__doc__ = InfoTable.__doc__
         self.stage = project.stage
     
     def _save(self):
+        self.stage.normalize()
+        
         project = Container(
             info = self.info,
             stage = self.stage,
         )
         return self._construct.build(project)
     
+    @classmethod
+    def new(cls):
+        project = cls()
+        project.stage = ScratchStageMorph()
+        return project
+        
     @property
     def sprites(self):
         return self.stage.sprites
