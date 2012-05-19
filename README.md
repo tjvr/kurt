@@ -38,6 +38,8 @@ Tested with **Python 2.6**. Works with **Scratch 1.4**; not tested with earlier 
 * Most images now work! Details:
 	* Images with depth 1 and 2 now work — (fixed some buggy reverse-engineered code).
 	* Default color values ("squeak_colors") now work — fixed a bug saving all-white stage background.
+* Can now build projects entirely "from scratch" (as it were) in Python code
+
 
 ###v1.2, images:
 * Can now parse images! :D
@@ -185,17 +187,20 @@ I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, n
 
 ## Todo
 
+* Import images from a separate `.png` or `.jpg` file and save them into a Scratch file.
+
+* Compiler
+
 * <s>Parse images</s> DONE! :D
 	* Compress Bitmap to ByteArray on save (using run-length encoding)
 	* Images with depth `16` are not supported *(need an example)*
 
-* Import images from a separate `.png` or `.jpg` file and save them into a Scratch file.
+* <s>"Default project" for building projects entirely "from scratch" (as it were) in Python code?</s> DONE!
+    * Make lists work.
 
 * Make some decent tests
 
 * Read/write external Sound files
-
-* "Default project" for building projects entirely "from scratch" (as it were) in Python code?
 
 * Optimise `ObjectNetworkAdapter` for building large files.	
 
