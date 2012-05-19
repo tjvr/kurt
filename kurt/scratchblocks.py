@@ -1,31 +1,84 @@
-"""Parses [scratchblocks] syntax to Script/Block objects."""
+#coding=utf8
+
+# Copyright © 2012 Tim Radvan
+# 
+# This file is part of Kurt.
+# 
+# Kurt is free software: you can redistribute it and/or modify it under the 
+# terms of the GNU Lesser General Public License as published by the Free 
+# Software Foundation, either version 3 of the License, or (at your option) any 
+# later version.
+# 
+# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY 
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more 
+# details.
+# 
+# You should have received a copy of the GNU Lesser General Public License along 
+# with Kurt. If not, see <http://www.gnu.org/licenses/>.
+
+"""Function for parsing `[scratchblocks]` syntax to Script/Block objects.
+This is the opposite of `Script.to_block_plugin()`.
+
+Note: classes for manipulating Scripts and Blocks are found in `kurt.scripts`.
+
+Functions:
+    parse_scratchblocks
+
+Example:
+when gf clicked
+set x to (0)
+forever
+    if <key [right arrow v] pressed?>
+        change [vx v] by (2)
+    end
+    if <key [left arrow v] pressed?>
+        change [vx v] by (-2)
+    end
+    set [vx v] to ((vx) * (0.8))
+    change x by (vx)
+end
+
+Should parse to:
+    [
+        Block('EventHatMorph', 'Scratch-StartClicked'),
+        Block('xpos:', 0),
+        Block('doForever',  [
+            Block('doIf', 
+                Block('keyPressed:', 'right arrow'),
+                [
+                    Block('changeVariable', u'vx', <#changeVar:by:>, 2),
+                ]),
+            Block('doIf', 
+                Block('keyPressed:', 'left arrow'),
+                [
+                    Block('changeVariable', u'vx', <#changeVar:by:>, -2),
+                ]),
+            Block('changeVariable', u'vx', <#setVar:to:>, 
+                Block('*', 
+                    Block('readVariable', u'vx'),
+                0.80000000000000004),
+            ),
+            Block('changeXposBy:', 
+                Block('readVariable', u'vx'),
+            ),
+        ]),
+    ]
+    
+Errors are not currently very helpful :P
+"""
 
 from construct import *
 from construct.text import *
 
+from scripts import Script, Block
+from blockspecs import find_block
+from fixed_objects import Point
 
-# DEBUG: this isn't needed here
-try:
-    import kurt
-except ImportError: # try and find kurt directory
-    import os, sys
-    path_to_file = os.path.join(os.getcwd(), __file__)
-    path_to_lib = os.path.split(os.path.split(path_to_file)[0])[0]
-    sys.path.append(path_to_lib)
-
-from kurt.scripts import Script, Block
-from kurt.blockspecs import find_block
-from kurt import Point
 
 
 class ParseError(Exception):
     pass
-
-
-
-def log(x):
-    print x
-
 
 
 
@@ -89,17 +142,13 @@ class BlockAdapter(Adapter):
             
             block = Block(script, type, *block_args)
         
-        else:
-            #if text == "end": # DEBUG
-            #    return Block(script, "end")
-            
+        else:            
             if flag == "r" and len(parts) == 1 and isinstance(parts[0], str):
                 var = parts[0]
                 block = Block(script, "readVariable", var)
         
         if not block:
             e = "No block type found for %r \n"%text + repr(args)
-            log(e)
             raise ConstructError(e)
         return block
 
@@ -107,6 +156,8 @@ class BlockAdapter(Adapter):
 class ReporterAdapter(BlockAdapter):
     def _decode(self, obj, context):
         (flag, value) = obj
+        
+        print flag, value
         
         if flag == "string":            
             if value.endswith(" v"): # Dropdown
@@ -116,13 +167,23 @@ class ReporterAdapter(BlockAdapter):
                 color = value.strip()
                 if len(color) == 6:
                     pass # TODO: colors
-                    
+            
             return Arg(value)
         
         else:
             value = value[0]
+            
             if isinstance(value, list):
-                return BlockAdapter._decode(self, value[0], context, flag=flag)
+                value = value[0]
+                
+                if len(value) == 1 and isinstance(value[0], str):
+                    try:
+                        number = float(value[0])
+                        return Arg(number)
+                    except ValueError:
+                        pass
+                
+                return BlockAdapter._decode(self, value, context, flag=flag)
             
             else:
                 return Arg(value)
@@ -226,51 +287,12 @@ class StackAdapter(Adapter):
     def _decode(self, obj, context):
         return obj
 
-stack = StackAdapter(Sequence("stack",
+stack = OptionalGreedyRepeater(block)
+
+script = Sequence("stack",
     OptionalGreedyRepeater(block),
     Anchor("position"),
-))
-
-
-"""
-when green flag clicked
-set x to (0)
-forever
-	if <key [right arrow v] pressed?>
-		change [vx v] by (2)
-	end
-	if <key [left arrow v] pressed?>
-		change [vx v] by (-2)
-	end
-	set [vx v] to ((vx) * (0.8))
-	change x by (vx)
-end
-
-
-Script(Point(23, 36.0),
-	Block('EventHatMorph', 'Scratch-StartClicked'),
-	Block('xpos:', 0),
-	Block('doForever',  [
-			Block('doIf', 
-				Block('keyPressed:', 'right arrow'),
-				[
-					Block('changeVariable', u'vx', <#changeVar:by:>, 2),
-				]),
-			Block('doIf', 
-				Block('keyPressed:', 'left arrow'),
-				[
-					Block('changeVariable', u'vx', <#changeVar:by:>, -2),
-				]),
-			Block('changeVariable', u'vx', <#setVar:to:>, 
-				Block('*', 
-					Block('readVariable', u'vx'),
-				0.80000000000000004),
-			),
-			Block('changeXposBy:', 
-				Block('readVariable', u'vx'),
-			),
-		]))
-"""
+)
 
 
 def get_lines(data):
@@ -282,71 +304,30 @@ def get_lines(data):
 
 
 
-def parse_blocks(data):
-    data = data.strip()
-    
-    #try:
-    (blocks, leftovers) = stack.parse(data.strip())
-    #except ConstructError, e:
-    #    import pdb; pdb.set_trace()
-    
-    if leftovers:
-        print leftovers
-    
-    return blocks
-    
-
-def parse_script_file(morph, file):
-    settings = {
-        "pos": "(20, 20)",
-    }
-    
-    while 1:
-        try:
-            line = file.readline()
-        except EOFError:
-            raise ParseError("no blocks found")
-        line = line.strip()
-        
-        if line:
-            try:
-                (name, value) = line.split(":")
-            except ValueError:
-                raise ParseError("invalid line: "+line)
-            
-            name = name.strip().lower()
-            value = value.strip()
-            for setting in settings.keys():
-                if name.startswith(setting):
-                    settings[setting] = value
-                    break
-            else:
-                settings[name] = value
-        
-        else:
-            break
-    
-    print settings
-    
-    pos = Point.from_string(settings["pos"])
-
-    data = ""
-    while 1:
-        more_data = file.read()
-        if not more_data: break
-        data += more_data    
-    print data
-    
-    data = str(data)
-    blocks = parse_blocks(data)
-    script = Script(morph, pos, blocks)
-    
-    """TODO:
-    * negative numbers
+def parse_scratchblocks(data):
+    """Parses scratchblocks formatted code. Returns a list of Blocks.
+    The opposite of Script.to_block_plugin().
+    @param data: str, the scratchblocks code
     """
+    data = data.strip()
+    data = data.replace("\r\n", "\n")
+    data = data.replace("\r", "\n")
     
+    (blocks, leftovers) = script.parse(data.strip())
     
-    return script
+    if leftovers < len(data):
+        line_no = 0
+        char_count = 0
+        for line in data.split("\n"):
+            char_count += len(line)
+            line_no += 1
+            if char_count > leftovers:
+                break
+        
+        msg = "Error in data after %r on line #%i" % (line, line_no)
+        raise ParseError(msg)
+    
+    return list(blocks)
 
 
 
