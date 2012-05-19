@@ -208,7 +208,7 @@ class SketchMorph(BaseMorph):
 ### Scratch-specific classes ###
 
 class ScriptableScratchMorph(BaseMorph):
-    _fields = Morph._fields + ("objName", "vars", "blocksBin", "isClone", "media", "costume")
+    _fields = Morph._fields + ("objName", "vars", "scripts", "isClone", "media", "costume")
     
     def __init__(self, *args, **kwargs):
         UserObject.__init__(self, *args, **kwargs)
@@ -216,9 +216,22 @@ class ScriptableScratchMorph(BaseMorph):
         self.images = []
         self.sounds = []
     
+    def set_defaults(self):
+        BaseMorph.set_defaults(self)
+        
+        self.scripts = []
+        self.media = []
+        self.costume = None # defaults to first ImageMedia in self.media on save
+        self.vars = {}
+        self.lists = {}
+        self.isClone = False
+        
+        self.volume = 100
+        self.tempoBPM = 60
+    
     def built(self):
         UserObject.built(self)
-        self.blocksBin = [Script.from_array(self, script) for script in self.blocksBin]
+        self.scripts = [Script.from_array(self, script) for script in self.scripts]
         
         media = self.media
         self.media = []
@@ -230,23 +243,29 @@ class ScriptableScratchMorph(BaseMorph):
             else:
                 self.media.append(media)
     
+    def normalize(self):
+        if not self.costume:
+            for media in self.media:
+                if isinstance(media, ImageMedia):
+                    self.costume = media
+                    break
+            else:
+                raise ValueError("%r does not have a costume" % self)
+        
+        self.lists = dict((unicode(name), list) for (name, list) in self.lists.items())
+        for list_name in self.lists:
+            scratch_list = self.lists[list_name]
+            scratch_list.name = list_name
+            scratch_list.owner = scratch_list.target = self
+            scratch_list.normalize()
+    
     def _encode_field(self, name, value):
-        if name == 'blocksBin':
+        if name == 'scripts':
             return [script.to_array() for script in value]
         elif name == 'media':
             return OrderedCollection(self.sounds + self.images + self.media)
         else:
             return value
-
-    @property
-    def scripts(self):
-        """Alias for blocksBin."""
-        return self.blocksBin
-    
-    @scripts.setter
-    def scripts(self, value):
-        """Alias for blocksBin."""
-        self.blocksBin = value
 
 
 
@@ -267,6 +286,29 @@ class ScratchSpriteMorph(ScriptableScratchMorph):
     """
     classID = 124
     _fields = ScriptableScratchMorph._fields + ("visibility", "scalePoint", "rotationDegrees", "rotationStyle", "volume", "tempoBPM", "draggable", "sceneStates", "lists")
+    
+    def set_defaults(self):
+        ScriptableScratchMorph.set_defaults(self)
+        
+        self.objName = "Sprite1"
+        self.color = Color(0, 0, 1023)
+        # self.owner — Stage
+        # self.bounds = Rectangle() - default to size of costume?
+        
+        self.visibility = 100
+        self.scalePoint = Point(1.0, 1.0)
+        self.rotationDegrees = 0.0
+        self.submorphs = []
+        self.rotationStyle = Symbol("normal")
+        
+        self.draggable = False
+        self.sceneStates = {}
+    
+    def normalize(self):
+        ScriptableScratchMorph.normalize(self)
+        
+        if not self.bounds:
+            self.bounds = Rectangle([0, 0, self.costume.width, self.costume.height])
     
     @property
     def costumes(self):
@@ -510,20 +552,18 @@ class ScratchListMorph(BorderedMorph):
         items - (alias for cellMorphs)
     """
     classID = 175
-    _fields = BorderedMorph._fields + ("listName", "cellMorphs", "target")
-	#cellMorphs asArray collect: [:t3 | t3 firstSubmorph contents].
+    _fields = BorderedMorph._fields + ("name", "items", "target")
 	
-    @property
-    def name(self):
-        return getattr(self, "listName")
+    def set_defaults(self):
+        self.borderColor = Color(594, 582, 582)
+        self.borderWidth = 2
+        self.bounds = Rectangle([0, 0, 100, 100]) # ?
+        self.color = Color(774, 786, 798)
+        
+        self.items = []
     
-    @name.setter
-    def name(self, value):
-        setattr(self, "listName", value)
-    
-    @property
-    def items(self):
-        return self.cellMorphs
+    def normalize(self):
+        self.items = [unicode(item) for item in self.items]
 
 
 

@@ -119,6 +119,20 @@ class ScratchProjectFile(BinaryFile):
         Rename("info", InfoTable),
         Rename("stage", ObjTable),
     )
+    
+    def __init__(self, *args, **kwargs):
+        self.info = {
+            "comment": "",
+            "scratch-version": '1.4 of 30-Jun-09',
+            "language": "en",
+            "author": u"blob8108",
+            "isHosting": True,
+            "platform": "", 
+            "os-version": "",
+            "thumbnail": None, #<ColorForm(160x120)>,
+            "history": "",
+        }
+        BinaryFile.__init__(self, *args, **kwargs)
 
     def _load(self, bytes):
         project = self._construct.parse(bytes)
