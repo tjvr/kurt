@@ -129,7 +129,6 @@ class ScratchProjectFile(BinaryFile):
     )
     
     def __init__(self, *args, **kwargs):
-        BinaryFile.__init__(self, *args, **kwargs)
         self.info = {
             "comment": "",
             "scratch-version": '1.4 of 30-Jun-09',
@@ -141,6 +140,7 @@ class ScratchProjectFile(BinaryFile):
             "thumbnail": None, #<ColorForm(160x120)>,
             "history": "",
         }
+        BinaryFile.__init__(self, *args, **kwargs)
 
     def _load(self, bytes):
         project = self._construct.parse(bytes)
