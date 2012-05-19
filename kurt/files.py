@@ -158,8 +158,8 @@ class ScratchProjectFile(BinaryFile):
         return self._construct.build(project)
     
     @classmethod
-    def new(cls):
-        project = cls()
+    def new(cls, path=None):
+        project = cls(path)
         project.stage = ScratchStageMorph()
         return project
         
