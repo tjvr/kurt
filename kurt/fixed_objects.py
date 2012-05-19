@@ -369,6 +369,11 @@ class Point(FixedObject):
 class Rectangle(FixedObject):
     classID = 33
     _construct = StrictRepeater(4, Field)
+    
+    @classmethod
+    def from_value(cls, value):
+        value = list(value)
+        return cls(value)
 
 
 

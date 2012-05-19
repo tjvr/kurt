@@ -130,11 +130,11 @@ class ScratchProjectFile(BinaryFile):
     
     def __init__(self, *args, **kwargs):
         self.info = {
-            "comment": "",
+            "comment": "Made with Kurt \nhttp://github.com/blob8108/kurt",
             "scratch-version": '1.4 of 30-Jun-09',
             "language": "en",
-            "author": u"blob8108",
-            "isHosting": True,
+            "author": u"",
+            "isHosting": False,
             "platform": "", 
             "os-version": "",
             "thumbnail": None, #<ColorForm(160x120)>,

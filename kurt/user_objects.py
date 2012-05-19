@@ -280,7 +280,11 @@ class ScriptableScratchMorph(BaseMorph):
         for list_name in self.lists:
             scratch_list = self.lists[list_name]
             scratch_list.name = list_name
-            scratch_list.owner = scratch_list.target = self
+            #scratch_list.target = self
+            #if isinstance(self, ScratchStageMorph):
+            #     scratch_list.owner = self
+            #else:
+            #    scratch_list.owner = self.owner
             scratch_list.normalize()
     
     def _encode_field(self, name, value):
@@ -638,9 +642,11 @@ class ScratchListMorph(BorderedMorph):
     _fields = BorderedMorph._fields + ("name", "items", "target")
 	
     def set_defaults(self):
+        BorderedMorph.set_defaults(self)
+        
         self.borderColor = Color(594, 582, 582)
         self.borderWidth = 2
-        self.bounds = Rectangle([0, 0, 100, 100]) # ?
+        self.bounds = Rectangle([0, 0, 150, 360]) # ?
         self.color = Color(774, 786, 798)
         
         self.items = []
