@@ -147,6 +147,14 @@ class ScratchProjectFile(BinaryFile):
         )
         return self._construct.build(project)
     
+    @classmethod
+    def new(cls, path=None):
+        project = cls()
+        project.stage = ScratchStageMorph()
+        project.path = path # do this now so project doesn't attempt
+                            # to .load() itself
+        return project
+        
     @property
     def sprites(self):
         return self.stage.sprites
