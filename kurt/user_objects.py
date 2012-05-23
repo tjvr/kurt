@@ -483,15 +483,7 @@ class VariableBlockMorph(CommandBlockMorph):
 
 
 class ScratchMedia(UserObject):
-    _fields = ("mediaName",)
-    
-    @property
-    def name(self):
-        return getattr(self, "mediaName")
-    
-    @name.setter
-    def name(self, value):
-        setattr(self, "mediaName", value)
+    _fields = ("name",)
 
 
 class ImageMedia(ScratchMedia):
@@ -503,6 +495,33 @@ class ImageMedia(ScratchMedia):
     """
     classID = 162
     _fields = ScratchMedia._fields + ("form", "rotationCenter", "textBox", "jpegBytes", "compositeForm")
+
+    @classmethod
+    def load(cls, path):
+        (folder, name) = os.path.split(path)
+        if "." in name:
+            format = name.split('.')[-1].lower()
+        else:
+            format = "png" # default
+            name += "." + format
+        if format == "jpeg": format = "jpg"
+        
+        if format == "png":
+            return cls(
+                name = name,
+                form = Form.load_png(path),
+            )
+        
+        elif format == "jpg":
+            f = open(path, "rb")
+            jpegBytes = f.read()
+            f.close()
+            
+            return cls(
+                name = name,
+                jpegBytes = jpegBytes,
+            )
+       
     
     def set_defaults(self):
         ScratchMedia.set_defaults(self)
@@ -552,9 +571,12 @@ class ImageMedia(ScratchMedia):
                 format = "png"
         
         try:
-            format = format.lstrip(".")
+            format = format.lstrip(".").lower()
+            if format == "jpeg": format = "jpg"
+            
             save_func = getattr(self, "save_%s"%format)
             assert callable(save_func)
+            
         except (AssertionError, AttributeError):
             raise ValueError, "Invalid format %r" % format
             

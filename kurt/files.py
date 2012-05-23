@@ -166,6 +166,10 @@ class ScratchProjectFile(BinaryFile):
     @property
     def sprites(self):
         return self.stage.sprites
+        
+    @sprites.setter
+    def sprites(self, value):
+        self.stage.sprites = value
 
 
 class ScratchSpriteFile(BinaryFile):

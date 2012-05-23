@@ -538,13 +538,6 @@ class Form(FixedObject, ContainsRefs):
                 if a == 0 and (r > 0 or g > 0 or b > 0):
                     a = 255
                 yield array("B", (r, g, b, a))
-                
-                #alpha = argb[0]
-                #rgb = argb[1:4]
-                #if alpha == "\x00" and rgb != "\x00\x00\x00":
-                #    alpha = "\xff"
-                #rgba = rgb + alpha
-                #yield rgba
         
         else:
             if self.depth == 16:
@@ -588,17 +581,7 @@ class Form(FixedObject, ContainsRefs):
             except StopIteration:
                 break
             
-            #if isinstance(color, TranslucentColor):
-            #    (r, g, b, a) = color.to_8bit()
-            #else:
-            #    (r, g, b) = color.to_8bit()
-            #    a = 255
-            
             rgba += color
-            #rgba.append(r)
-            #rgba.append(g)
-            #rgba.append(b)
-            #rgba.append(a)
             
             pixel_count += 1
             x += 1            
@@ -613,16 +596,45 @@ class Form(FixedObject, ContainsRefs):
         if not path.endswith(".png"): path += ".png"
         
         if not png:
-            raise ValueError, "Missing dependency: pypng library needed for PNG support"
+            raise ValueError, "Missing dependency: pypng library needed for PNG support"
         
         f = open(path, "wb")
-        (width, height, rgb_array) = self.to_array()
+        (width, height, rgba_array) = self.to_array()
         writer = png.Writer(width, height, alpha=True)
         writer.write_array(f, rgb_array)
         f.flush()
         f.close()
-        
-        
+
+    @classmethod
+    def from_array(cls, width, height, rgba_array):
+        """Returns a Form with 32-bit RGBA pixels"""
+        raw = ""
+        for i in range(0, len(rgba_array), 4):
+            (r, g, b, a) = (chr(x) for x in rgba_array[i:i+4])
+            raw += "".join((a, r, g, b))
+
+        return Form(
+            width = width,
+            height = height,
+            depth = 32,
+            bits = Bitmap(raw),
+        )
+    
+    @classmethod
+    def load_png(cls, path):
+        reader = png.Reader(filename=path)
+        (width, height, color_array, metadata) = reader.read_flat()
+        if metadata["bitdepth"] != 8:
+            raise ValueError("Only PNG images with depth 8 are supported")
+
+        rgba_array = array('B')
+        pixel_size = 4 if metadata["alpha"] else 3
+        for i in range(0, len(color_array), pixel_size):
+            rgba_array += color_array[i:i+pixel_size]
+            if not metadata["alpha"]:
+                rgba_array += 255
+
+        return cls.from_array(width, height, rgba_array)
 
 
 class ColorForm(Form):

@@ -76,8 +76,9 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
     start_time = time.time()
     
     name = sprite.name
-    #if name == "Stage": name = "_Stage"
-    name = "%i %s" % (number, name)
+    num_text = str(number)
+    if len(num_text) == 1: num_text = "0"+num_text
+    name = num_text + " " + name
     sprite_dir = join_path(parent_dir, name)
     os.mkdir(sprite_dir)
 
@@ -94,8 +95,10 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
         contents = "Position: %s, %s \n" % (x, y)
         contents += "\n"
         contents += script.to_block_plugin()
-        
-        name = "script%i %s" % (count, script.blocks[0].to_block_plugin())        
+
+        count_text = str(count)
+        if len(count_text) == 1: count_text = "0"+count_text
+        name = count_text + " " + script.blocks[0].to_block_plugin()
         script_path = join_path(scripts_dir, name+".txt")
         write_file(script_path, contents, line_endings)
         
@@ -113,7 +116,9 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
     count = 1
     costumes_list = ""
     for costume in sprite.images:
-        name = "%i %s" % (count, costume.name)
+        count_text = str(count)
+        if len(count_text) == 1: count_text = "0"+count_text
+        name = count_text + " " + costume.name
         costume_path = join_path(costumes_dir, name)
         
         filename = costume.save(costume_path)
@@ -138,7 +143,8 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
     var_list = ""
     var_names = sorted(sprite.vars.keys())
     for var_name in var_names:
-        var_list += var_name + " = " + unicode(sprite.vars[var_name])
+        value = sprite.vars[var_name]
+        var_list += var_name + " = " + unicode(value)
         var_list += "\n"
     
     var_list_path = join_path(sprite_dir, "variables.txt")
