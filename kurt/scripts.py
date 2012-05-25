@@ -152,7 +152,7 @@ class Block(object):
                 if not insert_fmt: insert_fmt = block_plugin_inserts["%i"]
             
             elif isinstance(value, BaseMorph):
-                value = value.objName
+                value = value.name
                 if not insert_fmt: insert_fmt = block_plugin_inserts["%m"]
             
             elif isinstance(value, Color):
@@ -192,7 +192,7 @@ class Block(object):
         
         if self.name == "MouseClickEventHatMorph":
             try:
-                morph_name = self.script.morph.objName
+                morph_name = self.script.morph.name
             except AttributeError:
                 morph_name = "sprite"
             arguments[0] = morph_name

@@ -601,7 +601,7 @@ class Form(FixedObject, ContainsRefs):
         f = open(path, "wb")
         (width, height, rgba_array) = self.to_array()
         writer = png.Writer(width, height, alpha=True)
-        writer.write_array(f, rgb_array)
+        writer.write_array(f, rgba_array)
         f.flush()
         f.close()
 

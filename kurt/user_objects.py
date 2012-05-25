@@ -262,7 +262,7 @@ class ScriptableScratchMorph(BaseMorph):
     
     def normalize(self):
         if not self.costume:
-            for media in self.media:
+            for media in self.media + self.images:
                 if isinstance(media, ImageMedia):
                     self.costume = media
                     break
