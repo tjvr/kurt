@@ -500,15 +500,17 @@ class ImageMedia(ScratchMedia):
     def load(cls, path):
         (folder, name) = os.path.split(path)
         if "." in name:
-            format = name.split('.')[-1].lower()
+            format = name.split(".")[-1].lower()
+            name_without_extension = ".".join(name.split(".")[:-1])
         else:
             format = "png" # default
+            name_without_extension = name
             name += "." + format
         if format == "jpeg": format = "jpg"
         
         if format == "png":
             return cls(
-                name = name,
+                name = name_without_extension,
                 form = Form.load_png(path),
             )
         
@@ -518,7 +520,7 @@ class ImageMedia(ScratchMedia):
             f.close()
             
             return cls(
-                name = name,
+                name = name_without_extension,
                 jpegBytes = jpegBytes,
             )
        

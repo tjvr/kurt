@@ -159,8 +159,10 @@ class ScratchProjectFile(BinaryFile):
     
     @classmethod
     def new(cls, path=None):
-        project = cls(path)
+        project = cls()
         project.stage = ScratchStageMorph()
+        project.path = path # do this now so project doesn't attempt
+                            # to .load() itself
         return project
         
     @property
