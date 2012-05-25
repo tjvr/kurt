@@ -277,12 +277,12 @@ class Script(object):
         return string
     
     def __repr__(self):
-        string = "Script(%s,\n" % repr(self.pos)
+        string = "Script(%s, [\n" % repr(self.pos)
         for block in self.blocks:
             string += "\t" + repr(block).replace("\n", "\n\t") + ",\n"
         string = string.rstrip()
         string = string.rstrip(",")
-        return string + ")"
+        return string + "])"
     
     def __iter__(self):
         return iter(self.blocks)

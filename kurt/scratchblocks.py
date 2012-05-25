@@ -157,8 +157,6 @@ class ReporterAdapter(BlockAdapter):
     def _decode(self, obj, context):
         (flag, value) = obj
         
-        print flag, value
-        
         if flag == "string":            
             if value.endswith(" v"): # Dropdown
                 value = value[:-2]
@@ -252,10 +250,6 @@ parts = PartsAdapter(Rename("parts", OptionalGreedyRepeater(part)))
 reporter = Sequence("reporter",
     parts, #OptionalGreedyRepeater(part),
 )
-
-class PrintContext(Construct):
-    def _parse(self, obj, context):
-        print context.block
 
 class CBlockAdapter(Adapter):
     def _decode(self, stack, context):

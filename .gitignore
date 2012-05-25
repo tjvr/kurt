@@ -3,3 +3,4 @@ construct/
 tests/* files/
 dist/
 kurt.egg-info/
+*.sb

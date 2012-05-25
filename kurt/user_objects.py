@@ -27,7 +27,7 @@ available fields [dir() won't show them.]
 from construct import Container
 import os
 
-from fixed_objects import OrderedCollection, Form, Bitmap, Point, Rectangle, Symbol, Color
+from fixed_objects import *
 
 
 
@@ -40,6 +40,7 @@ class UserObject(object):
     Unknown fields not in this list are named "undefined-%i", where i is the field index.
     """
     _fields = []
+    _version = 1
     
     def to_construct(self, context):
         field_values = self.field_values[:]
@@ -92,10 +93,10 @@ class UserObject(object):
         """
         self.fields = dict(zip(self._fields, [None] * len(self._fields)))
         
-        self.version = 1
+        self.version = self._version
         if 'version' in args:
             self.version = args.pop('version')
-        
+
         self.set_defaults()
         
         if field_values:
@@ -152,14 +153,6 @@ class UserObject(object):
     @property
     def field_values(self):
         return [value for (field_name, value) in self.ordered_fields]
-    
-    @property
-    def name(self):
-        return getattr(self, "objName")
-    
-    @name.setter
-    def name(self, value):
-        setattr(self, "objName", value)
     
     def __repr__(self):
         name = getattr(self, "name", "")
@@ -232,7 +225,7 @@ class SketchMorph(BaseMorph):
 ### Scratch-specific classes ###
 
 class ScriptableScratchMorph(BaseMorph):
-    _fields = Morph._fields + ("objName", "vars", "scripts", "isClone", "media", "costume")
+    _fields = Morph._fields + ("name", "vars", "scripts", "isClone", "media", "costume")
     
     def __init__(self, *args, **kwargs):
         UserObject.__init__(self, *args, **kwargs)
@@ -279,6 +272,9 @@ class ScriptableScratchMorph(BaseMorph):
         self.lists = dict((unicode(name), list) for (name, list) in self.lists.items())
         for list_name in self.lists:
             scratch_list = self.lists[list_name]
+            if not isinstance(scratch_list, ScratchListMorph):
+                scratch_list = ScratchListMorph(items=scratch_list)
+                self.lists[list_name] = scratch_list
             scratch_list.name = list_name
             #scratch_list.target = self
             #if isinstance(self, ScratchStageMorph):
@@ -314,11 +310,12 @@ class ScratchSpriteMorph(ScriptableScratchMorph):
     """
     classID = 124
     _fields = ScriptableScratchMorph._fields + ("visibility", "scalePoint", "rotationDegrees", "rotationStyle", "volume", "tempoBPM", "draggable", "sceneStates", "lists")
+    _version = 3
     
     def set_defaults(self):
         ScriptableScratchMorph.set_defaults(self)
         
-        self.objName = "Sprite1"
+        self.name = "Sprite1"
         self.color = Color(0, 0, 1023)
         # self.owner — Stage
         # self.bounds = Rectangle() - default to size of costume?
@@ -334,7 +331,11 @@ class ScratchSpriteMorph(ScriptableScratchMorph):
         ScriptableScratchMorph.normalize(self)
         
         if not self.bounds:
-            self.bounds = Rectangle([0, 0, self.costume.width, self.costume.height])
+            try:
+                self.bounds = Rectangle([0, 0, self.costume.width, self.costume.height])
+            except AttributeError:
+                # invalid costume, or maybe JPG
+                self.bounds = Rectangle([0, 0, 100, 100])
     
     @property
     def costumes(self):
@@ -359,11 +360,12 @@ class ScratchStageMorph(ScriptableScratchMorph):
     """
     classID = 125
     _fields = ScriptableScratchMorph._fields + ("zoom", "hPan", "vPan", "obsoleteSavedState", "sprites", "volume", "tempoBPM", "sceneStates", "lists")
+    _version = 5
     
     def set_defaults(self):
         ScriptableScratchMorph.set_defaults(self)
         
-        self.objName = "Stage"
+        self.name = "Stage"
         self.bounds = Rectangle([0, 0, 480, 360])
         self.color = Color(1023, 1023, 1023)
         
@@ -393,6 +395,14 @@ class ScratchStageMorph(ScriptableScratchMorph):
                 self.submorphs.append(sprite)
             sprite.owner = self
             sprite.normalize()
+    
+    @property
+    def background(self):
+        return self.costume
+    
+    @background.setter
+    def background(self, value):
+        self.costume = value
     
     @property
     def backgrounds(self):
@@ -457,6 +467,7 @@ class WatcherMorph(AlignmentMorph):
     """A variable watcher."""
     classID = 155
     _fields = AlignmentMorph._fields + ("titleMorph", "readout", "readoutFrame", "scratchSlider", "watcher", "isSpriteSpecific", "unused", "sliderMin", "sliderMax", "isLarge")
+    _version = 5
     
     @property
     def name(self):
@@ -495,6 +506,7 @@ class ImageMedia(ScratchMedia):
     """
     classID = 162
     _fields = ScratchMedia._fields + ("form", "rotationCenter", "textBox", "jpegBytes", "compositeForm")
+    _version = 4
 
     @classmethod
     def load(cls, path):
@@ -521,7 +533,7 @@ class ImageMedia(ScratchMedia):
             
             return cls(
                 name = name_without_extension,
-                jpegBytes = jpegBytes,
+                jpegBytes = ByteArray(jpegBytes),
             )
        
     
@@ -551,6 +563,10 @@ class ImageMedia(ScratchMedia):
     @property
     def height(self):
         return self.form.height
+
+    @property
+    def size(self):
+        return (self.width, self.height)
     
     def save(self, path, format=None):
         """Save the image data to an external file.
@@ -593,7 +609,7 @@ class ImageMedia(ScratchMedia):
         
     def save_jpg(self, path):
         if not self.jpegBytes:
-            raise ValueError, "ImageMedia object %r is not in JPEG format"
+            raise ValueError, "ImageMedia object %r is not in JPG format"
         
         if not path.endswith(".jpg"): path += ".jpg"
         
@@ -664,7 +680,8 @@ class ScratchListMorph(BorderedMorph):
     """
     classID = 175
     _fields = BorderedMorph._fields + ("name", "items", "target")
-	
+    _version = 2
+    
     def set_defaults(self):
         BorderedMorph.set_defaults(self)
         
