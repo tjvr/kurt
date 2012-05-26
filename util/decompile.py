@@ -21,7 +21,7 @@
 Images are exported to PNG or JPG format files.
 Scripts are converted to scratchblocks format txt files.
 
-    Usage: python decompile.py [path/to/file.sb]
+    Usage: python decompile.py "path/to/file.sb"
 """
 
 import time
@@ -71,17 +71,22 @@ def write_file(path, contents, line_endings):
     f.close()
 
 
+def escape_filename(name):
+    """Return name stripped of non-filename-friendly characters"""
+    name = name.replace("/", "")
+    return name
+
+
 def export_sprite(parent_dir, sprite, number, line_endings, debug):
     log("* "+sprite.name, False)
     start_time = time.time()
     
-    name = sprite.name
+    name = escape_filename(sprite.name)
     num_text = str(number)
     if len(num_text) == 1: num_text = "0"+num_text
     name = num_text + " " + name
     sprite_dir = join_path(parent_dir, name)
     os.mkdir(sprite_dir)
-
 
     # Scripts
     scripts_dir = join_path(sprite_dir, "scripts")
@@ -98,7 +103,9 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
 
         count_text = str(count)
         if len(count_text) == 1: count_text = "0"+count_text
-        name = count_text + " " + script.blocks[0].to_block_plugin()
+        name = count_text + " "
+        name += escape_filename(script.blocks[0].to_block_plugin())
+        
         script_path = join_path(scripts_dir, name+".txt")
         write_file(script_path, contents, line_endings)
         
@@ -118,7 +125,7 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
     for costume in sprite.images:
         count_text = str(count)
         if len(count_text) == 1: count_text = "0"+count_text
-        name = count_text + " " + costume.name
+        name = count_text + " " + escape_filename(costume.name)
         costume_path = join_path(costumes_dir, name)
         
         filename = costume.save(costume_path)
