@@ -38,7 +38,7 @@ from inline_objects import Field
 
 
 def default_colormap(depth):
-    full = 2**depth - 1
+    full = 255 # values returned should be in range 0-255
     half = full / 2
     quarter = full / 4
     eighth = full / 8
@@ -47,7 +47,7 @@ def default_colormap(depth):
     three_quarters = full * 3 / 4
     seven_eighths = full * 7 / 8
 
-    # This generation comes from the sqeuak source under initializeIndexColors
+    # This generation comes from the squeak source under initializeIndexColors
     colormap = []
     # 1-bit colors
     colormap.append((full, full, full, full))
@@ -68,12 +68,14 @@ def default_colormap(depth):
     colormap.append((five_eighths, five_eighths, five_eighths, full))
     colormap.append((three_quarters, three_quarters, three_quarters, full))
     colormap.append((seven_eighths, seven_eighths, seven_eighths, full))
+    
     # additional 8-bit colors
     for i in range(32):  # 24 more shades of gray
         if i % 4 == 0:
             continue
         value = full * i / 32
         colormap.append((value, value, value, full))
+    
     for red in range(6):  # Color "cube" with six steps for each primary color
         for blue in range(6):
             for green in range(6):
@@ -570,8 +572,10 @@ class Form(FixedObject, ContainsRefs):
                 if a == 0 and (r > 0 or g > 0 or b > 0):
                     a = 255
                 yield array("B", (r, g, b, a))
+        
         elif self.depth == 16:
             raise NotImplementedError # TODO: depth 16
+        
         elif self.depth <= 8:
             if self.colors:
                 colors = [color.to_rgba_array() for color in self.colors]
