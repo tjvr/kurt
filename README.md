@@ -191,14 +191,14 @@ I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, n
 
 ## Todo
 
-* <s>Import images from a separate `.png` or `.jpg` file and save them into a Scratch file.</s> DONE!
+* ~~Import images from a separate `.png` or `.jpg` file and save them into a Scratch file.~~ DONE!
 
-* <s>"Default project" for building projects entirely "from scratch" (as it were) in Python code?</s> DONE! (Lists work, too!)
+* ~~"Default project" for building projects entirely "from scratch" (as it were) in Python code?~~ DONE! (Lists work, too!)
 
-* <s>Compiler</s> Done, sort of — kind of a proof-of-concept.
+* ~~Compiler~~ Done, sort of — kind of a proof-of-concept.
 	* Booleans like `<(1) < (2)>` don't work, unsurprisingly
 
-* <s>Parse images</s> DONE! :D
+* ~~Parse images~~ DONE! :D
 	* Compress Bitmap to ByteArray on save (using run-length encoding)
 	* Images with depth `16` are not supported *(need an example)*
 
