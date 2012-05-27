@@ -104,7 +104,8 @@ class Block(object):
                     string += " "
                 string += "[\n"
                 for block in arg:
-                    string += "\t\t" + repr(block).replace("\n", "\n\t\t") + ",\n"
+                    string += "\t\t" + repr(block).replace("\n", "\n\t\t")
+                    string += ",\n"
                 string += "\t]"
             else:
                 string += repr(arg) + ", "

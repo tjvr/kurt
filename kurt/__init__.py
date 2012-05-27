@@ -38,7 +38,8 @@ USAGE:
     such as int and bool, are converted to their Pythonic counterparts. Array 
     and Dictionary are converted to list and dict.
     
-    Tested with Python 2.6. Works with Scratch 1.4; not tested with earlier versions, but probably works.
+    Tested with Python 2.6. Works with Scratch 1.4; not tested with earlier 
+    versions, but probably works.
     
     Scratch is created by the Lifelong Kindergarten Group at the MIT Media Lab. 
     See their website: http://scratch.mit.edu/

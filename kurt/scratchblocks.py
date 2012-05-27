@@ -127,7 +127,8 @@ class BlockAdapter(Adapter):
             
             if flag and type.flag and type.flag != flag:
                 summary = " ".join(repr(o) for o in obj)
-                raise ParseError("wrong flag %r for %r\n" % (flag, summary) + repr(args))
+                raise ParseError(
+                    "wrong flag %r for %r\n" % (flag, summary) + repr(args))
             
             if type.command == "changeVariable":
                 args.insert(1, None)
@@ -232,7 +233,8 @@ insert = ReporterAdapter(Select("insert",
         Literal(")"),
     ),
     
-    QuotedString("string", start_quote="[", end_quote="]", esc_char="\\", encoding="utf8"),
+    QuotedString("string", start_quote="[", end_quote="]", esc_char="\\", 
+                 encoding="utf8"),
 include_name=True))
 
 

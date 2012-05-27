@@ -82,7 +82,10 @@ class FixedObject(object):
         self.value = value
     
     def to_construct(self, context):
-        return Container(classID = self.__class__.__name__, value = self.to_value())
+        return Container(
+            classID = self.__class__.__name__, 
+            value = self.to_value(),
+        )
     
     @classmethod
     def from_construct(cls, obj, context):
@@ -170,7 +173,8 @@ class SoundBuffer(FixedObjectByteArray, FixedObjectWithRepeater):
 
 class UTF8(FixedObjectByteArray):
     classID = 14
-    _construct = PascalString("value", length_field=UBInt32("length"), encoding="utf8")
+    _construct = PascalString("value", length_field=UBInt32("length"), 
+                              encoding="utf8")
 
 
 
@@ -192,7 +196,8 @@ class Collection(FixedObjectWithRepeater, ContainsRefs):
         return iter(self.value)
     
     def __getattr__(self, name):
-        if name in ('append', 'count', 'extend', 'index', 'insert', 'pop', 'remove', 'reverse', 'sort'):
+        if name in ('append', 'count', 'extend', 'index', 'insert', 'pop', 
+                    'remove', 'reverse', 'sort'):
             return getattr(self.value, name)
     
     def __getitem__(self, index):
@@ -235,7 +240,8 @@ class Dictionary(Collection):
         Collection.__init__(self, value)
     
     def to_value(self):
-        items = [Container(key=key, value=value) for (key, value) in dict(self.value).items()]
+        items = [Container(key=key, value=value) 
+                 for (key, value) in dict(self.value).items()]
         return Container(items=items, length=len(items))
     
     @classmethod
@@ -427,7 +433,8 @@ class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
     classID = 13
     _construct = Struct("",
         UBInt32("length"),
-        construct.String("items", lambda ctx: ctx.length * 4, padchar="\x00", paddir="right"),
+        construct.String("items", lambda ctx: ctx.length * 4, padchar="\x00", 
+                         paddir="right"),
         # Identically named "String" class -_-
     )
         
@@ -443,7 +450,8 @@ class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
         If(lambda ctx: ctx._value > 223,
             IfThenElse("", lambda ctx: ctx._value <= 254, Embed(Struct("",
                 UBInt8("_second_byte"),
-                Value("_value", lambda ctx: (ctx._value - 224) * 256 + ctx._second_byte),
+                Value("_value", 
+                    lambda ctx: (ctx._value - 224) * 256 + ctx._second_byte),
             )), Embed(Struct("",
                 UBInt32("_value"),
             )))
@@ -458,7 +466,8 @@ class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
             Struct("data",
                 Embed(_int),
                 Value("data_code", lambda ctx: ctx._value % 4),
-                Value("run_length", lambda ctx: (ctx._value - ctx.data_code) / 4),
+                Value("run_length", lambda ctx:
+                    (ctx._value - ctx.data_code) / 4),
                 Switch("", lambda ctx: ctx.data_code, {
                     0: Embed(Struct("",
                         StrictRepeater(get_run_length,
@@ -490,8 +499,8 @@ class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
     @classmethod
     def from_byte_array(cls, bytes):
         """Decodes a run-length encoded ByteArray and returns a Bitmap.
-        The ByteArray decompresses to a sequence of 32-bit values, which are stored as 
-        a byte string. (The specific encoding depends on Form.depth.)
+        The ByteArray decompresses to a sequence of 32-bit values, which are
+        stored as a byte string. (The specific encoding depends on Form.depth.)
         """
         runs = cls._length_run_coding.parse(bytes)
         data = "" 
@@ -533,7 +542,8 @@ class Form(FixedObject, ContainsRefs):
     
     @property
     def value(self):
-        return dict((k, getattr(self, k)) for k in self.__dict__ if not k.startswith("_"))
+        return dict((k, getattr(self, k)) for k in self.__dict__ 
+                    if not k.startswith("_"))
     
     def to_value(self):
         return Container(**self.value)
@@ -613,7 +623,8 @@ class Form(FixedObject, ContainsRefs):
         if not path.endswith(".png"): path += ".png"
         
         if not png:
-            raise ValueError, "Missing dependency: pypng library needed for PNG support"
+            raise ValueError,
+                "Missing dependency: pypng library needed for PNG support"
         
         f = open(path, "wb")
         (width, height, rgba_array) = self.to_array()

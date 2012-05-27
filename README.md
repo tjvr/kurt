@@ -37,10 +37,13 @@ Tested with **Python 2.6**. Works with **Scratch 1.4**; not tested with earlier 
 ## Recent Changes 
 
 ###v1.3, decompiler:
-* Most images now work! Details:
+* Can now build projects entirely "from scratch" (as it were) in Python code using `ScratchProjectFile.new()`
+* **Decompiler** to export all images, scripts from .sb file as PNG/JPG format and scratchblocks text files
+* Experimental **compiler** for making .sb files, the reverse of decompiler
+* *Highly* experimental scratchblocks **parser** for generating scripts
+* Most **images** now work! Details:
 	* Images with depth 1 and 2 now work — (fixed some buggy reverse-engineered code).
 	* Default color values ("squeak_colors") now work — fixed a bug saving all-white stage background.
-* Can now build projects entirely "from scratch" (as it were) in Python code
 
 
 ###v1.2, images:

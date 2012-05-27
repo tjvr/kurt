@@ -188,8 +188,10 @@ blocks = (list(parse_blockspec(squeak_blockspecs)) +
 
 blocks += [
     BlockType("readVariable", "%v", "r", "variables"),
-    BlockType("changeVariable", "change %v by %n", defaults=[None, Symbol("changeVar:by:"), None], category="variables"),
-    BlockType("changeVariable", "set %v to %s", defaults=[None, Symbol("setVar:to:"), None], category="variables"),
+    BlockType("changeVariable", "change %v by %n", 
+        defaults=[None, Symbol("changeVar:by:"), None], category="variables"),
+    BlockType("changeVariable", "set %v to %s", 
+        defaults=[None, Symbol("setVar:to:"), None], category="variables"),
 ]
 
 blocks_by_cmd = {}

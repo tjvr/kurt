@@ -37,11 +37,13 @@ import user_objects
 
 class ObjectAdapter(Adapter):
     """Decodes a construct to a pythonic class representation.
-    The class must have a from_construct classmethod and a to_construct instancemethod.
+    The class must have a from_construct classmethod and a to_construct 
+    instancemethod.
     """
     def __init__(self, classes, *args, **kwargs):
         """Initialize an adapter for a new type/object(s).
-        @param classes: class, list of classes, or dict of obj.classID name to class mapping.
+        @param classes: class, list of classes, or dict of obj.classID name to 
+        class mapping.
             eg ObjectAdapter({"String": String, "Array": Collection}, <subcon>)
         Note: Must use new-style objects, ie. subclasses of object.
         """
@@ -58,7 +60,8 @@ class ObjectAdapter(Adapter):
             return self.classes[classID]
     
     def _encode(self, obj, context):
-        """Encodes a class to a lower-level object using the class' own to_construct function.
+        """Encodes a class to a lower-level object using the class' own 
+        to_construct function.
         If no such function is defined, returns the object unchanged.
         """
         func = getattr(obj, 'to_construct', None)
@@ -68,7 +71,8 @@ class ObjectAdapter(Adapter):
             return obj
     
     def _decode(self, obj, context):
-        """Initialises a new Python class from a construct using the mapping passed to the adapter.
+        """Initialises a new Python class from a construct using the mapping 
+        passed to the adapter.
         """
         cls = self._get_class(obj.classID)
         return cls.from_construct(obj, context)
@@ -185,7 +189,8 @@ _obj_table_entry = PythonicAdapter(ObjectAdapter(Struct("object",
         user_object,
     ),
 )))
-_obj_table_entry.__doc__ = """Construct for object table entries, both UserObjects and FixedObjects."""
+_obj_table_entry.__doc__ = """Construct for object table entries, both 
+    UserObjects and FixedObjects."""
 
 
 class ObjectTableAdapter(Adapter):
@@ -205,16 +210,21 @@ class ObjectNetworkAdapter(Adapter):
     """Object network <--> object table listing objects containing Refs"""
     def _encode(self, root, context):
         def get_ref(value):            
-            """Returns the index of the given object in the object table, adding it if needed."""
-            # This is really slow at the moment, particularly if we have lots of objects.
+            """Returns the index of the given object in the object table, 
+            adding it if needed.
+            """
+            # This is really slow at the moment, particularly if we have lots of
+            # objects.
             objects = self._objects
             
             value = PythonicAdapter(Pass)._encode(value, context)
-            # Convert strs to FixedObjects here to make sure they get encoded correctly
+            # Convert strs to FixedObjects here to make sure they get encoded 
+            # correctly
             
             if isinstance(value, UserObject) or isinstance(value, FixedObject):
                 # must handle both back and forward refs.
-                proc_objects = [getattr(obj, '_made_from', None) for obj in objects]
+                proc_objects = [getattr(obj, '_made_from', None) 
+                                for obj in objects]
                 
                 for i in xrange(len(objects)-1, -1, -1):
                     if value is objects[i]:
@@ -236,27 +246,39 @@ class ObjectNetworkAdapter(Adapter):
         
         def fix_fields(obj):
             obj = PythonicAdapter(Pass)._encode(obj, context)
-            # Convert strs to FixedObjects here to make sure they get encoded correctly
+            # Convert strs to FixedObjects here to make sure they get encoded
+            # correctly
             
             if isinstance(obj, UserObject):
                 fixed_obj = obj.to_construct(Container())
-                fixed_obj.field_values = [get_ref(value) for value in fixed_obj.field_values]
+                fixed_obj.field_values = [get_ref(value) 
+                                          for value in fixed_obj.field_values]
                 #fixed_obj = obj.__class__(field_values, version = obj.version)
             
             elif isinstance(obj, Dictionary):
-                fixed_obj = obj.__class__(dict((get_ref(field), get_ref(value)) for (field, value) in obj.value.items()))
+                fixed_obj = obj.__class__(dict(
+                    (get_ref(field), get_ref(value))
+                    for (field, value) in obj.value.items()
+                ))
                 
             elif isinstance(obj, dict):
-                fixed_obj = dict((get_ref(field), get_ref(value)) for (field, value) in obj.items())
+                fixed_obj = dict(
+                    (get_ref(field), get_ref(value)) 
+                    for (field, value) in obj.items()
+                )
                 
             elif isinstance(obj, list):
                 fixed_obj = [get_ref(field) for field in obj]
                 
             elif isinstance(obj, Form):
-                fixed_obj = obj.__class__(**dict((field, get_ref(value)) for (field, value) in obj.value.items()))
+                fixed_obj = obj.__class__(**dict(
+                    (field, get_ref(value)) 
+                    for (field, value) in obj.value.items()
+                ))
                 
             elif isinstance(obj, ContainsRefs):
-                fixed_obj = obj.__class__([get_ref(field) for field in obj.value])
+                fixed_obj = obj.__class__([get_ref(field) 
+                                           for field in obj.value])
                 
             else:
                 return obj
@@ -291,10 +313,16 @@ class ObjectNetworkAdapter(Adapter):
                     obj.fields[field_name] = value
             
             elif isinstance(obj, Dictionary):
-                obj.value = dict((resolve_ref(field), resolve_ref(value)) for (field, value) in obj.value.items())
+                obj.value = dict(
+                    (resolve_ref(field), resolve_ref(value)) 
+                    for (field, value) in obj.value.items()
+                )
             
             elif isinstance(obj, dict):
-                obj = dict((resolve_ref(field), resolve_ref(value)) for (field, value) in obj.items())
+                obj = dict(
+                    (resolve_ref(field), resolve_ref(value)) 
+                    for (field, value) in obj.items()
+                )
             
             elif isinstance(obj, list):
                 obj = [resolve_ref(field) for field in obj]
@@ -324,15 +352,17 @@ _obj_table_entries = ObjectTableAdapter(Struct("object_table",
 ))
 
 ObjTable = ObjectNetworkAdapter(_obj_table_entries)
-ObjTable.__doc__ = """Construct for parsing a binary object table to pythonic object(s).
-""" #Includes "ObjS\\x01Stch\\x01" header.
+ObjTable.__doc__ = """Construct for parsing a binary object table to pythonic 
+    object(s).
+    """ #Includes "ObjS\\x01Stch\\x01" header.
 
 class InfoTableAdapter(Subconstruct):
     """Info ObjTable found in the project header.
     Adds the preceding info_size header (4 bytes).
     
     Parses to a Dictionary. Includes the following keys:
-        thumbnail - image showing a small picture of the stage when the project was saved
+        thumbnail - image showing a small picture of the stage when the project 
+                    was saved
         author - name of the user who saved or shared this project
         comment - author's comments about the project
         history - a string containing the project save/upload history

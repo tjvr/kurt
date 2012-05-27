@@ -37,7 +37,8 @@ class UserObject(object):
     Use .fields.keys() to see available fields [dir() won't show them.]
     
     Each class lists its field order in _fields. 
-    Unknown fields not in this list are named "undefined-%i", where i is the field index.
+    Unknown fields not in this list are named "undefined-%i", where i is the 
+    field index.
     """
     _fields = []
     _version = 1
@@ -101,7 +102,8 @@ class UserObject(object):
         
         if field_values:
             defined_fields = self._fields[:]
-            defined_fields += tuple("undefined-%i" % i for i in range(len(defined_fields), len(field_values)))
+            defined_fields += tuple("undefined-%i" % i
+                for i in range(len(defined_fields), len(field_values)))
             self.fields.update(zip(defined_fields, field_values))
         
         self.fields.update(args)
@@ -116,7 +118,8 @@ class UserObject(object):
         if name in self.fields:
             return self.fields[name]
         else:
-            raise AttributeError, '%s instance has no attribute %s' % (self.__class__.__name__, name)
+            raise AttributeError, ('%s instance has no attribute %s'
+                % (self.__class__.__name__, name))
             
     def __setattr__(self, name, value):
         if name in self._fields:
@@ -144,7 +147,9 @@ class UserObject(object):
             ordered_fields.append((field_name, value))
             
         # leftover undefined fields
-        fields = sorted(fields.items(), key=lambda (field,value): int(field.split('-')[1]))
+        fields = sorted(fields.items(),
+            key=lambda (field,value): int(field.split('-')[1])
+        )
         for field_name, value in fields:
             ordered_fields.append((field_name, value))
              
@@ -190,7 +195,8 @@ class EllipseMorph(BorderedMorph):
 
 class AlignmentMorph(RectangleMorph):
     classID = 104
-    _fields = RectangleMorph._fields + ("orientation", "centering", "hResizing", "vResizing", "inset") 
+    _fields = RectangleMorph._fields + ("orientation", "centering", "hResizing", 
+        "vResizing", "inset") 
 
 class StringMorph(BaseMorph):
     classID = 105
@@ -201,15 +207,20 @@ class UpdatingStringMorph(StringMorph):
 
 class SimpleSliderMorph(BorderedMorph):
     classID = 107
-    _fields = BorderedMorph._fields + ("slider", "value", "setValueSelector", "sliderShadow", "sliderColor", "descending", "model", "target", "actionSelector", "arguments", "actWhen")
+    _fields = BorderedMorph._fields + ("slider", "value", "setValueSelector", 
+        "sliderShadow", "sliderColor", "descending", "model", "target", 
+        "actionSelector", "arguments", "actWhen")
 
 class SimpleButtonMorph(RectangleMorph):
     classID = 108
-    _fields = RectangleMorph._fields + ("target", "actionSelector", "arguments", "actWhen")
+    _fields = RectangleMorph._fields + ("target", "actionSelector", "arguments", 
+        "actWhen")
 
 class SampledSound(UserObject):
     classID = 109
-    _fields = ("envelopes", "scaledVol", "initialCount", "samples", "originalSamplingRate", "samplesSize", "scaledIncrement", "scaledInitialIndex")
+    _fields = ("envelopes", "scaledVol", "initialCount", "samples", 
+        "originalSamplingRate", "samplesSize", "scaledIncrement",
+        "scaledInitialIndex")
 
 class ImageMorph(BaseMorph):
     classID = 110
@@ -217,7 +228,8 @@ class ImageMorph(BaseMorph):
 
 class SketchMorph(BaseMorph):
     classID = 111
-    _fields = Morph._fields + ("originalForm", "rotationCenter", "rotationDegrees", "rotationStyle", "scalePoint", "offsetWhenRotated")
+    _fields = Morph._fields + ("originalForm", "rotationCenter", 
+        "rotationDegrees", "rotationStyle", "scalePoint", "offsetWhenRotated")
 
 
 
@@ -225,7 +237,8 @@ class SketchMorph(BaseMorph):
 ### Scratch-specific classes ###
 
 class ScriptableScratchMorph(BaseMorph):
-    _fields = Morph._fields + ("name", "vars", "scripts", "isClone", "media", "costume")
+    _fields = Morph._fields + ("name", "vars", "scripts", "isClone", "media", 
+        "costume")
     
     def __init__(self, *args, **kwargs):
         UserObject.__init__(self, *args, **kwargs)
@@ -248,7 +261,8 @@ class ScriptableScratchMorph(BaseMorph):
     
     def built(self):
         UserObject.built(self)
-        self.scripts = [Script.from_array(self, script) for script in self.scripts]
+        self.scripts = [Script.from_array(self, script)
+                        for script in self.scripts]
         
         media = self.media
         self.media = []
@@ -269,18 +283,23 @@ class ScriptableScratchMorph(BaseMorph):
             else:
                 raise ValueError("%r does not have a costume" % self)
 
-        self.lists = dict((unicode(name), list) for (name, list) in self.lists.items())
+        self.lists = dict(
+            (unicode(name), list) for (name, list) in self.lists.items()
+        )
         for list_name in self.lists:
             scratch_list = self.lists[list_name]
             if not isinstance(scratch_list, ScratchListMorph):
                 scratch_list = ScratchListMorph(items=scratch_list)
                 self.lists[list_name] = scratch_list
             scratch_list.name = list_name
+            
+            # This would show the list watcher on the stage:
             #scratch_list.target = self
             #if isinstance(self, ScratchStageMorph):
             #     scratch_list.owner = self
             #else:
             #    scratch_list.owner = self.owner
+            
             scratch_list.normalize()
     
     def _encode_field(self, name, value):
@@ -295,7 +314,8 @@ class ScriptableScratchMorph(BaseMorph):
 
 class SensorBoardMorph(BaseMorph):
     classID = 123
-    _fields = BaseMorph._fields + ("unknown",) # TODO — I have NO idea what this does.
+    _fields = BaseMorph._fields + ("unknown",)
+                                  # TODO — I have NO idea what this does.
 
 
 class ScratchSpriteMorph(ScriptableScratchMorph):
@@ -309,7 +329,9 @@ class ScratchSpriteMorph(ScriptableScratchMorph):
     Use .fields.keys() to see all available fields.
     """
     classID = 124
-    _fields = ScriptableScratchMorph._fields + ("visibility", "scalePoint", "rotationDegrees", "rotationStyle", "volume", "tempoBPM", "draggable", "sceneStates", "lists")
+    _fields = ScriptableScratchMorph._fields + ("visibility", "scalePoint", 
+        "rotationDegrees", "rotationStyle", "volume", "tempoBPM", "draggable", 
+        "sceneStates", "lists")
     _version = 3
     
     def set_defaults(self):
@@ -332,7 +354,8 @@ class ScratchSpriteMorph(ScriptableScratchMorph):
         
         if not self.bounds:
             try:
-                self.bounds = Rectangle([0, 0, self.costume.width, self.costume.height])
+                self.bounds = Rectangle(
+                    [0, 0, self.costume.width, self.costume.height])
             except AttributeError:
                 # invalid costume, or maybe JPG
                 self.bounds = Rectangle([0, 0, 100, 100])
@@ -347,10 +370,11 @@ class ScratchSpriteMorph(ScriptableScratchMorph):
 
 
 class ScratchStageMorph(ScriptableScratchMorph):
-    """The project stage. Also contains project contents, including sprites and media.
+    """The project stage. Contains project contents including sprites and media.
     Main attributes:
         sprites - ordered list of sprites.
-        submorphs - everything on the stage, including sprites & variable/list watchers.
+        submorphs - everything on the stage, including sprites & 
+                    variable/list watchers.
         scripts
         vars
         lists
@@ -359,7 +383,9 @@ class ScratchStageMorph(ScriptableScratchMorph):
     Use .fields.keys() to see all available fields.
     """
     classID = 125
-    _fields = ScriptableScratchMorph._fields + ("zoom", "hPan", "vPan", "obsoleteSavedState", "sprites", "volume", "tempoBPM", "sceneStates", "lists")
+    _fields = ScriptableScratchMorph._fields + ("zoom", "hPan", "vPan", 
+        "obsoleteSavedState", "sprites", "volume", "tempoBPM", "sceneStates", 
+        "lists")
     _version = 5
     
     def set_defaults(self):
@@ -443,7 +469,9 @@ class BlockMorph(BaseMorph):
 class CommandBlockMorph(BlockMorph):
     """unused?"""
     classID = 148
-    _fields = BlockMorph._fields + ("commandSpec", "argMorphs", "titleMorph", "receiver", "selector", "isReporter", "isTimed", "wantsName", "wantsPossession")
+    _fields = BlockMorph._fields + ("commandSpec", "argMorphs", "titleMorph", 
+        "receiver", "selector", "isReporter", "isTimed", "wantsName", 
+        "wantsPossession")
 
 class CBlockMorph(BaseMorph):
     """unused?"""
@@ -466,7 +494,9 @@ class ScratchSliderMorph(BaseMorph):
 class WatcherMorph(AlignmentMorph):
     """A variable watcher."""
     classID = 155
-    _fields = AlignmentMorph._fields + ("titleMorph", "readout", "readoutFrame", "scratchSlider", "watcher", "isSpriteSpecific", "unused", "sliderMin", "sliderMax", "isLarge")
+    _fields = AlignmentMorph._fields + ("titleMorph", "readout", "readoutFrame", 
+        "scratchSlider", "watcher", "isSpriteSpecific", "unused", "sliderMin", 
+        "sliderMax", "isLarge")
     _version = 5
     
     @property
@@ -499,13 +529,16 @@ class ScratchMedia(UserObject):
 
 class ImageMedia(ScratchMedia):
     """An image file, used for costumes and backgrounds.
-    Methods:
+    Class methods:
+        load(path) - load a png or jpg image
+    Instance methods:
         save(path) — save the image to an external file.
     
-    Image data is stored internally on the "form" attribute.
+    PNG image data is stored internally on the "form" attribute.
     """
     classID = 162
-    _fields = ScratchMedia._fields + ("form", "rotationCenter", "textBox", "jpegBytes", "compositeForm")
+    _fields = ScratchMedia._fields + ("form", "rotationCenter", "textBox", 
+        "jpegBytes", "compositeForm")
     _version = 4
 
     @classmethod
@@ -572,8 +605,8 @@ class ImageMedia(ScratchMedia):
         """Save the image data to an external file.
         Returns the filename with extension.
         Arguments:
-            path - the absolute or relative path to save to. Does not require extension.
-            format - the extension to save as, "png" or "jpg". May throw an error if 
+            path - absolute/relative path to save to. Doesn't require extension.
+            format - extension to save as, "png" or "jpg". May throw an error if 
                      image format is different.
         """
         guessed_from_extension = False
@@ -622,11 +655,13 @@ class ImageMedia(ScratchMedia):
 class MovieMedia(ScratchMedia):
     """unused?"""
     classID = 163
-    _fields = ScratchMedia._fields + ("fileName", "fade", "fadeColor", "zoom", "hPan", "vPan", "msecsPerFrame", "currentFrame", "moviePlaying")
+    _fields = ScratchMedia._fields + ("fileName", "fade", "fadeColor", "zoom",
+        "hPan", "vPan", "msecsPerFrame", "currentFrame", "moviePlaying")
 
 class SoundMedia(ScratchMedia):
     classID = 164
-    _fields = ScratchMedia._fields + ("originalSound", "volume", "balance", "compressedSampleRate", "compressedBitsPerSample", "compressedData")
+    _fields = ScratchMedia._fields + ("originalSound", "volume", "balance", 
+        "compressedSampleRate", "compressedBitsPerSample", "compressedData")
 
 
 
@@ -658,7 +693,8 @@ class ReporterBlockMorph(BaseMorph):
 class MultilineStringMorph(BorderedMorph):
     """Used for costume text."""
     classID = 171
-    _fields = BorderedMorph._fields + ("font", "textColor", "selectionColor", "lines")
+    _fields = BorderedMorph._fields + ("font", "textColor", "selectionColor", 
+        "lines")
 
 class ToggleButton(SimpleButtonMorph):
     """unused?"""

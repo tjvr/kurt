@@ -81,7 +81,8 @@ class BinaryFile(object):
     
     def save(self, path=None):
         """Save the file to disk.
-        @param path: (optional) set new destination path. Future saves will go to the new location.
+        @param path: (optional) set new destination path. Future saves will go 
+                     to the new location.
         """
         if path and not path.lower().endswith("."+self.EXTENSION.lower()):
             path += "."+self.EXTENSION
@@ -116,8 +117,8 @@ class ScratchProjectFile(BinaryFile):
     @param path: path to .sb file.
     
     Attributes:
-        info - a Dictionary containing project info (author, notes, thumbnail...)
-        stage - the stage. Contains project contents, including sprites and media.
+        info - a Dictionary containing project info (author, notes, thumbnail)
+        stage - the stage. Contains contents, including sprites and media.
     """
     
     EXTENSION = "sb"
@@ -159,6 +160,10 @@ class ScratchProjectFile(BinaryFile):
     
     @classmethod
     def new(cls, path=None):
+        """Returns a new, empty project.
+        Optional path argument.
+        Will not write to disk until you .save()
+        """
         project = cls()
         project.stage = ScratchStageMorph()
         project.path = path # do this now so project doesn't attempt
@@ -179,8 +184,10 @@ class ScratchSpriteFile(BinaryFile):
     @param path: path to .sprite file.
     
     Attributes:
-        stage - the root object of the file (Sprite files actually contain a serialised ScratchStageMorph)
-        sprite - convenience property for accessing the first (only) sprite in the file.
+        stage - the root object of the file (Sprite files actually contain a 
+                serialised ScratchStageMorph)
+        sprite - convenience property for accessing the first (only) sprite in 
+                 the file.
     """
 
     EXTENSION = "sprite"

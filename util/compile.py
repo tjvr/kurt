@@ -248,7 +248,8 @@ def import_sprite(project_dir, sprite_name):
 
         costume_path = join_path(costumes_dir, filename)
         costume = ImageMedia.load(costume_path)
-        costume.rotationCenter = Point.from_string(costume_args["rotationCenter"])
+        costume.rotationCenter = Point.from_string(
+            costume_args["rotationCenter"])
 
         print costume
         
