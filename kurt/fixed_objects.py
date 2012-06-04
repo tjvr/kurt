@@ -623,8 +623,8 @@ class Form(FixedObject, ContainsRefs):
         if not path.endswith(".png"): path += ".png"
         
         if not png:
-            raise ValueError,
-                "Missing dependency: pypng library needed for PNG support"
+            raise ValueError, "Missing dependency: pypng library needed for " \
+                              "PNG support"
         
         f = open(path, "wb")
         (width, height, rgba_array) = self.to_array()

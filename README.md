@@ -12,7 +12,7 @@ You could use it for:
 * analysing the scripts in a project
 * *(someday, perhaps...)* making a "Scratch IDE" text-based editor for Scratch scripts... :)
 
-See [Usage](#usage) to get started!
+[Install](#installation) Kurt, and then see [Usage](#usage) to get started!
 
 (It *can't* read/write sounds yet, but they're on the [to-do list](#todo) — see below)
 
@@ -28,6 +28,8 @@ Download the latest version of Kurt and extract the `kurt` folder somewhere in y
 You'll need the **latest version** of the awesome [**Construct**](http://construct.wikispaces.com/) library — used for defining the format. It currently appears to be available [here](http://pypi.python.org/pypi/construct). (I'm using Construct version 2.04).
 
 For saving images, you'll need the [**PyPNG**](https://code.google.com/p/pypng/) module. Kurt *should* work without it, if you don't want to save images — but it's strongly recommended.
+
+Now see [Usage](#usage) to get started!
 
 Tested with **Python 2.6**. Works with **Scratch 1.4**; not tested with earlier versions, but possibly works.
 
@@ -65,6 +67,7 @@ Tested with **Python 2.6**. Works with **Scratch 1.4**; not tested with earlier 
 
 
 ## Usage
+**Getting Started** | [Scripts](#scripts) | [Images](#images) | [Decompiler](#decompiler) | [Compiler](#compiler)
 
 Here's a quick getting started — grab a Python interpreter (Python's `>>>` prompt — just type `python` into your terminal, or load up IDLE), and have a go!
 
@@ -87,7 +90,7 @@ Inspect project:
     project.stage # <ScratchStageMorph(Stage)>
     
     # List fields on object:
-    project.stage.fields.keys() # ['volume', 'hPan', 'sprites', 'lists', 'vars', 'obsoleteSavedState', 'color', 'media', 'sceneStates', 'bounds', 'submorphs', 'zoom', 'isClone', 'blocksBin', 'flags', 'objName', 'owner', 'tempoBPM', 'vPan', 'properties', 'costume']
+    project.stage.fields.keys() # ['volume', 'hPan', 'sprites', 'lists', 'name', 'vars', 'obsoleteSavedState', 'color', 'media', 'bounds', 'submorphs', 'zoom', 'isClone', 'flags', 'costume', 'scripts', 'owner', 'tempoBPM', 'vPan', 'properties', 'sceneStates']
 
     # Access fields using dot notation:
     project.stage.tempoBPM # 60
@@ -113,35 +116,35 @@ Save:
 
 Now re-open the project with Scratch!
 
-Everything should, of course, work perfectly; if you have any problems, please file an issue, and I'll take a look! (:
+Everything should, of course, work perfectly; if you do have any problems, please file an issue, and I'll take a look! (:
 
 ### Scripts
 A list of scripts can be found on the `scripts` property of both sprites and the stage.
 
     >>> cat.scripts
-    [Script(Point(23, 36.0),
-	Block('EventHatMorph', 'Scratch-StartClicked'),
-	Block('xpos:', 0),
-	Block('doForever',  [
-			Block('doIf', 
-				Block('keyPressed:', 'right arrow'),
-				[
-					Block('changeVariable', u'vx', <#changeVar:by:>, 2),
-				]),
-			Block('doIf', 
-				Block('keyPressed:', 'left arrow'),
-				[
-					Block('changeVariable', u'vx', <#changeVar:by:>, -2),
-				]),
-			Block('changeVariable', u'vx', <#setVar:to:>, 
-				Block('*', 
-					Block('readVariable', u'vx'),
-				0.80000000000000004),
-			),
-			Block('changeXposBy:', 
-				Block('readVariable', u'vx'),
-			),
-		]))]
+    [Script(Point(23, 36.0), [
+        Block('EventHatMorph', 'Scratch-StartClicked'),
+        Block('xpos:', 0),
+        Block('doForever',  [
+                Block('doIf', 
+                    Block('keyPressed:', 'right arrow'),
+                    [
+                        Block('changeVariable', u'vx', <#changeVar:by:>, 2),
+                    ]),
+                Block('doIf', 
+                    Block('keyPressed:', 'left arrow'),
+                    [
+                        Block('changeVariable', u'vx', <#changeVar:by:>, -2),
+                    ]),
+                Block('changeVariable', u'vx', <#setVar:to:>, 
+                    Block('*', 
+                        Block('readVariable', u'vx'),
+                    0.80000000000000004),
+                ),
+                Block('changeXposBy:', 
+                    Block('readVariable', u'vx'),
+                ),
+            ])])]
 
 Use the `to_block_plugin` method to print them nicely:
 
@@ -171,19 +174,41 @@ Save to an external file:
 
     image.save("scratch_cat.png")
 
-There's a script under `util/decompile.py` for exporting all the images, scripts, and most other stuff else in a Scratch project to separate files, with a folder for each sprite. It automatically makes a folder with the name `<project name> files` to put everything in. Just pass it the path to your project file:
+### Decompiler
+
+There's a script under `util/decompile.py` for exporting all the images, scripts, and most other stuff in a Scratch project to separate files, with a folder for each sprite. Think a Scratch [project summary](#note1) on steroids. It puts everything in a folder named `<project name> files`. Just pass it the path to your project file:
 
     $ python util/decompile.py tests/game.sb
 
+And get a folder structure a bit like this:
+
+    game files/
+        00 Stage/
+            backgrounds/
+                01 background1.png
+            backgrounds.txt
+            lists/
+            scripts/
+            variables.txt
+        
+        01 ScratchCat/
+            costumes/
+                01 costume1.png
+                02 costume2.png
+            costumes.txt
+            lists/
+            scripts/
+                01 when gf clicked.txt
+            variables.txt
+
 ### Compiler
-There's also a proof-of-concept compiler under `util/compile.py` that takes a folder structure generated by decompile as an argument, and compiles all the images and scripts back into a .sb file. It's rather incomplete, and doesn't include lists or variables, and the scratchblocks parser complains at lots of things like `<` and `>` signs, but it kinda works...
+There's also a *proof-of-concept* compiler under `util/compile.py` that takes a folder structure generated by decompile as an argument, and compiles all the images and scripts back into a .sb file. It's rather incomplete, and doesn't include lists or variables, and the scratchblocks parser complains at lots of things like `<` and `>` signs, but it kinda works... :P
 
 Decompile the provided `game.sb`, edit one of the scripts (make sure your scratchblocks syntax is absolutely perfect), and then try compiling it!
 
 Again, just pass it the path to your project folder:
 
     $ python util/decompile.py "tests/game files"
-
 
 ## Licence
 
@@ -215,3 +240,6 @@ I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, n
 
 * Optimise image parsing.
 
+## Notes
+
+<a name="note1"></a>*project summary* — a txt file with the detail of the project such as scripts in text form. Obtained by shift-clicking Scratch's "File" menu and choosing "Write project summary".
