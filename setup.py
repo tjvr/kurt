@@ -17,5 +17,5 @@ setup(name='kurt',
       packages=['kurt'],
       scripts=glob.glob('util/*'),
       url='https://github.com/blob8108/kurt',
-      version=version
+      version=version,
 )

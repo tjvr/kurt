@@ -19,11 +19,6 @@
 
 """Python library for reading/writing Scratch project (.sb) and sprite files.
 
-DEPENDENCIES:
-    construct - for defining the format. 
-                Homepage: http://construct.wikispaces.com/
-                ["construct" in the Python package index]
-
 USAGE:
     You'll probably just want to use the provided ScratchProjectFile and 
     ScratchSpriteFile classes. Pass them the path to the file and use their 
@@ -50,4 +45,4 @@ from kurt.files import *
 from kurt.scripts import *
 from kurt.scratchblocks import parse_scratchblocks, ParseError
 
-__version__ = '1.2.2dev.bboe'
+__version__ = '1.3'

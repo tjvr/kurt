@@ -27,7 +27,7 @@ Options 1 and 2 will automatically install kurt, and its dependencies
 [Construct](http://construct.wikispaces.com/) and
 [PyPNG](https://code.google.com/p/pypng/).
 
-### Option 1 (pip or easy_install)
+### Option 1: pip or easy_install
 
 If you have either `easy_install` or `pip` installed, installation is as simple
 as running one of the following:
@@ -35,18 +35,18 @@ as running one of the following:
     pip install kurt
     easy_install kurt
 
-### Option 2 (setup.py)
+### Option 2: setup.py
 
 Download (or git clone) the latest version of Kurt. From the kurt folder
 containing `setup.py` run:
 
     python setup.py install
 
-### Option 2 (manual install)
+### Option 3: manual install
 
 Download the latest version of Kurt and extract the `kurt` folder somewhere in your `sys.path` — or in the same directory as your code, if you prefer.
 
-You'll need the **latest version** of the awesome [**Construct**](http://construct.wikispaces.com/) library — used for defining the format. It currently appears to be available [here](http://pypi.python.org/pypi/construct). (I'm using Construct version 2.04).
+You'll need the **latest version** of the awesome [**Construct**](http://construct.wikispaces.com/) library (used for defining the format). It currently appears to be available [here](http://pypi.python.org/pypi/construct). (I'm using Construct version 2.04).
 
 For saving images, you'll need the [**PyPNG**](https://code.google.com/p/pypng/) module. Kurt *should* work without it, if you don't want to save images — but it's strongly recommended.
 
@@ -65,16 +65,16 @@ Tested with **Python 2.6**. Works with **Scratch 1.4**; not tested with earlier 
 * Experimental **compiler** for making .sb files, the reverse of decompiler
 * *Highly* experimental scratchblocks **parser** for generating scripts
 * Most **images** now work! Details:
-	* Images with depth 1 and 2 now work — (fixed some buggy reverse-engineered code).
-	* Default color values ("squeak_colors") now work — fixed a bug saving all-white stage background.
+    * Images with depth 1 and 2 now work — (fixed some buggy reverse-engineered code).
+    * Default color values ("squeak_colors") now work — fixed a bug saving all-white stage background.
 
 
 ###v1.2, images:
 * Can now parse images! :D
 
-	Well, most images. If not, try reloading the project with Scratch and saving it again — this sometimes helps.
-	
-	Unfortunately, Kurt doesn't compress the images when saving them back to the file again (yet), so it may massively increase your file size :P Again, you can just open it in Scratch and save it again, and the file size will be back to normal.
+    Well, most images. If not, try reloading the project with Scratch and saving it again — this sometimes helps.
+    
+    Unfortunately, Kurt doesn't compress the images when saving them back to the file again (yet), so it may massively increase your file size :P Again, you can just open it in Scratch and save it again, and the file size will be back to normal.
 
 * Split Sprite.media into separate costumes/sounds lists.
 
@@ -95,18 +95,21 @@ Here's a quick getting started — grab a Python interpreter (Python's `>>>` pr
 You'll probably just want to use the provided `ScratchProjectFile` and `ScratchSpriteFile` classes. Load them by passing the path to the file to their constructor and use their provided `.save()` methods.
 
 You can import just these classes them using:
-
+    
+    python
     from kurt.files import *
 
 Load a file (you'll find a preview file, `game.sb`, saved in the `tests` directory; but feel free to try it with any Scratch project file).
 
-	# Just pass in the absolute or relative path to the file:
-	project = ScratchProjectFile("tests/game.sb")
-	
+    python
+    # Just pass in the absolute or relative path to the file:
+    project = ScratchProjectFile("tests/game.sb")
+    
     # You can reload the file at any time with .load()
 
 Inspect project:
 
+    python
     project.info['author'] # u'blob8108'
     project.stage # <ScratchStageMorph(Stage)>
     
@@ -128,11 +131,13 @@ Inline objects, such as `int` and `bool`, are converted transparently to their P
 
 Make changes:
 
+    python
     cat.vars # {u'vx': 0.0}
     cat.vars['vx'] = 100
 
 Save:
 
+    python
     project.save()
 
 Now re-open the project with Scratch!
@@ -142,6 +147,7 @@ Everything should, of course, work perfectly; if you do have any problems, pleas
 ### Scripts
 A list of scripts can be found on the `scripts` property of both sprites and the stage.
 
+    python
     >>> cat.scripts
     [Script(Point(23, 36.0), [
         Block('EventHatMorph', 'Scratch-StartClicked'),
@@ -169,6 +175,7 @@ A list of scripts can be found on the `scripts` property of both sprites and the
 
 Use the `to_block_plugin` method to print them nicely:
 
+    python
     >>> print cat.scripts[0].to_block_plugin()
     when green flag clicked
     set x to (0)
@@ -188,11 +195,13 @@ This is identical to `scratchblocks` format, so you can paste them straight into
 ### Images
 You can find costumes under a sprite's `costumes` property (similarly for stage `backgrounds`).
 
+    python
     cat.costumes # [<ImageMedia(costume1)>, <ImageMedia(costume2)>]
     image = cat.costumes[0]
 
 Save to an external file:
 
+    python
     image.save("scratch_cat.png")
 
 ### Decompiler
@@ -245,19 +254,19 @@ I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, n
 * ~~"Default project" for building projects entirely "from scratch" (as it were) in Python code?~~ DONE! (Lists work, too!)
 
 * ~~Compiler~~ Done, sort of — kind of a proof-of-concept.
-	* Booleans like `<(1) < (2)>` don't work, unsurprisingly
+    * Booleans like `<(1) < (2)>` don't work, unsurprisingly
 
 * ~~Parse images~~ DONE! :D
-	* Compress Bitmap to ByteArray on save (using run-length encoding)
-	* Images with depth `16` are not supported *(need an example)*
+    * Compress Bitmap to ByteArray on save (using run-length encoding)
+    * Images with depth `16` are not supported *(need an example)*
 
 * Make some decent tests
 
 * Read/write external Sound files
 
-* Optimise `ObjectNetworkAdapter` for building large files.	
+* Optimise `ObjectNetworkAdapter` for building large files. 
 
-	Kurt is currently very quick at parsing files; but pretty slow at writing them, particularly ones with very long scripts.
+    Kurt is currently very quick at parsing files; but pretty slow at writing them, particularly ones with very long scripts.
 
 * Optimise image parsing.
 
