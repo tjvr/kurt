@@ -25,7 +25,9 @@ If you're interested in technical details of how the format works: the code shou
 
 Options 1 and 2 will automatically install kurt, and its dependencies
 [Construct](http://construct.wikispaces.com/) and
-[PyPNG](https://code.google.com/p/pypng/).
+[PyPNG](http://code.google.com/p/pypng/).
+
+The new installer (options 1 and 2) are thanks to [bboe](http://github.com/bboe)! :)
 
 ### Option 1: pip or easy_install
 
@@ -48,7 +50,7 @@ Download the latest version of Kurt and extract the `kurt` folder somewhere in y
 
 You'll need the **latest version** of the awesome [**Construct**](http://construct.wikispaces.com/) library (used for defining the format). It currently appears to be available [here](http://pypi.python.org/pypi/construct). (I'm using Construct version 2.04).
 
-For saving images, you'll need the [**PyPNG**](https://code.google.com/p/pypng/) module. Kurt *should* work without it, if you don't want to save images — but it's strongly recommended.
+For saving images, you'll need the [**PyPNG**](http://code.google.com/p/pypng/) module. Kurt *should* work without it, if you don't want to save images — but it's strongly recommended.
 
 Now see [Usage](#usage) to get started!
 
