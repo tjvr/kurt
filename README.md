@@ -97,13 +97,11 @@ Here's a quick getting started — grab a Python interpreter (Python's `>>>` pr
 You'll probably just want to use the provided `ScratchProjectFile` and `ScratchSpriteFile` classes. Load them by passing the path to the file to their constructor and use their provided `.save()` methods.
 
 You can import just these classes them using:
-    
-    python
+
     from kurt.files import *
 
 Load a file (you'll find a preview file, `game.sb`, saved in the `tests` directory; but feel free to try it with any Scratch project file).
 
-    python
     # Just pass in the absolute or relative path to the file:
     project = ScratchProjectFile("tests/game.sb")
     
@@ -111,9 +109,8 @@ Load a file (you'll find a preview file, `game.sb`, saved in the `tests` directo
 
 Inspect project:
 
-    python
     project.info['author'] # u'blob8108'
-    project.stage # <ScratchStageMorph(Stage)>
+    project.stage # <Stage(Stage)>
     
     # List fields on object:
     project.stage.fields.keys() # ['volume', 'hPan', 'sprites', 'lists', 'name', 'vars', 'obsoleteSavedState', 'color', 'media', 'bounds', 'submorphs', 'zoom', 'isClone', 'flags', 'costume', 'scripts', 'owner', 'tempoBPM', 'vPan', 'properties', 'sceneStates']
@@ -125,7 +122,7 @@ Inspect project:
     cat = project.stage.sprites[0]
     cat.name # u'ScratchCat'
 
-Most of the objects you're interested in, like `ScratchStageMorph` and `ScratchSpriteMorph`, inherit from `UserObject`. You can use `.fields.keys()` to see the available fields on one of these objects.
+Most of the objects you're interested in, like `Stage` and `Sprite`, inherit from `UserObject`. You can use `.fields.keys()` to see the available fields on one of these objects.
 
 `FixedObjects` like `OrderedCollection` have a `.value` property to access their value.
 
@@ -133,13 +130,11 @@ Inline objects, such as `int` and `bool`, are converted transparently to their P
 
 Make changes:
 
-    python
     cat.vars # {u'vx': 0.0}
     cat.vars['vx'] = 100
 
 Save:
 
-    python
     project.save()
 
 Now re-open the project with Scratch!
@@ -149,7 +144,6 @@ Everything should, of course, work perfectly; if you do have any problems, pleas
 ### Scripts
 A list of scripts can be found on the `scripts` property of both sprites and the stage.
 
-    python
     >>> cat.scripts
     [Script(Point(23, 36.0), [
         Block('EventHatMorph', 'Scratch-StartClicked'),
@@ -177,7 +171,6 @@ A list of scripts can be found on the `scripts` property of both sprites and the
 
 Use the `to_block_plugin` method to print them nicely:
 
-    python
     >>> print cat.scripts[0].to_block_plugin()
     when green flag clicked
     set x to (0)
@@ -197,13 +190,11 @@ This is identical to `scratchblocks` format, so you can paste them straight into
 ### Images
 You can find costumes under a sprite's `costumes` property (similarly for stage `backgrounds`).
 
-    python
     cat.costumes # [<ImageMedia(costume1)>, <ImageMedia(costume2)>]
     image = cat.costumes[0]
 
 Save to an external file:
 
-    python
     image.save("scratch_cat.png")
 
 ### Decompiler

@@ -25,9 +25,9 @@ USAGE:
     provided .save() methods. Access them using:
         from kurt.files import *
     
-    Most of the objects you're interested in, like ScratchStageMorph and 
-    ScratchSpriteMorph, inherit from UserObject. You can use .fields.keys() 
-    to see the available fields on one of these objects.
+    Most of the objects you're interested in, like Stage and Sprite, inherit 
+    from UserObject. You can use .fields.keys() to see the available fields on 
+    one of these objects.
     
     FixedObjects have a .value property to access their value. Inline objects, 
     such as int and bool, are converted to their Pythonic counterparts. Array 

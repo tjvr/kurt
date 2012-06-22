@@ -31,11 +31,11 @@ class Block(object):
     """A single block.
     Arguments:
         script - the parent script that this block belongs to
-        name - the named command that the block performs (see BlockType.command)
+        command - names the command this block performs (see BlockType.command)
         args - list of arguments for each of the block's inserts (see 
                BlockType.defaults)
     Attributes:
-        type - BlockType instance (found to match self.name)
+        type - BlockType instance (found to match self.command)
         
     Methods:
         to_block_plugin() — returns the block in scratchblocks format.
@@ -66,7 +66,7 @@ class Block(object):
     
     @classmethod
     def from_array(cls, script, array):
-        name = array.pop(0)
+        command = array.pop(0)
         
         args = []
         for arg in array:
@@ -76,12 +76,12 @@ class Block(object):
                 arg = [Block.from_array(script, block) for block in arg]
             args.append(arg)
         
-        return cls(script, name, *args)
+        return cls(script, command, *args)
     
     def to_array(self):
         array = []
-        if self.name:
-            array.append(Symbol(self.name))
+        if self.command:
+            array.append(Symbol(self.command))
         for arg in self.args:
             if isinstance(arg, Block):
                 array.append(arg.to_array())
@@ -92,7 +92,7 @@ class Block(object):
         return array
     
     def __repr__(self):
-        string = "Block(%s, " % repr(self.name)
+        string = "<%s Block (" % repr(self.command)
         for arg in self.args:
             if isinstance(arg, Block):
                 string = string.rstrip("\n")
@@ -111,10 +111,15 @@ class Block(object):
                 string += repr(arg) + ", "
         string = string.rstrip(" ")
         string = string.rstrip(",")
-        return string + ')'
+        return string + ")>"
     
     @property
     def name(self):
+        print "WARNING: Block.name is deprecated"
+        return self.command
+    
+    @property
+    def command(self):
         if self.type:
             return self.type.command
         return ""
@@ -129,7 +134,7 @@ class Block(object):
             
             if isinstance(value, Block):
                 block = value
-                if block.name == "readVariable":
+                if block.command == "readVariable":
                     value = block.args[0]
                     insert_fmt = "(%s)"
                 else:
@@ -176,33 +181,37 @@ class Block(object):
         
         block_type = self.type
 
-        if self.name == "changeVariable":
+        if self.command == "changeVariable":
             change = arguments.pop(1)
             if change.value == "setVar:to:":
                 text = "set %v to %s"
             elif change.value == "changeVar:by:":
                 text = "change %v by %n"
-            block_type = BlockType(self.name, text)
+            block_type = BlockType(self.command, text)
         
         if not block_type:
-            string = self.name
+            if not self.command and self.args: # Empty strings are comments
+                return "// %s" % self.args[0]
+            
+            string = self.command
             for arg in self.args:
                 arg = get_insert(arg)
                 string += " " + arg
+            
             return string
         
-        if self.name == "MouseClickEventHatMorph":
+        if self.command == "MouseClickEventHatMorph":
             try:
                 morph_name = self.script.morph.name
             except AttributeError:
                 morph_name = "sprite"
             arguments[0] = morph_name
         
-        elif self.name == "EventHatMorph":
+        elif self.command == "EventHatMorph":
             if arguments[0] != "Scratch-StartClicked":
-                block_type = BlockType(self.name, "when I receive %e")
+                block_type = BlockType(self.command, "when I receive %e")
         
-        if self.name in ("not", "="): # fix weird blockplugin bug
+        if self.command in ("not", "="): # fix weird blockplugin bug
             block_type = block_type.copy()
             block_type.text = block_type.text.replace(" ", "")
         
@@ -226,7 +235,7 @@ class Block(object):
                     block_str = block.to_block_plugin()
                     string += "\n\t" + block_str.replace("\n", "\n\t")
             
-            if self.name == 'doIfElse':
+            if self.command == 'doIfElse':
                 string += '\nelse'
                 
                 blocks = []
@@ -245,11 +254,21 @@ class Block(object):
 
 class Script(object):
     """A single stack of blocks.
-    Usually, self.blocks[0] is a "when" block/EventHatMorph.
+    
+    The first block self.blocks[0] is usually a “when” block, eg. an 
+    EventHatMorph.
+    
+    Scripts implement the `list` interface, so can be indexed directly; eg 
+    `script[0]` is the same as `script.blocks[0]`. All other methods like
+    `append` also work. 
+    
     Arguments/attributes:
-        morph - ScriptableScratchMorph instance that this script belongs to
-        pos - x, y position of script in blocks bin.
+        morph - ScriptableScratchMorph (Stage or Sprite) instance that this 
+                script belongs to
+        pos - (x, y) position of script in the “blocks bin”, the script pane in 
+              the Scratch interface.
         blocks - list of blocks.
+    
     Methods:
         to_block_plugin() — returns the script in scratchblocks format.
     """
@@ -272,6 +291,7 @@ class Script(object):
         return (self.pos, [block.to_array() for block in self.blocks])
     
     def to_block_plugin(self):
+        """Returns the script in scratchblocks format."""
         string = ""
         for block in self.blocks:
             string += block.to_block_plugin() + "\n"
@@ -307,7 +327,8 @@ class Script(object):
 
 
 
-from blockspecs import blocks_by_cmd, block_plugin_inserts, BlockType
+from blockspecs import *
+    #blocks_by_cmd, block_plugin_inserts, BlockType, find_block
 # YES THIS IS STUPID
 
 

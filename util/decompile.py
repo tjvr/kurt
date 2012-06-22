@@ -42,7 +42,7 @@ except ImportError: # try and find kurt directory
     sys.path.append(path_to_lib)
 
 from kurt.files import *
-from kurt import ScratchStageMorph
+from kurt import Stage
 
 
 
@@ -113,7 +113,7 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
     
     
     # Costumes/Backgrounds
-    if isinstance(sprite, ScratchStageMorph):
+    if isinstance(sprite, Stage):
         costumes_dir = join_path(sprite_dir, "backgrounds")
     else:
         costumes_dir = join_path(sprite_dir, "costumes")

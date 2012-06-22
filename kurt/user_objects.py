@@ -295,7 +295,7 @@ class ScriptableScratchMorph(BaseMorph):
             
             # This would show the list watcher on the stage:
             #scratch_list.target = self
-            #if isinstance(self, ScratchStageMorph):
+            #if isinstance(self, Stage):
             #     scratch_list.owner = self
             #else:
             #    scratch_list.owner = self.owner
@@ -318,7 +318,7 @@ class SensorBoardMorph(BaseMorph):
                                   # TODO — I have NO idea what this does.
 
 
-class ScratchSpriteMorph(ScriptableScratchMorph):
+class Sprite(ScriptableScratchMorph):
     """A sprite.
     Main attributes:
         scripts
@@ -369,7 +369,7 @@ class ScratchSpriteMorph(ScriptableScratchMorph):
         self.images = value
 
 
-class ScratchStageMorph(ScriptableScratchMorph):
+class Stage(ScriptableScratchMorph):
     """The project stage. Contains project contents including sprites and media.
     Main attributes:
         sprites - ordered list of sprites.

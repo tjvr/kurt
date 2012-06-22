@@ -385,7 +385,11 @@ InfoTable = InfoTableAdapter(ObjTable)
 
 
 
+ScratchStageMorph = Stage
+ScratchSpriteMorph = Sprite
+
 __all__ = [
     'ObjTable', '_obj_table_entry', '_obj_table_entries', 
-    'UserObject', 'FixedObject', 'Field'
+    'UserObject', 'FixedObject', 'Field', 
+    'ScratchStageMorph', 'ScratchSpriteMorph',
 ] + [cls.__name__ for cls in fixed_object_classes + user_object_classes]

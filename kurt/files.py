@@ -27,7 +27,7 @@ Construct them by passing them a path.
 from construct import Container, Struct, Bytes, Rename
 from construct.text import Literal
 from objtable import ObjTable, InfoTable
-from user_objects import ScratchStageMorph
+from user_objects import Stage
 
 import os.path
 
@@ -165,7 +165,7 @@ class ScratchProjectFile(BinaryFile):
         Will not write to disk until you .save()
         """
         project = cls()
-        project.stage = ScratchStageMorph()
+        project.stage = Stage()
         project.path = path # do this now so project doesn't attempt
                             # to .load() itself
         return project
@@ -185,7 +185,7 @@ class ScratchSpriteFile(BinaryFile):
     
     Attributes:
         stage - the root object of the file (Sprite files actually contain a 
-                serialised ScratchStageMorph)
+                serialised Stage)
         sprite - convenience property for accessing the first (only) sprite in 
                  the file.
     """

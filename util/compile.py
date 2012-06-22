@@ -193,9 +193,9 @@ def import_sprite(project_dir, sprite_name):
     start_time = time.time()
     
     if is_stage:
-        sprite = ScratchStageMorph()
+        sprite = Stage()
     else:
-        sprite = ScratchSpriteMorph()
+        sprite = Sprite()
         sprite.name = sprite_name
     
     # Scripts
