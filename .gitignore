@@ -6,3 +6,5 @@ construct/
 dist/
 files/
 tests/
+kurt/scratchblocks/parsetab.py
+parser.out

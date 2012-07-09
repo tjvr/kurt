@@ -43,6 +43,10 @@ USAGE:
 from kurt.objtable import *
 from kurt.files import *
 from kurt.scripts import *
-from kurt.scratchblocks import parse_scratchblocks, ParseError
+
+try:
+	from kurt.scratchblocks import parse_scratchblocks
+except ImportError:
+	pass
 
 __version__ = '1.3'
