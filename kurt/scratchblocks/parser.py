@@ -1,4 +1,4 @@
-from ply import yacc
+﻿from ply import yacc
 import os
 from lexer import tokens
 
@@ -13,23 +13,35 @@ class Insert(object):
     
     BOOL = "bool"
 
-    def __init__(self, value, kind):
-        self.value = value
+    REPORTER = "reporter"
+
+    def __init__(self, kind, value):
         self.kind = kind
+        self.value = value
     
     def __repr__(self):
-        return "Insert(%s, %s)" % (self.value, self.kind)
+        return "Insert(%r, %r)" % (self.kind, self.value)
+
 
 
 def p_parts(t):
-    """
-    parts : part parts
-	      | part
-    """
-    if len(t) == 3:
-        t[0] = [t[1]] + t[2]
-    elif len(t) == 2:
-        t[0] = [t[1]]
+    """parts : parts part"""
+    t[0] = t[1] + [ t[2] ]
+
+def p_part(t):
+    """parts : part"""
+    t[0] = [ t[1] ]
+
+
+
+def p_insert_part(t):
+    """part : insert"""
+    t[0] = t[1]
+
+def p_symbol_part(t):
+    """part : SYMBOL"""
+    t[0] = t[1]
+
 
 
 def p_number_int(t):
@@ -42,51 +54,46 @@ def p_number_float(t):
 
 def p_number_insert(t):
     """insert : LPAREN number RPAREN"""
-    t[0] = Insert(t[2], Insert.NUMBER)
+    t[0] = Insert(Insert.NUMBER, t[2])
 
 def p_variable_insert(t):
     """insert : LPAREN SYMBOL RPAREN"""
-    t[0] = Insert(t[2], Insert.VARIABLE)
+    t[0] = Insert(Insert.VARIABLE, t[2])
 
 def p_string_insert(t):
     """insert : STRING"""
-    t[0] = Insert(t[2], Insert.STRING)
+    t[0] = Insert(Insert.STRING, t[1])
+
+def p_boolean_insert(t):
+    """insert : LBOOL parts RBOOL"""
+    t[0] = Insert(Insert.BOOL, t[2])
+
+def p_reporter_insert(t):
+    """insert : LPAREN parts RPAREN"""
+    t[0] = Insert(Insert.REPORTER, t[2])
+    
 
 
-#def p_insert_ltgt(t):
-#    """
-#    part : LBOOL
-#    part : RBOOL
-#    """
-#    t[0] = t[1]
-
-
-def p_part_insert(t):
-    """part : insert"""
-    t[0] = t[1]
-
-def p_part_symbol(t):
-    """part : SYMBOL"""
-    t[0] = t[1]
-
-def p_part_boolean(t):
-    """part : LBOOL parts RBOOL"""
-    t[0] = Insert(t[2], Insert.BOOL)
+def p_boolean_expr(t):
+    """parts : insert LBOOL insert
+             | insert RBOOL insert
+    """
+    t[0] = [ t[1], t[2], t[3] ]
 
 
 
 # Syntax errors.
 def p_error(p):
     if p:
-        raise SyntaxError("invalid syntax" + repr(p.__dict__))
-	else:
-		# EOF
-		raise SyntaxError("invalid syntax")
+        raise SyntaxError("unexpected %r" % p.value + " —— " + repr(p.__dict__))
+    else:
+        # EOF
+        raise SyntaxError("invalid syntax")
 
 
 
 # Build the parser.
 path_to_file = os.path.join(os.getcwd(), __file__)
 path_to_folder = os.path.split(path_to_file)[0]
-print path_to_folder
+
 yacc.yacc(debug=DEBUG, outputdir=path_to_folder)
