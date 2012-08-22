@@ -31,7 +31,6 @@ from os.path import split as split_path
 
 import codecs
 def open(file, mode="r"):
-    log(file)
     return codecs.open(file, mode, "utf-8")
 
 
@@ -46,6 +45,9 @@ from kurt import *
 
 
 
+IGNORED_NAMES = [".DS_Store"]
+
+
 class InvalidFile(Exception):
     def __init__(self, path, error):
         self.path = path
@@ -58,6 +60,9 @@ class FileNotFound(Exception):
 class FileExists(Exception):
     pass
 
+class ParseError(Exception):
+    pass
+
 
 
 def log(msg, newline=True):
@@ -67,12 +72,16 @@ def log(msg, newline=True):
         print msg, 
 
 
-def split_filename_number(filename):
+def split_filename_number(filename, path=None):
     parts = filename.split(' ')
     try:
         number = int(parts[0])
     except ValueError:
-        raise InvalidFile(filename, "Name must start with number")
+        if path:
+            path = os.path.join(path, filename) 
+        else:
+            path = filename
+        raise InvalidFile(path, "Name must start with number")
     
     name = " ".join(parts[1:])
     
@@ -98,6 +107,7 @@ def read_costume_file(path):
             filename = line.strip()
             costume = {
                 "filename": filename,
+                "rotationCenter": "0, 0",
             }
             
             while 1:
@@ -167,14 +177,17 @@ def read_script_file(morph, path):
         if not more_data: break
         data += more_data    
     
-    data = str(data)
+    data = unicode(data)
+    data = data.replace('\r\n', '\n')
+    data = data.replace('\r', '\n')
     
     try:
-        blocks = parse_scratchblocks(data)
+        script = parse_scratchblocks(data)
     except ParseError, e:
         raise InvalidFile(path, e)
     
-    script = Script(morph, pos, blocks)
+    script = Script(morph, pos, script.blocks)
+    # TODO: move position info inside parser?
 
     file.close()
     
@@ -187,13 +200,15 @@ def import_sprite(project_dir, sprite_name):
     is_stage = (sprite_name == "00 Stage")
     number = 0
     if not is_stage:
-        (number, sprite_name) = split_filename_number(sprite_name)    
+        (number, sprite_name) = split_filename_number(sprite_name, project_dir)    
     
     log("* "+sprite_name, False)
     start_time = time.time()
     
     if is_stage:
         sprite = Stage()
+        stage_background = sprite.backgrounds[0]
+        sprite.backgrounds = []
     else:
         sprite = Sprite()
         sprite.name = sprite_name
@@ -221,11 +236,16 @@ def import_sprite(project_dir, sprite_name):
     costumes = read_costume_file(costumes_dir+".txt")
     
     found_costumes = os.listdir(costumes_dir)
+    for ignore in IGNORED_NAMES:
+        while ignore in found_costumes:
+            found_costumes.remove(ignore)
     found_costumes.sort()
     
     for costume in costumes:
-        if costume["filename"] not in found_costumes:
-            log("Couldn't find costume "+costume)
+        costume_path = os.path.join(costumes_dir, costume["filename"])
+        if ( costume["filename"] not in found_costumes or 
+             not os.path.exists(costume_path) ):
+            log("Couldn't find costume "+costume_path)
             costumes.remove(costume)
     
     for filename in found_costumes:
@@ -235,7 +255,20 @@ def import_sprite(project_dir, sprite_name):
         else:
             costumes.append({
                 "filename": filename,
+                "rotationCenter": "0, 0",
             })
+    
+    for costume in costumes:
+        try:
+            (number, name) = split_filename_number(costume["filename"])
+            costume["number"] = number
+            costume["name"] = name
+        except InvalidFile:
+            costume["number"] = None
+            costume["name"] = costume["filename"]
+    
+    costumes.sort(key=lambda c: c["number"])
+    costumes.sort(key=lambda c: c["number"] is None) # sort new costumes to end
     
     selected_costume = None
     for costume_args in costumes:
@@ -244,10 +277,14 @@ def import_sprite(project_dir, sprite_name):
             costume_args.pop("selected")
 
         filename = costume_args["filename"]
-        #(index, costume_name) = split_filename_number(filename)
+        #(index, costume_name) = split_filename_number(filename, costumes_dir)
 
         costume_path = join_path(costumes_dir, filename)
         costume = ImageMedia.load(costume_path)
+        costume.name = costume_args["name"]
+        if not costume:
+            raise InvalidFile(costume_path, "Couldn't load image")
+        
         costume.rotationCenter = Point.from_string(
             costume_args["rotationCenter"])
 
@@ -255,7 +292,10 @@ def import_sprite(project_dir, sprite_name):
         
         sprite.images.append(costume)
     
-    if not selected_costume:
+    if is_stage and not costumes:
+        sprite.backgrounds = [stage_background]
+    
+    if not selected_costume and costumes:
         selected_costume = costumes[-1]
     
     # TODO: Variables
@@ -291,6 +331,10 @@ def compile(project_dir, debug=True): # DEBUG: set to false
         raise FileNotFound(join_path(project_dir, stage_name))
     sprite_names.remove(stage_name)
     
+    for ignore in IGNORED_NAMES:
+        while ignore in sprite_names:
+            sprite_names.remove(ignore)
+    
     (_, stage) = import_sprite(project_dir, stage_name)
     
     sprites = [import_sprite(project_dir, name) for name in sprite_names]
@@ -325,6 +369,7 @@ if __name__ == '__main__':
             project.save()
 
         except InvalidFile, e:
+            print
             print "Invalid file: %s" % e.path
             print e.error
             exit(2)

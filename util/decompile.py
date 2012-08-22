@@ -41,9 +41,11 @@ except ImportError: # try and find kurt directory
     path_to_lib = split_path(split_path(path_to_file)[0])[0]
     sys.path.append(path_to_lib)
 
-from kurt.files import *
+from kurt.files import ScratchProjectFile, ScratchSpriteFile
 from kurt import Stage
 
+from compile import read_script_file ### DEBUG
+import cStringIO
 
 
 class InvalidProject(Exception):
@@ -110,7 +112,43 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
         write_file(script_path, contents, line_endings)
         
         count += 1
-    
+        
+#         ### DEBUG
+#         test = read_script_file(sprite, script_path)
+#         if test != script:
+#             def compare(script_a, script_b, stack='script'):
+#                 i = 0
+#                 for (block_a, block_b) in zip(script_a, script_b):
+#                     if block_a != block_b:
+#                         print stack + '[%i]' % i
+#                         print block_a.type, block_b.type
+#                         
+#                         done_args = False
+#                         j = 0
+#                         
+#                         if len(block_a.args) != len(block_b.args):
+#                             # weird.
+#                             if len(filter(None, block_a.args)) == len(filter(None, block_b.args)):
+#                                 print "SECRETLY THE SAME"
+#                                 continue
+#                         
+#                         for (arg_a, arg_b) in zip(block_a.args, block_b.args):
+#                             if arg_a != arg_b:
+#                                 if isinstance(arg_a, list):
+#                                     assert isinstance(arg_b, list)
+#                                     compare(arg_a, arg_b, stack + '[%i]' % i + '.args[%i]' % j)
+#                                     done_args = True
+#                                 else:
+#                                     print ' ', arg_a, arg_b
+#                             j += 1
+#                         
+#                         if not done_args:
+#                             print block_a
+#                             print block_b
+#                     i += 1
+#                 
+#             compare(script, test)
+#             import pdb; pdb.set_trace()
     
     # Costumes/Backgrounds
     if isinstance(sprite, Stage):
@@ -161,9 +199,9 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
     # Lists
     lists_dir = join_path(sprite_dir, "lists")
     os.mkdir(lists_dir)
-    for list in sprite.lists.values():
-        list_path = join_path(lists_dir, list.name+".txt")
-        contents = "\n".join(list.items)
+    for slist in sprite.lists.values():
+        list_path = join_path(lists_dir, slist.name+".txt")
+        contents = "\n".join(slist.items)
         write_file(list_path, contents, line_endings)
     
     

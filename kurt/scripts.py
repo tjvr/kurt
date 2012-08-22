@@ -40,18 +40,49 @@ class Block(object):
     Methods:
         to_block_plugin() — returns the block in scratchblocks format.
     """
-    def __init__(self, script, type=None, *args):
+    def __init__(self, script, command_or_type=None, *args):
         self.script = script
         
+        if not command_or_type:
+            print 'OBSOLETE?'
+            import pdb; pdb.set_trace()
+        
         self.type = None
-        if isinstance(type, BlockType):
-            self.type = type
+        if isinstance(command_or_type, BlockType):
+            self.type = command_or_type
         else:
-            if isinstance(type, Symbol):
-                type = type.value
+            command = command_or_type
+            if isinstance(command, Symbol):
+                command = command.value
             
-            if type in blocks_by_cmd:
-                self.type = blocks_by_cmd[type]
+            if command in blocks_by_cmd:
+                poss_types = blocks_by_cmd[command]
+                if command == "changeVariable":
+                    if len(args) < 3:
+                        raise ValueError, \
+                            "Invalid arguments to 'changeVariable' block"
+                    
+                    for type in poss_types:
+                        if type.defaults[1] == args[1]:
+                            self.type = type
+                            break
+                    else:
+                        raise ValueError, "Invalid argument " + repr(args[1]) \
+                            + " to changeVariable block"
+                
+                elif command == "EventHatMorph":
+                    if args[0] == "Scratch-StartClicked": # when gf clicked
+                        for type in poss_types:
+                            if type.defaults == ["Scratch-StartClicked"]:
+                                self.type = type
+                                break
+                    else: # broadcast
+                        for type in poss_types:
+                            if type.defaults == []:
+                                self.type = type
+                                break
+                else:
+                    self.type = poss_types[0]
         
         if self.type:
             self.args = self.type.defaults[:]
@@ -66,22 +97,33 @@ class Block(object):
     
     @classmethod
     def from_array(cls, script, array):
+        orig = array
+        
+        array = list(array)
         command = array.pop(0)
         
         args = []
         for arg in array:
-            if isinstance(arg, list) and isinstance(arg[0], Symbol):
-                arg = Block.from_array(script, arg)
-            elif isinstance(arg, list):
-                arg = [Block.from_array(script, block) for block in arg]
+            if isinstance(arg, list):
+                if len(arg) == 0:
+                    arg = Block.from_array(script, '')
+                elif isinstance(arg[0], Symbol):
+                    arg = Block.from_array(script, arg)
+                else:
+                    arg = [Block.from_array(script, block) for block in arg]
             args.append(arg)
         
-        return cls(script, command, *args)
+        x = cls(script, command, *args)
+        x._orig = orig
+        return x
     
     def to_array(self):
         array = []
         if self.command:
             array.append(Symbol(self.command))
+        else:
+            array.append('')
+        
         for arg in self.args:
             if isinstance(arg, Block):
                 array.append(arg.to_array())
@@ -90,6 +132,16 @@ class Block(object):
             else:
                 array.append(arg)
         return array
+    
+    def __eq__(self, other):
+        return (
+            isinstance(other, Block) and
+            self.type == other.type and
+            self.args == other.args
+        )
+    
+    def __ne__(self, other):
+        return not self == other
     
     def __repr__(self):
         string = "<%s Block (" % repr(self.command)
@@ -106,7 +158,7 @@ class Block(object):
                 for block in arg:
                     string += "\t\t" + repr(block).replace("\n", "\n\t\t")
                     string += ",\n"
-                string += "\t]"
+                string += "\t], "
             else:
                 string += repr(arg) + ", "
         string = string.rstrip(" ")
@@ -115,7 +167,8 @@ class Block(object):
     
     @property
     def name(self):
-        print "WARNING: Block.name is deprecated"
+        print "WARNING: Block.name is deprecated -- use Block.command instead" 
+        # TODO — leave this out?
         return self.command
     
     @property
@@ -289,6 +342,15 @@ class Script(object):
     
     def to_array(self):
         return (self.pos, [block.to_array() for block in self.blocks])
+    
+    def __eq__(self, other):
+        return (
+            isinstance(other, Script) and
+            self.blocks == other.blocks
+        )
+    
+    def __ne__(self, other):
+        return not self == other
     
     def to_block_plugin(self):
         """Returns the script in scratchblocks format."""

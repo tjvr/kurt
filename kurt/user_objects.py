@@ -27,6 +27,7 @@ available fields [dir() won't show them.]
 from construct import Container
 import os
 
+from inline_objects import Ref
 from fixed_objects import *
 
 
@@ -245,6 +246,8 @@ class ScriptableScratchMorph(BaseMorph):
         
         self.images = []
         self.sounds = []
+        
+        self.build_media() # returns silently if self.media is still a Ref
     
     def set_defaults(self):
         BaseMorph.set_defaults(self)
@@ -263,6 +266,11 @@ class ScriptableScratchMorph(BaseMorph):
         UserObject.built(self)
         self.scripts = [Script.from_array(self, script)
                         for script in self.scripts]
+        self.build_media()
+        
+    def build_media(self):
+        if isinstance(self.media, Ref):
+            return # Don't run this yet!
         
         media = self.media
         self.media = []
@@ -411,6 +419,7 @@ class Stage(ScriptableScratchMorph):
             ),
         )
         self.media = [image]
+        self.images = [image]
         self.costume = image
     
     def normalize(self):

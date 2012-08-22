@@ -110,6 +110,9 @@ class FixedObject(object):
     
     def __repr__(self):
         return "%s(%s)" % (self.__class__.__name__, self.value)
+    
+    def copy(self):
+        return self.__class__(self.value)
 
 
 class ContainsRefs: pass
@@ -211,6 +214,9 @@ class Collection(FixedObjectWithRepeater, ContainsRefs):
     
     def __len__(self):
         return len(self.value)
+    
+    def copy(self):
+        return self.__class__(list(self.value.copy))
 
 class Array(Collection):
     classID = 20
@@ -251,6 +257,9 @@ class Dictionary(Collection):
     
     def __getattr__(self, name):
         return getattr(self.value, name)
+    
+    def copy(self):
+        return self.__class__(self.value.copy())
 
 class IdentityDictionary(Dictionary):
     classID = 25
@@ -293,6 +302,9 @@ class Color(FixedObject):
     @property
     def value(self):
         return (self.r, self.g, self.b)
+    
+    def copy(self):
+        return Color(self.r, self.g, self.b)
     
     def __repr__(self):
         return "%s(%s)" % (
@@ -345,6 +357,9 @@ class TranslucentColor(Color):
     @classmethod
     def from_value(cls, value):
         return cls(value.r, value.g, value.b, value.alpha)
+    
+    def copy(self):
+        return TranslucentColor(self.r, self.g, self.b, self.alpha)
     
     @classmethod
     def from_32bit_raw_argb(cls, raw):
@@ -403,6 +418,9 @@ class Point(FixedObject):
     @classmethod
     def from_value(cls, value):
         return cls(value.x, value.y)
+    
+    def copy(self):
+        return Point(self.x, self.y)
     
     @classmethod
     def from_string(cls, string):
@@ -552,6 +570,9 @@ class Form(FixedObject, ContainsRefs):
     def from_value(cls, value):
         return cls(**dict(value))
     
+    def copy(self):
+        return self.__class__.from_value(self.to_value())
+    
     def __repr__(self):
         return "<%s(%ix%i)>" % (
             self.__class__.__name__,
@@ -660,7 +681,7 @@ class Form(FixedObject, ContainsRefs):
         for i in range(0, len(color_array), pixel_size):
             rgba_array += color_array[i:i+pixel_size]
             if not metadata["alpha"]:
-                rgba_array += 255
+                rgba_array += array('B', [255])
 
         return cls.from_array(width, height, rgba_array)
 

@@ -45,8 +45,8 @@ from kurt.files import *
 from kurt.scripts import *
 
 try:
-	from kurt.scratchblocks import parse_scratchblocks
+    from kurt.scratchblocks import parse_scratchblocks
 except ImportError:
-	pass
+    pass
 
 __version__ = '1.3'

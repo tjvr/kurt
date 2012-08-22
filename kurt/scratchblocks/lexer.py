@@ -3,7 +3,16 @@ import re
 
 # Based on: http://www.drdobbs.com/web-development/184405580#l1
 
-tokens = (
+reserved = {
+   'forever': 'FOREVER',
+   'if':      'IF',
+   'else':    'ELSE',
+   'repeat':  'REPEAT',
+   'until':   'UNTIL',
+   'end':     'END',
+}
+
+tokens = [
     'INT',
     'FLOAT',
     'STRING',
@@ -12,12 +21,15 @@ tokens = (
     'LBOOL',
     'RBOOL',
     'SYMBOL',
-)
+    'NEWLINE',
+] + reserved.values()
 
 t_LPAREN = r'\('
 t_RPAREN = r'\)'
-t_LBOOL = r'<'
-t_RBOOL = r'>'
+t_LBOOL  = r'<'
+t_RBOOL  = r'>'
+
+
 
 # This rule must come before the int rule.
 def t_FLOAT(t):
@@ -59,21 +71,32 @@ def t_STRING(t):
 
 # Ignore comments.
 def t_comment(t):
-    r'([#]|\\)[^\n]*'
+    r'(\\)[^\n]*'
     pass
 
 # Track line numbers.
-def t_newline(t):
-    r'\n+'
+def t_NEWLINE(t):
+    r'(\r\n|\n|\r)+'
+    t.value = t.value.replace("\r\n", "\n")
+    #t.value = t.value.replace("\r", "\n")
     t.lineno += len(t.value)
+    return t
+
 
 # This rule must be practically last since there are so few rules concerning
 # what constitutes a symbol.
 def t_SYMBOL(t):
     r'[^0-9()<>\[\]][^()<>\[\]\ \t\n]*'
+    t.type = reserved.get(t.value, 'SYMBOL') 
     return t
 
 t_ignore = ' \t'
+
+
+# def t_EOF(t):
+#     r'\Z'
+#     return t
+
 
 # Handle errors.
 def t_error(t):

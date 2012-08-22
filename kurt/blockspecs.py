@@ -202,21 +202,25 @@ blocks += [
         defaults = [None, Symbol("setVar:to:"), None], category="variables"),
     
     BlockType("EventHatMorph", "when gf clicked", "S",  # alternate spelling
-        defaults = ["Scratch-StartClicked"])            
+        defaults = ["Scratch-StartClicked"]),
+    
+    BlockType("", "obsolete!"),          
 ]
 
 blocks_by_cmd = {}
 for block in blocks:
     cmd = block.command
     if cmd not in blocks_by_cmd:
-        blocks_by_cmd[cmd] = block
+        blocks_by_cmd[cmd] = []
+    blocks_by_cmd[cmd].append(block)
 
-blocks_by_cmd['EventHatMorph'].defaults = ["Scratch-StartClicked"]
+assert blocks_by_cmd['EventHatMorph'][0].text == 'when green flag clicked'
+blocks_by_cmd['EventHatMorph'][0].defaults = ["Scratch-StartClicked"]
 
 def strip_block_text(parts):
     """Returns text with spaces and inserts removed."""
     text = ''.join(part.replace(" ", "") for part in parts
-                    if part and not part[0] == "%")
+                    if part and not (len(part) == 2 and part[0] == "%"))
     for chr in "?:-":
         new_text = text.replace(chr, "")
         if new_text:
@@ -275,6 +279,7 @@ block_plugin_inserts = {
     "%H": "[%s v]",
     "%W": "[%s v]",
 }
+
 
 from scripts import Block
 
