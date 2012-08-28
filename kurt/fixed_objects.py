@@ -79,6 +79,8 @@ class FixedObject(object):
     """A primitive fixed-format object - eg String, Dictionary.
     value property - contains the object's value."""
     def __init__(self, value):
+        if isinstance(value, FixedObject):
+            value = value.value
         self.value = value
     
     def to_construct(self, context):
@@ -271,6 +273,8 @@ class IdentityDictionary(Dictionary):
 class Color(FixedObject):
     """A 32-bit RGB color value.
     Each component r, g, b has a value between 0 and 1023.
+    
+    However, Colors are considered equal if they have the same 8-bit value.
     """
     classID = 30
     _construct = BitStruct("value",
@@ -292,12 +296,31 @@ class Color(FixedObject):
         self.g = g
         self.b = b
     
+    def __eq__(self, other):
+        return (
+            isinstance(other, Color) and
+            self.to_8bit() == other.to_8bit()
+        )
+    
+    def __ne__(self, other):
+        return not self == other
+    
     def to_value(self):
         return Container(r=self.r, g=self.g, b=self.b)
     
     @classmethod
     def from_value(cls, value):
         return cls(value.r, value.g, value.b)
+    
+    @classmethod
+    def from_8bit(self, r, g=None, b=None):
+        if g is None and b is None:
+            rgb = r
+        else:
+            rgb = (r, g, b)
+        
+        return Color(*(x << 2 for x in rgb))
+        
 
     @property
     def value(self):
@@ -313,7 +336,7 @@ class Color(FixedObject):
         )
     
     def to_8bit(self):
-        """Returns value with components between 0-256."""
+        """Returns value with components between 0-255."""
         return tuple(x >> 2 for x in self.value)
     
     def to_rgba_array(self):

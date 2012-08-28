@@ -236,7 +236,7 @@ class SketchMorph(BaseMorph):
 
 
 ### Scratch-specific classes ###
-
+    
 class ScriptableScratchMorph(BaseMorph):
     _fields = Morph._fields + ("name", "vars", "scripts", "isClone", "media", 
         "costume")
@@ -252,7 +252,7 @@ class ScriptableScratchMorph(BaseMorph):
     def set_defaults(self):
         BaseMorph.set_defaults(self)
         
-        self.scripts = []
+        self.scripts = ScriptCollection()
         self.media = []
         self.costume = None # defaults to first ImageMedia in self.media on save
         self.vars = {}
@@ -264,9 +264,35 @@ class ScriptableScratchMorph(BaseMorph):
     
     def built(self):
         UserObject.built(self)
-        self.scripts = [Script.from_array(self, script)
-                        for script in self.scripts]
+        
+        scripts = [Script.from_array(self, script) for script in self.scripts]
+        self.scripts = ScriptCollection(scripts)
+        
+        comments = []
+        for script in self.scripts:
+            if isinstance(script, Comment):
+                comments.append(script)
+        for comment in comments:
+            self.scripts.remove(comment)
+        
+        blocks_by_id = list(self.blocks_by_id())
+        
+        for comment in comments:
+            comment.attach_scripts(blocks_by_id)
+        
         self.build_media()
+    
+    def blocks_by_id(self):
+        """Return a list of all the blocks in script order but reverse script 
+        blocks order.
+        Used to determine which block a Comment is anchored to.
+        
+        Note that Squeak arrays are 1-based, so index with:
+            blocks_by_id[index - 1]
+        """
+        for script in self.scripts:
+            for block in reversed(list(script.to_block_list())):
+                yield block
         
     def build_media(self):
         if isinstance(self.media, Ref):
@@ -312,12 +338,16 @@ class ScriptableScratchMorph(BaseMorph):
     
     def _encode_field(self, name, value):
         if name == 'scripts':
-            return [script.to_array() for script in value]
+            scripts = [script.to_array() for script in value]
+            blocks_by_id = list(self.blocks_by_id())
+            for block in blocks_by_id:
+                if block.comment:
+                    scripts.append(block.comment.to_array(blocks_by_id))
+            return scripts
         elif name == 'media':
             return OrderedCollection(self.sounds + self.images + self.media)
         else:
             return value
-
 
 
 class SensorBoardMorph(BaseMorph):
@@ -364,7 +394,7 @@ class Sprite(ScriptableScratchMorph):
             try:
                 self.bounds = Rectangle(
                     [0, 0, self.costume.width, self.costume.height])
-            except AttributeError:
+            except ValueError:
                 # invalid costume, or maybe JPG
                 self.bounds = Rectangle([0, 0, 100, 100])
     
@@ -375,6 +405,20 @@ class Sprite(ScriptableScratchMorph):
     @costumes.setter
     def costumes(self, value):
         self.images = value
+
+
+class SpriteCollection(OrderedCollection):
+    def __getitem__(self, item):
+        try:
+            index = int(item)
+        except ValueError:
+            for sprite in self.value:
+                if sprite.name == item:
+                    return sprite
+        return self.value[index]
+    
+    def __repr__(self):
+        return repr(self.value)
 
 
 class Stage(ScriptableScratchMorph):
@@ -406,7 +450,7 @@ class Stage(ScriptableScratchMorph):
         self.zoom = 1.0
         self.hPan =  0
         self.vPan =  0
-        self.sprites = OrderedCollection()
+        self.sprites = SpriteCollection()
         self.sceneStates = {}
         
         image = ImageMedia(
@@ -431,6 +475,18 @@ class Stage(ScriptableScratchMorph):
             sprite.owner = self
             sprite.normalize()
     
+    def built(self):
+        ScriptableScratchMorph.built(self)
+        self.sprites = SpriteCollection(self.sprites)
+        
+    def _encode_field(self, name, value):
+        value = ScriptableScratchMorph._encode_field(self, name, value)
+        
+        if name == 'sprites':
+            return OrderedCollection(self.sprites)
+        else:
+            return value
+    
     @property
     def background(self):
         return self.costume
@@ -448,7 +504,7 @@ class Stage(ScriptableScratchMorph):
         self.images = value
 
 
-from scripts import Script
+from scripts import Script, Comment, ScriptCollection
 # Yes, this is stupid. Circular dependencies ftw. -_-
 
 
@@ -600,11 +656,21 @@ class ImageMedia(ScratchMedia):
     
     @property
     def width(self):
-        return self.form.width
+        if self.form:
+            return self.form.width
+        elif self.jpegBytes:
+            raise ValueError, "Can't get size of JPEGs yet" # TODO
+        else:
+            raise ValueError
         
     @property
     def height(self):
-        return self.form.height
+        if self.form:
+            return self.form.height
+        elif self.jpegBytes:
+            raise ValueError, "Can't get size of JPEGs yet" # TODO
+        else:
+            raise ValueError
 
     @property
     def size(self):

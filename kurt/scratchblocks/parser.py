@@ -1,28 +1,33 @@
 ﻿from ply import yacc
 import os
-from lexer import tokens
+from lexer import tokens, pretty_error
 
 from kurt.blockspecs import find_block, blocks_by_cmd
-from kurt.scripts import Block, Script
-from kurt import Symbol
+from kurt.scripts import Block, Script, SpriteRef
+from kurt import Symbol, Color
+
+
+import htmlcolor
+htmlcolor_parser = htmlcolor.Parser()
+
 
 DEBUG = True
 
 
-special_variables = {
-    'all': Symbol('all'),
-}
-
 
 class Insert(object):
-    NUMBER = "number"
-    VARIABLE = "variable"
-    STRING = "string"
+    NUMBER = "NUMBER"      # ( )
+    VARIABLE = "VARIABLE"
+    REPORTER = "REPORTER"
+    SPECIAL = "SPECIAL"
+       
+    STRING = "STRING"                    # [ ]
+    STRING_DROPDOWN = "STRING_DROPDOWN"  # [ v]
     
-    BOOL = "bool"
-    REPORTER = "reporter"
+    BOOL = "BOOL"  # < >
     
-    SPECIAL = "special"
+    COLOR = "COLOR" # [#fff]
+    # COLOR is only used in `insert_kind`
 
     def __init__(self, kind, value):
         self.kind = kind
@@ -32,14 +37,82 @@ class Insert(object):
         return "Insert(%r, %r)" % (self.kind, self.value)
 
 
-
-
 class BlockError(Exception):
     pass
 
 
+  
+special_variables = {
+    'all': Symbol('all'),
+    'any': Symbol('any'),
+    'last': Symbol('last'),
+}
+
+special_strings = {
+    'mouse-pointer': Symbol('mouse'),
+}
+
+math_functions = ['sqrt', 'abs', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 
+                  'ln', 'log', 'e ^', '10 ^']
+
+insert_kind = {
+    "%b": [Insert.BOOL],
+    "%n": [Insert.NUMBER, Insert.VARIABLE],
+    "%d": [Insert.NUMBER, Insert.VARIABLE],
+    "%s": [Insert.STRING, Insert.VARIABLE],
+    
+    "%c": [Insert.COLOR], # Color
+    "%C": [Insert.COLOR],
+    
+    "%m": [Insert.STRING_DROPDOWN, Insert.VARIABLE, Insert.SPECIAL], # Sprite
+                                                    # Symbol('mouse')
+    "%a": [Insert.STRING_DROPDOWN], # attribute of sprite
+    "%e": [Insert.STRING_DROPDOWN, Insert.VARIABLE], # broadcast message
+    "%k": [Insert.STRING_DROPDOWN], # key
+    
+    "%v": [Insert.STRING_DROPDOWN], # var doesn't *accept* VARIABLE Insert!
+    "%L": [Insert.STRING_DROPDOWN], # List name
+    "%i": [Insert.NUMBER, Insert.SPECIAL, Insert.VARIABLE], # Item
+                                   # Symbol('last'), Symbol('any')
+    "%y": [Insert.NUMBER, Insert.SPECIAL, Insert.VARIABLE], # Item (for delete)
+                                   # Symbol('last'), Symbol('all')
+    
+    "%f": [Insert.STRING_DROPDOWN], # Math function
+           # one of `math_functions`
+    "%l": [Insert.STRING_DROPDOWN, Insert.VARIABLE], # Costume name
+    "%g": [Insert.STRING_DROPDOWN], # graphic effect
+    
+    "%S": [Insert.STRING_DROPDOWN, Insert.VARIABLE], # sound
+    "%D": [Insert.NUMBER, Insert.VARIABLE], # drum
+    "%N": [Insert.NUMBER, Insert.VARIABLE], # note
+    "%I": [Insert.NUMBER, Insert.VARIABLE], # instrument
+    
+    "%h": [Insert.STRING_DROPDOWN], # sensor (value)
+    "%H": [Insert.STRING_DROPDOWN], # sensor (bool)
+    "%W": [Insert.STRING_DROPDOWN, Insert.VARIABLE], # motor direction # TODO
+}
+for accept_inserts in insert_kind.values():
+    if Insert.STRING_DROPDOWN in accept_inserts:
+        accept_inserts.append(Insert.STRING)
+for accept_inserts in insert_kind.values():
+    if Insert.VARIABLE in accept_inserts:
+        accept_inserts.append(Insert.REPORTER)
+
+
+
+def parse_color(hexcode):
+    if hexcode:
+        try:
+            rgb = htmlcolor_parser.parse(hexcode)
+            return Color.from_8bit(*rgb)
+        except ValueError:
+            pass
+    return hexcode
+
 
 def block_from_parts(parts, flag=None):
+    # flag is currently unused
+    
     text = ""
     arguments = []
     for part in parts:
@@ -47,51 +120,107 @@ def block_from_parts(parts, flag=None):
             arguments.append(part)
         else:
             text += part
-
+    
     script = None
     block = None
     poss_types = find_block(text)
     
     if poss_types:
-        if text == 'of':
-            if len(arguments) < 2:
-                raise BlockError, "'of' block needs 2 arguments"
-            
-            if arguments[1].kind == Insert.STRING:
-                type = blocks_by_cmd['getAttribute:of:'][0]
-            else:
-                type = blocks_by_cmd['computeFunction:of:']
-            
-        else:
+        if len(poss_types) == 1:
             type = poss_types[0]
-
-            if type.command == "changeVariable":
-                arguments.insert(1, None)
-                # This gets replaced by a symbol from the blocks arguments:
-                # either <#setVar:to:> or <#changeVar:by:>
-
-        # if flag and type.flag and type.flag != flag:
-        #     summary = " ".join(repr(o) for o in obj)
-        #     raise ParseError(
-        #         "wrong flag %r for %r\n" % (flag, summary) + repr(args))
-
-        block_args = type.defaults[:]
-        for i in range(len(arguments)):
-            arg = arguments[i]
-            if arg:
-                if arg.kind == Insert.VARIABLE:
-                    arg = Block(script, "readVariable", arg.value)
+        else:            
+            # verify insert types against block.inserts
+            for type in poss_types:
+                for (insert, need_type) in zip(arguments, type.inserts):
+                    if need_type == '%f':
+                        if insert.value not in math_functions:
+                            break # Not this type.
+                    else:
+                        need_kinds = insert_kind[need_type]
+                        if insert.kind not in need_kinds:
+                            if insert.kind in (Insert.STRING, 
+                                               Insert.STRING_DROPDOWN):
+                                if Insert.NUMBER in need_kinds:
+                                    # cast DROPDOWN / STRING to NUMBER
+                                    if insert.value.strip().isdigit():
+                                        continue # int
+                                    elif value.strip().replace('.', '').isdigit():
+                                        continue # float
+                            
+                                elif Insert.COLOR in need_kinds:
+                                    # COLORs are STRINGs at this point
+                                    continue
+                            
+                            elif (insert.kind == Insert.NUMBER and 
+                                  Insert.STRING in need_kinds):
+                                # cast NUMBER to STRING
+                                continue
+                            
+                            
+                            
+                            break # Not this type.
                 else:
-                    arg = arg.value
-                
-                # TODO: verify kind of args against block.parts
+                    break # Type is ok!
+            else: # No types matched
+                type = poss_types[0]
+                print "WARNING: wrong args for '%s' block" % type.command
+                print ' '.join(map(repr, parts))
+                import pdb; pdb.set_trace()
 
+        if type.command == "changeVariable":
+            arguments.insert(1, None)
+            # This gets replaced by a symbol from the blocks arguments:
+            # either <#setVar:to:> or <#changeVar:by:>
+        
+        has_args = not type.command == "MouseClickEventHatMorph"
+        allow_vars = not type.command in ("EventHatMorph", "KeyEventHatMorph")
+        
+        block_args = list(type.defaults)
+        if has_args:
+            for i in range(len(arguments)):
+                insert = arguments[i]
+                if insert is None:
+                    continue
+                
+                kind = insert.kind
+                if kind == Insert.VARIABLE and allow_vars:
+                    arg = Block("readVariable", insert.value)
+                else:
+                    arg = insert.value
+                
+                if i < len(type.inserts):
+                    insert_type = type.inserts[i]
+                    need_kinds = insert_kind[insert_type]
+                    
+                    if kind in (Insert.STRING, 
+                                Insert.STRING_DROPDOWN):
+                        if insert_type == "%m":
+                            arg = SpriteRef(arg)
+                        
+                        elif insert_type in ("%f", "%g", "%k"):
+                            arg = str(arg) # Will not accept unicode!
+                        
+                        elif Insert.COLOR in need_kinds:
+                                arg = parse_color(arg)
+                    
+                        elif Insert.NUMBER in need_kinds:
+                            # cast DROPDOWN / STRING to NUMBER 
+                            if arg.strip().isdigit():
+                                arg = int(arg)
+                            elif arg.strip().replace('.', '').isdigit():
+                                arg = float(arg)
+                    
+                    elif ( Insert.STRING in need_kinds and
+                           insert.kind == Insert.NUMBER ):
+                        # cast NUMBER to STRING
+                        arg = unicode(arg)
+                
                 if i >= len(block_args):
                     block_args.append(arg)
                 else:
                     block_args[i] = arg
 
-        block = Block(script, type, *block_args)
+        block = Block(type, *block_args)
 
     if not block:
         e = "No block type found for %r \n"%text + repr(arguments)
@@ -104,6 +233,8 @@ def variable_named(variable_name):
     if variable_name.endswith(' v'):
         variable_name = variable_name[:-2]
     
+    # make sure this is a reporter!
+    
     if variable_name.lower() in special_variables:
         value = special_variables[variable_name].copy()
         return Insert(Insert.SPECIAL, value)
@@ -114,6 +245,10 @@ def variable_named(variable_name):
 
 # Scripts
 
+def p_file(t):
+    """file : script"""
+    t[0] = Script(None, blocks = t[1])
+
 def p_script_end_newlines(t):
     """script : script NEWLINE"""
     t[0] = t[1]
@@ -123,65 +258,83 @@ def p_script_begin_newlines(t):
     t[0] = t[2]
 
 def p_script(t):
-    """script : script NEWLINE block"""
-    t[0] = Script(None, blocks=t[1].blocks + [ t[3] ])
+    """script : script NEWLINE block
+              | script NEWLINE block COMMENT"""
+    block = t[3]
+    if len(t) > 4:
+        block.add_comment(t[4])
+    t[0] = t[1] + [ block ]
 
 def p_script_one(t):
-    """script : block"""
-    t[0] = Script(None, blocks=[ t[1] ])
-    # this is wrong. do script as whole file.
+    """script : block
+              | block COMMENT
+    """
+    block = t[1]
+    if len(t) > 2:
+        block.add_comment(t[2])
+    t[0] = [ block ]
 
 
 # C blocks
 
-def p_empty_c_stack(t):
-    """block : c_block  NEWLINE END
-             | if_block NEWLINE END
-    """
-    block = t[1]
-    args = block.args + [ [] ]
-    t[0] = Block(block.script, block.command, *args)
-
 def p_c_stack(t):
-    """block : c_block  NEWLINE script NEWLINE END
-             | if_block NEWLINE script NEWLINE END
+    """block : c_block  c_mouth END
+             | if_block c_mouth END
     """
     block = t[1]
-    args = block.args + [ t[3].blocks ]
-    t[0] = Block(block.script, block.command, *args)
-
-def p_if_empty_else(t):
-    """block : if_block NEWLINE ELSE NEWLINE script NEWLINE END"""
-    block = t[1]
-    block.type = blocks_by_cmd['doIfElse'][0]
-    args = block.args + [ ] + [ t[5].blocks ]
-    t[0] = Block(block.script, block.type, *args)
-
-def p_if_else_empty(t):
-    """block : if_block NEWLINE script NEWLINE ELSE NEWLINE END"""
-    block = t[1]
-    block.type = blocks_by_cmd['doIfElse'][0]
-    args = block.args + [ t[3].blocks ] + [ ]
-    t[0] = Block(block.script, block.type, *args)
+    block.args += [ t[2] ]
+    t[0] = block #Block(block.command, *args)
 
 def p_if_else(t):
-    """block : if_block NEWLINE script NEWLINE ELSE NEWLINE script NEWLINE END"""
+    """block : if_block c_mouth ELSE c_mouth END
+             | if_block c_mouth ELSE COMMENT c_mouth END"""
     block = t[1]
     block.type = blocks_by_cmd['doIfElse'][0]
-    args = block.args + [ t[3].blocks ] + [ t[7].blocks ]
-    t[0] = Block(block.script, block.type, *args)
+    if len(t) > 6:
+        block.args += [ t[2] ] + [ t[4] ]
+        block.add_comment(t[4])
+    else:
+        block.args += [ t[2] ] + [ t[5] ]
+    t[0] = block #Block(block.type, *args)
+
+def p_c_mouth(t):
+    """c_mouth : NEWLINE script NEWLINE"""
+    t[0] = t[2]
+
+def p_c_mouth_empty(t):
+    """c_mouth : NEWLINE"""
+    t[0] = None
 
 def p_c_block(t):
-    """c_block : FOREVER
-               | FOREVER IF insert
-               | REPEAT insert
-               | REPEAT UNTIL insert
+    """c_block : c_block_def
+               | c_block_def COMMENT
+    """
+    block = t[1]
+    if len(t) > 2:
+        block.add_comment(t[2])
+    t[0] = block
+    
+def p_c_block_def(t):
+    """c_block_def : FOREVER
+                   | FOREVER IF insert
+                   | REPEAT insert
+                   | REPEAT UNTIL insert
     """
     t[0] = block_from_parts(t[1:])
 
 def p_if_block(t):
-    """if_block : IF insert"""
-    t[0] = block_from_parts(t[1:])
+    """if_block : if_block_def
+                | if_block_def COMMENT
+    """
+    block = t[1]
+    if len(t) > 2:
+        block.add_comment(t[2])
+    t[0] = block
+
+def p_if_block_def(t):
+    """if_block_def : IF insert"""
+    block = block_from_parts(t[1:])
+    t[0] = block
 
 
 # Block
@@ -215,10 +368,6 @@ def p_symbol_part(t):
 
 # Inserts
 
-def p_string_insert(t):
-    """insert : STRING"""
-    t[0] = Insert(Insert.STRING, t[1])
-
 def p_bool_insert(t):
     """insert : LBOOL parts RBOOL"""
     block = block_from_parts(t[2], "b")
@@ -226,7 +375,19 @@ def p_bool_insert(t):
 
 def p_empty_bool_insert(t):
     """insert : LBOOL RBOOL"""
-    t[0] = Insert(Insert.BOOL, None)
+    t[0] = Insert(Insert.BOOL, False)
+
+def p_string_insert(t):
+    """insert : STRING"""
+    (value, is_dropdown) = t[1]
+    if value.lower() in special_strings:
+        value = special_strings[value].copy()
+        t[0] = Insert(Insert.SPECIAL, value)
+    else:
+        if is_dropdown:
+            t[0] = Insert(Insert.STRING_DROPDOWN, value)
+        else:
+            t[0] = Insert(Insert.STRING, value)
 
 def p_reporter_insert(t):
     """insert : LPAREN parts RPAREN"""
@@ -242,19 +403,23 @@ def p_reporter_insert(t):
                 raise e # Give up: not a block or a variable.
         
         # Variable!
-        t[0] = variable_named( ' '.join(parts))
+        t[0] = variable_named(' '.join(parts))
         # TODO: allow multiple spaces in var names
 
 def p_empty_reporter_insert(t):
     """insert : LPAREN RPAREN"""
     t[0] = Insert(Insert.REPORTER, None)
-
+    
 def p_number_insert(t):
-    """insert : LPAREN number RPAREN"""
+    """insert : LPAREN number RPAREN
+              | LPAREN number DROPDOWN
+    """
     t[0] = Insert(Insert.NUMBER, t[2])
-
+    
 def p_variable_insert(t):
-    """insert : LPAREN SYMBOL RPAREN"""
+    """insert : LPAREN SYMBOL RPAREN
+              | LPAREN SYMBOL DROPDOWN
+    """
     variable_name = t[2]
     try: # Might be a reporter like 'costume #'
         block = block_from_parts(t[2], "r")
@@ -285,10 +450,12 @@ def p_boolean_expr(t):
     t[0] = [ t[1], t[2], t[3] ]
 
     
-# Until is sometimes used in block text!
-    
-def p_until_part(t):
-    """part : UNTIL"""
+# Keywords sometimes used in block text
+
+def p_keyword_part(t):
+    """part : IF
+            | UNTIL
+    """
     t[0] = t[1]
 
 
@@ -296,12 +463,8 @@ def p_until_part(t):
 # Syntax errors.
 def p_error(p):
     if p:
-        e = "unexpected %s" % p.type
-        e += "\n"
-        for key in dir(p):
-            if not key.startswith("_"):
-                e += "    %s: %r\n" % (key, getattr(p, key))
-        raise SyntaxError(e)
+        err_msg = "Unexpected %(type)s: %(value)s " % p.__dict__
+        pretty_error(p, err_msg)
     else:
         # EOF
         raise SyntaxError("invalid syntax")
@@ -321,7 +484,7 @@ logging.basicConfig(
 )
 log = logging.getLogger()
 
-yacc.yacc(debug=True,debuglog=log)
+yacc.yacc(debug=True, debuglog=log)
 
 
 # "if <<(x) > (3)> and <(y) < (4)>>\n    say [hi]\nend"

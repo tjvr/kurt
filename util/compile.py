@@ -21,7 +21,7 @@
 Imports PNG or JPG images.
 Scripts must be scratchblocks format txt files.
 
-    Usage: python compile.py "path/to/project files/"
+    Usage: compile.py "path/to/project files/"
 """
 
 import time
@@ -52,7 +52,9 @@ class InvalidFile(Exception):
     def __init__(self, path, error):
         self.path = path
         self.error = error
-        Exception.__init__(self, error)
+        
+        message = ("%s\n" % path) + unicode(error)
+        Exception.__init__(self, message)
 
 class FileNotFound(Exception):
     pass
@@ -65,11 +67,16 @@ class ParseError(Exception):
 
 
 
+last_had_newline = True
 def log(msg, newline=True):
+    global last_had_newline
     if newline:
+        if not last_had_newline:
+            print
         print msg
     else:
         print msg, 
+    last_had_newline = newline
 
 
 def split_filename_number(filename, path=None):
@@ -107,7 +114,7 @@ def read_costume_file(path):
             filename = line.strip()
             costume = {
                 "filename": filename,
-                "rotationCenter": "0, 0",
+                "rotationCenter": None,
             }
             
             while 1:
@@ -181,12 +188,15 @@ def read_script_file(morph, path):
     data = data.replace('\r\n', '\n')
     data = data.replace('\r', '\n')
     
-    try:
-        script = parse_scratchblocks(data)
-    except ParseError, e:
-        raise InvalidFile(path, e)
+#     try:
+    script = parse_scratchblocks(data)
+#     except SyntaxError, e:
+#         raise InvalidFile(path, e)
+#     except BlockError, e:
+#         raise InvalidFile(path, e)
     
-    script = Script(morph, pos, script.blocks)
+    script = Script(pos, script.blocks)
+    script.morph = morph
     # TODO: move position info inside parser?
 
     file.close()
@@ -197,10 +207,16 @@ def read_script_file(morph, path):
 
 def import_sprite(project_dir, sprite_name):
     sprite_dir = join_path(project_dir, sprite_name)
-    is_stage = (sprite_name == "00 Stage")
-    number = 0
-    if not is_stage:
-        (number, sprite_name) = split_filename_number(sprite_name, project_dir)    
+    is_stage = (sprite_name in ("Stage", "00 Stage"))
+    if is_stage:    
+        number = 0
+    else:
+        try:
+            (number, sprite_name) \
+                = split_filename_number(sprite_name, project_dir)
+        except InvalidFile:
+            number = None
+            sprite_name = sprite_name
     
     log("* "+sprite_name, False)
     start_time = time.time()
@@ -213,18 +229,20 @@ def import_sprite(project_dir, sprite_name):
         sprite = Sprite()
         sprite.name = sprite_name
     
+    
     # Scripts
     scripts_dir = join_path(sprite_dir, "scripts")
-    script_names = os.listdir(scripts_dir)
-    
-    scripts = []
-    for script_name in script_names:
-        script_path = join_path(scripts_dir, script_name)
-        script = read_script_file(sprite, script_path)
-        scripts.append(script)
-    
-    scripts.sort(key=lambda script: script.pos.y)
-    sprite.scripts = scripts
+    if os.path.exists(scripts_dir):
+        script_names = os.listdir(scripts_dir)
+        
+        scripts = []
+        for script_name in script_names:
+            script_path = join_path(scripts_dir, script_name)
+            script = read_script_file(sprite, script_path)
+            scripts.append(script)
+        
+        scripts.sort(key=lambda script: script.pos.y)
+        sprite.scripts = scripts
     
     
     # Costumes/Backgrounds
@@ -233,73 +251,122 @@ def import_sprite(project_dir, sprite_name):
     else:
         costumes_dir = join_path(sprite_dir, "costumes")
     
-    costumes = read_costume_file(costumes_dir+".txt")
-    
-    found_costumes = os.listdir(costumes_dir)
-    for ignore in IGNORED_NAMES:
-        while ignore in found_costumes:
-            found_costumes.remove(ignore)
-    found_costumes.sort()
-    
-    for costume in costumes:
-        costume_path = os.path.join(costumes_dir, costume["filename"])
-        if ( costume["filename"] not in found_costumes or 
-             not os.path.exists(costume_path) ):
-            log("Couldn't find costume "+costume_path)
-            costumes.remove(costume)
-    
-    for filename in found_costumes:
-        for other in costumes:
-            if filename == other["filename"]:
-                break
-        else:
-            costumes.append({
-                "filename": filename,
-                "rotationCenter": "0, 0",
-            })
-    
-    for costume in costumes:
-        try:
-            (number, name) = split_filename_number(costume["filename"])
-            costume["number"] = number
-            costume["name"] = name
-        except InvalidFile:
-            costume["number"] = None
-            costume["name"] = costume["filename"]
-    
-    costumes.sort(key=lambda c: c["number"])
-    costumes.sort(key=lambda c: c["number"] is None) # sort new costumes to end
-    
+    costumes = []
     selected_costume = None
-    for costume_args in costumes:
-        if "selected" in costume_args:
-            selected_costume = costume
-            costume_args.pop("selected")
-
-        filename = costume_args["filename"]
-        #(index, costume_name) = split_filename_number(filename, costumes_dir)
-
-        costume_path = join_path(costumes_dir, filename)
-        costume = ImageMedia.load(costume_path)
-        costume.name = costume_args["name"]
-        if not costume:
-            raise InvalidFile(costume_path, "Couldn't load image")
+    if os.path.exists(costumes_dir):
+        costume_file = costumes_dir+".txt"
+        if os.path.exists(costume_file):
+            costumes = read_costume_file(costume_file)
         
-        costume.rotationCenter = Point.from_string(
-            costume_args["rotationCenter"])
-
-        print costume
+        found_costumes = os.listdir(costumes_dir)
+        for ignore in IGNORED_NAMES:
+            while ignore in found_costumes:
+                found_costumes.remove(ignore)
+        found_costumes.sort()
         
-        sprite.images.append(costume)
+        remove_costumes = []
+        for costume in costumes:
+            costume_path = os.path.join(costumes_dir, costume["filename"])
+            if ( costume["filename"] not in found_costumes or 
+                 not os.path.exists(costume_path) ):
+                log("Couldn't find costume "+costume_path)
+                remove_costumes.append(costume)    
+        for costume in remove_costumes:
+            costumes.remove(costume)
+            
+        
+        for filename in found_costumes:
+            for other in costumes:
+                if filename == other["filename"]:
+                    break
+            else:
+                costumes.append({
+                    "filename": filename,
+                    "rotationCenter": None,
+                })
+        
+        for costume in costumes:
+            try:
+                (number, name) = split_filename_number(costume["filename"])
+                costume["number"] = number
+            except InvalidFile:
+                costume["number"] = None
+        
+        costumes.sort(key=lambda c: c["number"])
+        costumes.sort(key=lambda c: c["number"] is None) # sort new costumes to end
+        
+        for costume_args in costumes:
+            if "selected" in costume_args:
+                selected_costume = costume
+                costume_args.pop("selected")
+    
+            filename = costume_args["filename"]
+            log("  - " + filename)
+            
+            costume_path = join_path(costumes_dir, filename)
+            costume = ImageMedia.load(costume_path)
+            if not costume:
+                raise InvalidFile(costume_path, "Couldn't load image")
+            
+            if "name" in costume_args and costume_args["name"]:
+                costume.name = costume_args["name"]
+            else:
+                try:
+                    (_, costume.name) = split_filename_number(costume.name)
+                except InvalidFile:
+                    pass
+            
+            if costume_args["rotationCenter"]:
+                costume.rotationCenter = Point.from_string(
+                    costume_args["rotationCenter"])
+            else:
+                try:
+                    size = costume.size
+                except ValueError:
+                    costume.rotationCenter = Point(0, 0)
+                    size = None
+                if size:
+                    (width, height) = size
+                    costume.rotationCenter = Point(int(width / 2), int(height / 2))
+                
+            sprite.images.append(costume)
     
     if is_stage and not costumes:
         sprite.backgrounds = [stage_background]
     
     if not selected_costume and costumes:
-        selected_costume = costumes[-1]
+        selected_costume = costumes[0]
+    
     
     # TODO: Variables
-    # TODO: Lists
+    var_list_path = join_path(sprite_dir, "variables.txt")
+    var_file = open(var_list_path)
+    for line in var_file:
+        line = line.strip("\r\n")
+        if line:
+            parts = line.split(" = ")
+            var_name = parts[0]
+            value = " = ".join(parts[1:])        
+            sprite.vars[var_name] = value
+    
+    
+    # Lists
+    lists_dir = join_path(sprite_dir, "lists")
+    if os.path.exists(lists_dir):
+        list_names = os.listdir(lists_dir)
+        for list_name in list_names:
+            if list_name in IGNORED_NAMES:
+                continue
+            list_path = os.path.join(lists_dir, list_name)
+            
+            if "." in list_name: # strip extension
+                list_name = ".".join(list_name.split(".")[:-1])
+            
+            list_file = open(list_path)
+            items = [line.strip("\r\n") for line in list_file.readlines()]
+            sprite.lists[list_name] \
+                = ScratchListMorph(name=list_name, items=items)
+            list_file.close()
     
     sprite_save_time = time.time() - start_time
     log(sprite_save_time)
@@ -323,27 +390,43 @@ def compile(project_dir, debug=True): # DEBUG: set to false
     if not os.path.exists(project_dir):
         raise FileNotFound(project_dir)
     
+    project = ScratchProjectFile.new(project_path)
+    
+    if os.path.exists(project.path):
+        raise FileExists(project.path)
+    
     log("Importing sprites...")
     
     sprite_names = os.listdir(project_dir)
-    stage_name = "00 Stage"
-    if stage_name not in sprite_names:
-        raise FileNotFound(join_path(project_dir, stage_name))
-    sprite_names.remove(stage_name)
+    
+    if "00 Stage" in sprite_names:
+        stage_name = "00 Stage"
+    elif "Stage" in sprite_names:
+        stage_name = "Stage"
+    else:
+        stage_name = None
+    
+    if stage_name:
+        sprite_names.remove(stage_name)
     
     for ignore in IGNORED_NAMES:
         while ignore in sprite_names:
             sprite_names.remove(ignore)
     
-    (_, stage) = import_sprite(project_dir, stage_name)
+    if stage_name is not None:
+        (_, stage) = import_sprite(project_dir, stage_name)
+        project.stage = stage
     
     sprites = [import_sprite(project_dir, name) for name in sprite_names]
     sprites.sort(key=lambda (n, s): n)
+    sprites.sort(key=lambda (n, s): n is None) # sort new sprites to end
     sprites = [sprite for (number, sprite) in sprites]
-    
-    project = ScratchProjectFile.new(project_path+".sb")
-    project.stage = stage
     project.sprites = sprites
+    
+    for sprite in sprites:
+        for script in sprite.scripts:
+            script.replace_sprite_refs(lookup_sprite_named = project.get_sprite)
+    
     return project
 
 
@@ -360,20 +443,22 @@ if __name__ == '__main__':
             path = path[:-3]
         if path.endswith(" files"):
             path = path[:-6]
-        
-        if os.path.exists(path):
-            raise FileExists(path)
 
         try:
             project = compile(path)
+            print "Saving..."
             project.save()
+        
+        except FileExists, e:
+            print "File exists: %s" % unicode(e)
+            exit(1)
 
         except InvalidFile, e:
             print
-            print "Invalid file: %s" % e.path
+            print "Invalid file:", e
             print e.error
             exit(2)
 
         except FileNotFound, e:
-            print "File missing: %r" % str(e)
+            print "File missing: %s" % unicode(e)
             exit(2)

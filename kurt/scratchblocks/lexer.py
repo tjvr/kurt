@@ -22,6 +22,8 @@ tokens = [
     'RBOOL',
     'SYMBOL',
     'NEWLINE',
+    'DROPDOWN',
+    'COMMENT',
 ] + reserved.values()
 
 t_LPAREN = r'\('
@@ -29,6 +31,9 @@ t_RPAREN = r'\)'
 t_LBOOL  = r'<'
 t_RBOOL  = r'>'
 
+def t_DROPDOWN(t):
+    r'v\)'
+    return t
 
 
 # This rule must come before the int rule.
@@ -62,31 +67,35 @@ def t_STRING(t):
             else:
                 new_str += c
     
+    is_dropdown = False
     if new_str.endswith(" v"):
         new_str = new_str[:-2]
+        is_dropdown = True
     
-    t.value = new_str
+    t.value = (new_str, is_dropdown)
     return t
 
 
-# Ignore comments.
-def t_comment(t):
-    r'(\\)[^\n]*'
-    pass
+def t_COMMENT(t):
+    r'(//)[^\n]*'
+    t.value = t.value[2:]
+    if t.value and t.value[0] == ' ':
+        t.value = t.value[1:]
+    return t
 
 # Track line numbers.
 def t_NEWLINE(t):
     r'(\r\n|\n|\r)+'
     t.value = t.value.replace("\r\n", "\n")
-    #t.value = t.value.replace("\r", "\n")
-    t.lineno += len(t.value)
+    t.value = t.value.replace("\r", "\n")
+    t.lineno += len(t.value) # Doesn't work!
     return t
 
 
 # This rule must be practically last since there are so few rules concerning
 # what constitutes a symbol.
 def t_SYMBOL(t):
-    r'[^0-9()<>\[\]][^()<>\[\]\ \t\n]*'
+    r'[^0-9()<>\[\]][^()<>\[\]\ \t\n\/]*'
     t.type = reserved.get(t.value, 'SYMBOL') 
     return t
 
@@ -99,8 +108,23 @@ t_ignore = ' \t'
 
 
 # Handle errors.
+def pretty_error(token, err_msg):
+    input = token.lexer.lexdata
+    
+    lineno = input[:token.lexpos].replace('\r\n', '\n').replace('\r', '\n').count('\n')
+    lines = input.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+    err_msg += "on line %i\n" % (lineno + 1)
+    
+    err_msg += "  " + lines[lineno].strip()
+    
+    error = SyntaxError(err_msg)
+    error.line = lines[lineno]
+    raise error
+    
+    
 def t_error(t):
-    raise SyntaxError("syntax error on line %d near '%s'" % (t.lineno, t.value))
+    pretty_error(t, "tokenize error ")
+    
 
 
 # Build the lexer.

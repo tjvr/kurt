@@ -19,7 +19,7 @@
 
 """Exports all the costumes present in a Scratch project file as PNG format.
 
-    Usage: python export_images.py [path/to/file.sb]
+    Usage: export_images.py [path/to/file.sb]
 """
 
 import os, sys

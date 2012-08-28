@@ -151,12 +151,16 @@ class BlockType:
     def parts(self):
         return self.INSERT_RE.split(self.text)
     
+    @property
+    def inserts(self):
+        return filter(lambda p: p and len(p) == 2 and p[0] == "%", self.parts)
+    
     def __repr__(self):
         return '<BlockType(%s)>' % self.command
     
     def make_default(self, script=None):
         """Returns a new Block object of this type with default arguments."""
-        return Block(script, self.command, *self.defaults[:])
+        return Block(self.command, *self.defaults[:])
 
 
 def parse_blockspec(squeak_code):
@@ -196,15 +200,15 @@ blocks = (list(parse_blockspec(squeak_blockspecs)) +
 
 blocks += [
     BlockType("readVariable", "%v", "r", "variables"),
-    BlockType("changeVariable", "change %v by %n", 
-        defaults = [None, Symbol("changeVar:by:"), None], category="variables"),
-    BlockType("changeVariable", "set %v to %s", 
-        defaults = [None, Symbol("setVar:to:"), None], category="variables"),
+    BlockType("changeVariable", "change %v by %n", category="variables", 
+        defaults = [None, Symbol("changeVar:by:"), None]),
+    BlockType("changeVariable", "set %v to %s", category="variables",
+        defaults = [None, Symbol("setVar:to:"), None]),
     
     BlockType("EventHatMorph", "when gf clicked", "S",  # alternate spelling
         defaults = ["Scratch-StartClicked"]),
     
-    BlockType("", "obsolete!"),          
+    BlockType("", "obsolete!"),
 ]
 
 blocks_by_cmd = {}
@@ -214,8 +218,14 @@ for block in blocks:
         blocks_by_cmd[cmd] = []
     blocks_by_cmd[cmd].append(block)
 
+
+# Fixes
 assert blocks_by_cmd['EventHatMorph'][0].text == 'when green flag clicked'
 blocks_by_cmd['EventHatMorph'][0].defaults = ["Scratch-StartClicked"]
+
+assert blocks_by_cmd['MouseClickEventHatMorph'][0].text == 'when %m clicked'
+blocks_by_cmd['MouseClickEventHatMorph'][0].defaults = ["Scratch-MouseClickEvent"]
+
 
 def strip_block_text(parts):
     """Returns text with spaces and inserts removed."""

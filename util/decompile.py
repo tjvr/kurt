@@ -21,7 +21,7 @@
 Images are exported to PNG or JPG format files.
 Scripts are converted to scratchblocks format txt files.
 
-    Usage: python decompile.py "path/to/file.sb"
+    Usage: decompile.py "path/to/file.sb"
 """
 
 import time
@@ -113,42 +113,44 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
         
         count += 1
         
-#         ### DEBUG
-#         test = read_script_file(sprite, script_path)
-#         if test != script:
-#             def compare(script_a, script_b, stack='script'):
-#                 i = 0
-#                 for (block_a, block_b) in zip(script_a, script_b):
-#                     if block_a != block_b:
-#                         print stack + '[%i]' % i
-#                         print block_a.type, block_b.type
-#                         
-#                         done_args = False
-#                         j = 0
-#                         
-#                         if len(block_a.args) != len(block_b.args):
-#                             # weird.
-#                             if len(filter(None, block_a.args)) == len(filter(None, block_b.args)):
-#                                 print "SECRETLY THE SAME"
-#                                 continue
-#                         
-#                         for (arg_a, arg_b) in zip(block_a.args, block_b.args):
-#                             if arg_a != arg_b:
-#                                 if isinstance(arg_a, list):
-#                                     assert isinstance(arg_b, list)
-#                                     compare(arg_a, arg_b, stack + '[%i]' % i + '.args[%i]' % j)
-#                                     done_args = True
-#                                 else:
-#                                     print ' ', arg_a, arg_b
-#                             j += 1
-#                         
-#                         if not done_args:
-#                             print block_a
-#                             print block_b
-#                     i += 1
-#                 
-#             compare(script, test)
-#             import pdb; pdb.set_trace()
+        ### DEBUG
+        test = read_script_file(sprite, script_path)
+        if test != script: ### DEBUG
+            def compare(script_a, script_b, stack='script'):
+                i = 0
+                for (block_a, block_b) in zip(script_a, script_b):
+                    if block_a != block_b:
+                        print stack + '[%i]' % i
+                        print block_a.type
+                        print block_b.type
+                        
+                        done_args = False
+                        j = 0
+                        
+                        if len(block_a.args) != len(block_b.args):
+                            # weird.
+                            if len(filter(None, block_a.args)) == len(filter(None, block_b.args)):
+                                print "SECRETLY THE SAME"
+                                continue
+                        
+                        for (arg_a, arg_b) in zip(block_a.args, block_b.args):
+                            if arg_a != arg_b:
+                                if isinstance(arg_a, list):
+                                    assert isinstance(arg_b, list)
+                                    compare(arg_a, arg_b, stack + '[%i]' % i + '.args[%i]' % j)
+                                    done_args = True
+                                else:
+                                    print ' ', arg_a, arg_b
+                            j += 1
+                        
+                        if not done_args:
+                            print block_a
+                            print block_b
+                    i += 1
+            
+            print
+            compare(script, test)
+            import pdb; pdb.set_trace()
     
     # Costumes/Backgrounds
     if isinstance(sprite, Stage):
@@ -175,7 +177,8 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
             costumes_list += "selected\n"
         
         if debug == True: # DEBUG
-            costumes_list += "# depth: %i\n" % costume.form_with_text.depth
+            if costume.form_with_text:
+                costumes_list += "# depth: %i\n" % costume.form_with_text.depth
         
         costumes_list += "\n"
         count += 1
@@ -189,6 +192,8 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
     var_names = sorted(sprite.vars.keys())
     for var_name in var_names:
         value = sprite.vars[var_name]
+        if " = " in var_name:
+            raise InvalidProject("Invalid variable name %s" % var_name)
         var_list += var_name + " = " + unicode(value)
         var_list += "\n"
     
@@ -249,9 +254,9 @@ if __name__ == '__main__':
     try:
         decompile(project)
     except FolderExistsException, e:
-        print "Folder exists: %r" % str(e)
+        print "Folder exists: %s" % unicode(e)
         exit(1)
     except InvalidProject, e:
-        print "Invalid project: %r" % str(e)
+        print "Invalid project: %s" % unicode(e)
         exit(2)
 

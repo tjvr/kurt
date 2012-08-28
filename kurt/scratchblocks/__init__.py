@@ -8,4 +8,5 @@ except ImportError, e:
 from lexer import lex, tokens
 from parser import yacc
 
-parse_scratchblocks = yacc.parse
+def parse_scratchblocks(input):
+    return yacc.parse(input, tracking=True)

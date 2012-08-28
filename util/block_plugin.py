@@ -20,7 +20,7 @@
 """Block plugin formatter: reads all the scripts in a Scratch project file and
 outputs [scratchblocks] formatted code for Scratch forums/wiki.
 
-    Usage: python block_plugin.py [path/to/project_file.sb]
+    Usage: block_plugin.py [path/to/project_file.sb]
 """
 
 # Known block plugin bugs:

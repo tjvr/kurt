@@ -22,8 +22,10 @@
     Block - a single block.
 """
 
-from fixed_objects import Symbol, Color
+from fixed_objects import Symbol, Color, Point
 from user_objects import BaseMorph
+
+from pprint import pformat
 
 
 
@@ -40,12 +42,12 @@ class Block(object):
     Methods:
         to_block_plugin() — returns the block in scratchblocks format.
     """
-    def __init__(self, script, command_or_type=None, *args):
-        self.script = script
+    def __init__(self, command_or_type=None, *args):
+        self.script = None
+        self._comment = None
         
         if not command_or_type:
             print 'OBSOLETE?'
-            import pdb; pdb.set_trace()
         
         self.type = None
         if isinstance(command_or_type, BlockType):
@@ -54,6 +56,9 @@ class Block(object):
             command = command_or_type
             if isinstance(command, Symbol):
                 command = command.value
+            
+            if command == 'scratchComment':
+                raise ValueError, "Use ScratchComment class instead"
             
             if command in blocks_by_cmd:
                 poss_types = blocks_by_cmd[command]
@@ -83,6 +88,10 @@ class Block(object):
                                 break
                 else:
                     self.type = poss_types[0]
+            
+            else:
+                print "WARNING: unknown block type %r" % command
+                self.type = BlockType(command, command)
         
         if self.type:
             self.args = self.type.defaults[:]
@@ -96,7 +105,7 @@ class Block(object):
                 self.args.append(args[i])
     
     @classmethod
-    def from_array(cls, script, array):
+    def from_array(cls, array):
         orig = array
         
         array = list(array)
@@ -106,15 +115,15 @@ class Block(object):
         for arg in array:
             if isinstance(arg, list):
                 if len(arg) == 0:
-                    arg = Block.from_array(script, '')
+                    arg = Block.from_array([''])
                 elif isinstance(arg[0], Symbol):
-                    arg = Block.from_array(script, arg)
+                    arg = Block.from_array(arg)
                 else:
-                    arg = [Block.from_array(script, block) for block in arg]
+                    arg = [Block.from_array(block) for block in arg]
             args.append(arg)
         
-        x = cls(script, command, *args)
-        x._orig = orig
+        x = cls(command, *args)
+        x._orig = orig ### DEBUG
         return x
     
     def to_array(self):
@@ -133,6 +142,11 @@ class Block(object):
                 array.append(arg)
         return array
     
+    def set_script(self, script):
+        if self.script and self.script is not script:
+            self.script.remove(self)
+        self.script = script
+    
     def __eq__(self, other):
         return (
             isinstance(other, Block) and
@@ -144,7 +158,7 @@ class Block(object):
         return not self == other
     
     def __repr__(self):
-        string = "<%s Block (" % repr(self.command)
+        string = "Block(%s," % repr(self.command)
         for arg in self.args:
             if isinstance(arg, Block):
                 string = string.rstrip("\n")
@@ -163,7 +177,7 @@ class Block(object):
                 string += repr(arg) + ", "
         string = string.rstrip(" ")
         string = string.rstrip(",")
-        return string + ")>"
+        return string + ")"
     
     @property
     def name(self):
@@ -176,6 +190,24 @@ class Block(object):
         if self.type:
             return self.type.command
         return ""
+        
+    @property
+    def comment(self):
+        return self._comment
+    
+    @comment.setter
+    def comment(self, comment):
+        if comment and not isinstance(comment, Comment):
+            comment = Comment(comment=comment, anchor=self)
+        self._comment = comment
+        if comment and not comment.anchor is self:
+            comment.anchor = self
+    
+    def add_comment(self, comment):
+        if not self.comment or isinstance(comment, Comment):
+            self.comment = comment
+        elif comment:
+            self.comment.comment += "\n" + comment
     
     def to_block_plugin(self):
         arguments = self.args[:]
@@ -192,7 +224,8 @@ class Block(object):
                     insert_fmt = "(%s)"
                 else:
                     value = block.to_block_plugin()
-                    if insert_type in ("%s", "%d", "%l", "%y", "%i"):
+                    if insert_type in ('%n', '%d', '%s', '%m', '%e', '%l', 
+                                          '%S', '%y', '%i'):
                         insert_fmt = "(%s)"
                     elif insert_type == "%b":
                         if (block.type and block.type.flag != 'b'):
@@ -242,44 +275,43 @@ class Block(object):
                 text = "change %v by %n"
             block_type = BlockType(self.command, text)
         
-        if not block_type:
-            if not self.command and self.args: # Empty strings are comments
-                return "// %s" % self.args[0]
-            
+        if not block_type:            
             string = self.command
             for arg in self.args:
                 arg = get_insert(arg)
                 string += " " + arg
+        
+        else:
+            if self.command == "MouseClickEventHatMorph":
+                try:
+                    morph_name = self.script.morph.name
+                except AttributeError:
+                    morph_name = "sprite"
+                arguments[0] = morph_name
             
-            return string
+            #elif self.command == "EventHatMorph":
+            #    if arguments[0] != "Scratch-StartClicked":
+            #        block_type = BlockType(self.command, "when I receive %e")
+            
+            if self.command in ("not", "="): # fix weird blockplugin bug
+                block_type = block_type.copy()
+                block_type.text = block_type.text.replace(" ", "")
+            
+            string = ""
+            for part in block_type.parts:
+                if BlockType.INSERT_RE.match(part):
+                    value = ""
+                    if arguments:
+                        value = arguments.pop(0)
+                    
+                    string += get_insert(value, insert_type=part)
+                else:
+                    string += part
         
-        if self.command == "MouseClickEventHatMorph":
-            try:
-                morph_name = self.script.morph.name
-            except AttributeError:
-                morph_name = "sprite"
-            arguments[0] = morph_name
+        if self.comment:
+            string += " " + self.comment.to_block_plugin()
         
-        elif self.command == "EventHatMorph":
-            if arguments[0] != "Scratch-StartClicked":
-                block_type = BlockType(self.command, "when I receive %e")
-        
-        if self.command in ("not", "="): # fix weird blockplugin bug
-            block_type = block_type.copy()
-            block_type.text = block_type.text.replace(" ", "")
-        
-        string = ""
-        for part in block_type.parts:
-            if BlockType.INSERT_RE.match(part):
-                value = ""
-                if arguments:
-                    value = arguments.pop(0)
-                
-                string += get_insert(value, insert_type=part)
-            else:
-                string += part
-        
-        if block_type.flag == "c":
+        if block_type and block_type.flag == "c":
             blocks = []
             if arguments:
                 blocks = arguments.pop(0)
@@ -302,7 +334,31 @@ class Block(object):
             string += "\nend"
         
         return string
-        
+    
+    def to_block_list(self):
+        yield self
+        for arg in self.args:
+            if isinstance(arg, Block):
+                for block in arg.to_block_list():
+                    yield block
+            elif isinstance(arg, list):
+                for block in arg:
+                    for b in block.to_block_list():
+                        yield b
+    
+    def replace_sprite_refs(self, lookup_sprite_named):
+        """Replace all the kurt.scratchblocks.SpriteRef objects with Sprite 
+        objects with the corresponding name."""
+        for i in range(len(self.args)):
+            arg = self.args[i]
+            if isinstance(arg, SpriteRef):
+                self.args[i] = lookup_sprite_named(arg.name)
+            elif isinstance(arg, Block):
+                arg.replace_sprite_refs(lookup_sprite_named)
+            elif isinstance(arg, list):
+                for block in arg:
+                    block.replace_sprite_refs(lookup_sprite_named)
+
 
 
 class Script(object):
@@ -325,19 +381,34 @@ class Script(object):
     Methods:
         to_block_plugin() — returns the script in scratchblocks format.
     """
-    def __init__(self, morph, pos=(0,0), blocks=None):
-        self.morph = morph
+    def __init__(self, pos=(0,0), blocks=None):
+        self.morph = None
         if blocks is None: blocks = []
         self.pos = pos
         self.blocks = blocks
+        
         for block in blocks:
-            block.script = self
+            if isinstance(block, Block): # Might still be Refs!
+                block.script = self
     
     @classmethod
     def from_array(cls, morph, array):
-        pos, blocks = array
-        script = cls(morph, pos)
-        script.blocks = [Block.from_array(script, block) for block in blocks]
+        (pos, blocks) = array
+        
+        if len(blocks) == 1:
+            block = blocks[0]
+            if block:
+                command = block[0]
+                if ( isinstance(command, Symbol) and
+                     command.value == 'scratchComment' ):
+                    return Comment.from_array(morph, pos, block)
+        
+        script = cls(pos, [Block.from_array(block) for block in blocks])
+        script.morph = morph
+        for block in script.blocks:
+            if isinstance(block, Block):
+                block.set_script(script)
+        script._orig = array ### DEBUG
         return script
     
     def to_array(self):
@@ -352,13 +423,6 @@ class Script(object):
     def __ne__(self, other):
         return not self == other
     
-    def to_block_plugin(self):
-        """Returns the script in scratchblocks format."""
-        string = ""
-        for block in self.blocks:
-            string += block.to_block_plugin() + "\n"
-        return string
-    
     def __repr__(self):
         string = "Script(%s, [\n" % repr(self.pos)
         for block in self.blocks:
@@ -367,11 +431,40 @@ class Script(object):
         string = string.rstrip(",")
         return string + "])"
     
+    def to_block_plugin(self):
+        """Returns the script in scratchblocks format."""
+        string = ""
+        for block in self.blocks:
+            string += block.to_block_plugin() + "\n"
+        return string
+    
+    def to_block_list(self):
+        for block in self.blocks:
+            for b in block.to_block_list():
+                yield b
+    
+    def replace_sprite_refs(self, lookup_sprite_named):
+        """Replace all the kurt.scratchblocks.SpriteRef objects with Sprite 
+        objects with the corresponding name."""
+        for block in self.blocks:
+            block.replace_sprite_refs(lookup_sprite_named)
+    
+    
+    # Pretend to be a list #
+    
     def __iter__(self):
         return iter(self.blocks)
     
     def __getattr__(self, name):
         return getattr(self.blocks, name)
+    
+    def append(self, block):
+        self.blocks.append(block)
+        block.set_script(self)
+    
+    def insert(self, index, block):
+        self.blocks.insert(index, block)
+        block.set_script(self)
     
     def __getitem__(self, index):
         return self.blocks[index]
@@ -387,10 +480,107 @@ class Script(object):
 
 
 
+class ScriptCollection(list):
+    def __init__(self, scripts=None):
+        if scripts is None: scripts = []
+        self += scripts
+    
+    def __repr__(self):
+        return pformat(list(self))
 
 
-from blockspecs import *
-    #blocks_by_cmd, block_plugin_inserts, BlockType, find_block
-# YES THIS IS STUPID
+
+from blockspecs import *  # YES THIS IS STUPID
+
+
+
+class Comment(Script):
+    type = BlockType("scratchComment", "// %s", defaults = ["", True, 112])
+    
+    def __init__(self, pos=None, comment="", showing=True, width=112, anchor=None):
+        self.morph = None
+        self.blocks = []
+        if pos is None:
+            pos = Point(0, 0)
+        self.pos = pos
+        
+        self.comment = comment
+        self.showing = showing
+        self.width = width
+        self._anchor = anchor
+    
+    def __len__(self):
+        return True
+    
+    @classmethod
+    def from_array(cls, morph, pos, block):
+        if block[0] == Symbol('scratchComment'):
+            block.pop(0)
+        comment = cls(pos, *block)
+        comment.morph = morph
+        return comment
+    
+    def to_array(self, blocks_by_id):
+        array = [Symbol('scratchComment')]
+        array += [self.comment, self.showing, self.width]
+        if self.anchor: 
+            for i in xrange(len(blocks_by_id)):
+                if blocks_by_id[i] is self.anchor:
+                    array.append(i + 1)
+                    break
+        return (self.pos, [array])
+    
+    def __repr__(self):
+        return 'Comment' + repr((
+            self.pos, self.comment, self.showing, self.width,
+        ))
+    
+    @property
+    def anchor(self):
+        return self._anchor
+    
+    @anchor.setter
+    def anchor(self, block):
+        self._anchor = block
+        if block:
+            if not self.pos and block.script:
+                (x, y) = block.script.pos
+                self.pos = (x + 200, y)
+            
+            if not block.comment is self:
+                block.comment = self
+    
+    def attach_scripts(self, blocks_by_id):
+        """Attach the comment to the right block from the given scripts."""
+        if self.anchor:
+            if not isinstance(self.anchor, Block):
+                index = self.anchor
+                self.anchor = blocks_by_id[index - 1]
+                self.anchor.comment = self
+    
+    def to_block_plugin(self):
+        return '// ' + self.comment.replace('\r', '\n').replace('\n', ' ')
+
+
+
+class SpriteRef(object):
+    """Used by `kurt.scratchblocks.parser` so that compile() doesn't have to
+    build all the sprites before parsing all the scripts."""
+    def __init__(self, name):
+        self.name = name
+    
+    def __repr__(self):
+        return 'SpriteRef(%s)' % self.name
+    
+    def __eq__(self, other): ### DEBUG
+        from user_objects import Sprite, Stage
+        return (
+            isinstance(other, SpriteRef) or 
+            isinstance(other, Sprite) or isinstance(other, Stage) 
+        ) and self.name == other.name
+
+
+
+
 
 

@@ -164,10 +164,10 @@ class ScratchProjectFile(BinaryFile):
         Optional path argument.
         Will not write to disk until you .save()
         """
-        project = cls()
+        project = cls(path, load=False)
         project.stage = Stage()
-        project.path = path # do this now so project doesn't attempt
-                            # to .load() itself
+        #project.path = path # do this now so project doesn't attempt
+        #                    # to .load() itself
         return project
         
     @property
@@ -177,6 +177,11 @@ class ScratchProjectFile(BinaryFile):
     @sprites.setter
     def sprites(self, value):
         self.stage.sprites = value
+    
+    def get_sprite(self, name):
+        for sprite in self.sprites:
+            if sprite.name == name:
+                return sprite
 
 
 class ScratchSpriteFile(BinaryFile):
