@@ -290,11 +290,12 @@ def p_if_else(t):
              | if_block c_mouth ELSE COMMENT c_mouth END"""
     block = t[1]
     block.type = blocks_by_cmd['doIfElse'][0]
+    block.args += [ t[2] ]
     if len(t) > 6:
-        block.args += [ t[2] ] + [ t[4] ]
+        block.args += [ t[5] ]
         block.add_comment(t[4])
     else:
-        block.args += [ t[2] ] + [ t[5] ]
+        block.args += [ t[4] ]
     t[0] = block #Block(block.type, *args)
 
 def p_c_mouth(t):

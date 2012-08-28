@@ -209,12 +209,12 @@ class ObjectTableAdapter(Adapter):
 class ObjectNetworkAdapter(Adapter):
     """Object network <--> object table listing objects containing Refs"""
     def _encode(self, root, context):
+        orig_objects = []
+        
         def get_ref(value):            
             """Returns the index of the given object in the object table, 
             adding it if needed.
             """
-            # This is really slow at the moment, particularly if we have lots of
-            # objects.
             objects = self._objects
             
             value = PythonicAdapter(Pass)._encode(value, context)
@@ -222,27 +222,17 @@ class ObjectNetworkAdapter(Adapter):
             # correctly
             
             if isinstance(value, UserObject) or isinstance(value, FixedObject):
-                # must handle both back and forward refs.
-                proc_objects = [getattr(obj, '_made_from', None) 
-                                for obj in objects]
-                
-                for i in xrange(len(objects)-1, -1, -1):
-                    if value is objects[i]:
-                        index = i + 1 # first entry's index is 1
-                        break
+                if getattr(value, '_tmp_index', None):
+                    index = value._tmp_index
                 else:
-                    for i in xrange(len(proc_objects)-1, -1, -1):
-                        if value is proc_objects[i]:
-                            index = i + 1
-                            break
-                    else:
-                        objects.append(value)
-                        index = len(objects)
-                
+                    objects.append(value)
+                    index = len(objects)
+                    value._tmp_index = index
+                    orig_objects.append(value) # save the object so we can
+                                               # strip the _tmp_indexes later
                 return Ref(index)
             else:
-                # Inline value
-                return value
+                return value # Inline value
         
         def fix_fields(obj):
             obj = PythonicAdapter(Pass)._encode(obj, context)
@@ -286,11 +276,18 @@ class ObjectNetworkAdapter(Adapter):
             fixed_obj._made_from = obj
             return fixed_obj
         
+        root = PythonicAdapter(Pass)._encode(root, context)
+        
         i = 0
         self._objects = objects = [root]
+        root._tmp_index = 1
         while i < len(objects):
             objects[i] = fix_fields(objects[i])
             i += 1
+        
+        for obj in orig_objects:
+            obj._tmp_index = None
+            # Strip indexes off objects in case we want to save again later
         
         return objects
     

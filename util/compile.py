@@ -447,7 +447,9 @@ if __name__ == '__main__':
         try:
             project = compile(path)
             print "Saving..."
+            start_time = time.time()
             project.save()
+            print time.time() - start_time
         
         except FileExists, e:
             print "File exists: %s" % unicode(e)
