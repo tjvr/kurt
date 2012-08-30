@@ -304,7 +304,7 @@ def import_sprite(project_dir, sprite_name):
             log("  - " + filename)
             
             costume_path = join_path(costumes_dir, filename)
-            costume = ImageMedia.load(costume_path)
+            costume = Image.load(costume_path)
             if not costume:
                 raise InvalidFile(costume_path, "Couldn't load image")
             
@@ -458,7 +458,6 @@ if __name__ == '__main__':
         except InvalidFile, e:
             print
             print "Invalid file:", e
-            print e.error
             exit(2)
 
         except FileNotFound, e:

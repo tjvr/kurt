@@ -150,7 +150,6 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
             
             print
             compare(script, test)
-            import pdb; pdb.set_trace()
     
     # Costumes/Backgrounds
     if isinstance(sprite, Stage):

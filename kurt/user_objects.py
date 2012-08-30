@@ -26,9 +26,22 @@ available fields [dir() won't show them.]
 
 from construct import Container
 import os
+import StringIO
+
+try:
+    import PIL.Image
+except ImportError:
+    PIL = None
 
 from inline_objects import Ref
 from fixed_objects import *
+
+
+
+def require_pil():
+    if not PIL:
+        raise ValueError, "Missing dependency: " \
+            "PIL library needed for image support"
 
 
 
@@ -254,7 +267,7 @@ class ScriptableScratchMorph(BaseMorph):
         
         self.scripts = ScriptCollection()
         self.media = []
-        self.costume = None # defaults to first ImageMedia in self.media on save
+        self.costume = None # defaults to first Image in self.media on save
         self.vars = {}
         self.lists = {}
         self.isClone = False
@@ -281,6 +294,20 @@ class ScriptableScratchMorph(BaseMorph):
             comment.attach_scripts(blocks_by_id)
         
         self.build_media()
+        
+    def build_media(self):
+        if isinstance(self.media, Ref):
+            return # Don't run this yet!
+        
+        media = self.media
+        self.media = []
+        for media in media:
+            if isinstance(media, Sound):
+                self.sounds.append(media)
+            elif isinstance(media, Image):
+                self.images.append(media)
+            else:
+                self.media.append(media)
     
     def blocks_by_id(self):
         """Return a list of all the blocks in script order but reverse script 
@@ -293,25 +320,11 @@ class ScriptableScratchMorph(BaseMorph):
         for script in self.scripts:
             for block in reversed(list(script.to_block_list())):
                 yield block
-        
-    def build_media(self):
-        if isinstance(self.media, Ref):
-            return # Don't run this yet!
-        
-        media = self.media
-        self.media = []
-        for media in media:
-            if isinstance(media, SoundMedia):
-                self.sounds.append(media)
-            elif isinstance(media, ImageMedia):
-                self.images.append(media)
-            else:
-                self.media.append(media)
     
     def normalize(self):
         if not self.costume:
             for media in self.media + self.images:
-                if isinstance(media, ImageMedia):
+                if isinstance(media, Image):
                     self.costume = media
                     break
             else:
@@ -453,7 +466,7 @@ class Stage(ScriptableScratchMorph):
         self.sprites = SpriteCollection()
         self.sceneStates = {}
         
-        image = ImageMedia(
+        image = Image(
             name = "background",
             form = Form(
                 width = 480,
@@ -592,39 +605,37 @@ class ScratchMedia(UserObject):
     _fields = ("name",)
 
 
-class ImageMedia(ScratchMedia):
+class Image(ScratchMedia):
     """An image file, used for costumes and backgrounds.
+    
     Class methods:
-        load(path) - load a png or jpg image
+        load(path) - load a PNG or JPEG image
+    
     Instance methods:
         save(path) — save the image to an external file.
     
     PNG image data is stored internally on the "form" attribute.
-    """
+    """ ### TODO
+ 
     classID = 162
     _fields = ScratchMedia._fields + ("form", "rotationCenter", "textBox", 
         "jpegBytes", "compositeForm")
     _version = 4
-
+    
     @classmethod
     def load(cls, path):
-        (folder, name) = os.path.split(path)
+        """Load image file and return an Image subclass by format."""
+        require_pil()
+        
+        (_, name) = os.path.split(path)
         if "." in name:
-            format = name.split(".")[-1].lower()
             name_without_extension = ".".join(name.split(".")[:-1])
         else:
-            format = "png" # default
             name_without_extension = name
-            name += "." + format
-        if format == "jpeg": format = "jpg"
         
-        if format == "png":
-            return cls(
-                name = name_without_extension,
-                form = Form.load_png(path),
-            )
+        image = PIL.Image.open(path) # Doesn't read raster data yet :)
         
-        elif format == "jpg":
+        if image.format == 'JPEG':
             f = open(path, "rb")
             jpegBytes = f.read()
             f.close()
@@ -633,7 +644,13 @@ class ImageMedia(ScratchMedia):
                 name = name_without_extension,
                 jpegBytes = ByteArray(jpegBytes),
             )
-       
+            
+        else:
+            return cls(
+                name = name_without_extension,
+                form = Form.load_png(path),
+            )
+            
     
     def set_defaults(self):
         ScratchMedia.set_defaults(self)
@@ -733,7 +750,7 @@ class MovieMedia(ScratchMedia):
     _fields = ScratchMedia._fields + ("fileName", "fade", "fadeColor", "zoom",
         "hPan", "vPan", "msecsPerFrame", "currentFrame", "moviePlaying")
 
-class SoundMedia(ScratchMedia):
+class Sound(ScratchMedia):
     classID = 164
     _fields = ScratchMedia._fields + ("originalSound", "volume", "balance", 
         "compressedSampleRate", "compressedBitsPerSample", "compressedData")
