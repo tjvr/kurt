@@ -27,7 +27,7 @@ Construct them by passing them a path.
 from construct import Container, Struct, Bytes, Rename
 from construct.text import Literal
 from objtable import ObjTable, InfoTable
-from user_objects import Stage
+from user_objects import Stage, Image
 
 import os.path
 
@@ -123,6 +123,8 @@ class ScratchProjectFile(BinaryFile):
     
     EXTENSION = "sb"
     
+    DEFAULT_COMMENT = "Made with Kurt \nhttp://github.com/blob8108/kurt"
+    
     _construct = Struct("scratch_file",
         Literal("ScratchV02"),
         Rename("info", InfoTable),
@@ -131,14 +133,14 @@ class ScratchProjectFile(BinaryFile):
     
     def __init__(self, *args, **kwargs):
         self.info = {
-            "comment": "Made with Kurt \nhttp://github.com/blob8108/kurt",
+            "comment": self.DEFAULT_COMMENT,
             "scratch-version": '1.4 of 30-Jun-09',
             "language": "en",
             "author": u"",
             "isHosting": False,
             "platform": "", 
             "os-version": "",
-            "thumbnail": None, #<ColorForm(160x120)>,
+            "thumbnail": None,
             "history": "",
         }
         BinaryFile.__init__(self, *args, **kwargs)
@@ -146,11 +148,25 @@ class ScratchProjectFile(BinaryFile):
     def _load(self, bytes):
         project = self._construct.parse(bytes)
         self.info.update(project.info)
+        
+        if self.info["thumbnail"]:
+            self.info["thumbnail"] = Image(
+                name = self.name + " thumbnail",
+                form = self.info["thumbnail"],
+            )
+        
+        self.info["comment"] = self.info["comment"].replace("\r", "\n")
+        
         #self.info.__doc__ = InfoTable.__doc__
         self.stage = project.stage
     
     def _save(self):
         self.stage.normalize()
+        
+        if self.info["thumbnail"]:
+            self.info["thumbnail"] = self.info["thumbnail"].form
+        
+        self.info["comment"] = self.info["comment"].replace("\n", "\r")
         
         project = Container(
             info = self.info,

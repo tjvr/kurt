@@ -25,8 +25,6 @@ Exports scripts to .txt files with block plugin (scratchblocks) syntax.
 
 import time
 import os, sys
-from os.path import join as join_path
-from os.path import split as split_path
 
 import codecs
 def open(file, mode="r"):
@@ -36,8 +34,8 @@ def open(file, mode="r"):
 try:
     import kurt
 except ImportError: # try and find kurt directory
-    path_to_file = join_path(os.getcwd(), __file__)
-    path_to_lib = split_path(split_path(path_to_file)[0])[0]
+    path_to_file = os.path.join(os.getcwd(), __file__)
+    path_to_lib = os.path.split(os.path.split(path_to_file)[0])[0]
     sys.path.append(path_to_lib)
 
 from kurt.files import ScratchProjectFile, ScratchSpriteFile
@@ -86,11 +84,11 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
     num_text = str(number)
     if len(num_text) == 1: num_text = "0"+num_text
     name = num_text + " " + name
-    sprite_dir = join_path(parent_dir, name)
+    sprite_dir = os.path.join(parent_dir, name)
     os.mkdir(sprite_dir)
 
     # Scripts
-    scripts_dir = join_path(sprite_dir, "scripts")
+    scripts_dir = os.path.join(sprite_dir, "scripts")
     os.mkdir(scripts_dir)
     
     scripts = sorted(sprite.scripts, key=lambda script: script.pos.y)
@@ -107,7 +105,7 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
         name = count_text + " "
         name += escape_filename(script.blocks[0].to_block_plugin())
         
-        script_path = join_path(scripts_dir, name+".txt")
+        script_path = os.path.join(scripts_dir, name+".txt")
         write_file(script_path, contents, line_endings)
         
         count += 1
@@ -153,9 +151,9 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
     
     # Costumes/Backgrounds
     if isinstance(sprite, Stage):
-        costumes_dir = join_path(sprite_dir, "backgrounds")
+        costumes_dir = os.path.join(sprite_dir, "backgrounds")
     else:
-        costumes_dir = join_path(sprite_dir, "costumes")
+        costumes_dir = os.path.join(sprite_dir, "costumes")
     
     os.mkdir(costumes_dir)
     
@@ -165,7 +163,7 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
         count_text = str(count)
         if len(count_text) == 1: count_text = "0"+count_text
         name = count_text + " " + escape_filename(costume.name)
-        costume_path = join_path(costumes_dir, name)
+        costume_path = os.path.join(costumes_dir, name)
         
         filename = costume.save(costume_path)
         
@@ -196,15 +194,15 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
         var_list += var_name + " = " + unicode(value)
         var_list += "\n"
     
-    var_list_path = join_path(sprite_dir, "variables.txt")
+    var_list_path = os.path.join(sprite_dir, "variables.txt")
     write_file(var_list_path, var_list, line_endings)
     
     
     # Lists
-    lists_dir = join_path(sprite_dir, "lists")
+    lists_dir = os.path.join(sprite_dir, "lists")
     os.mkdir(lists_dir)
     for slist in sprite.lists.values():
-        list_path = join_path(lists_dir, slist.name+".txt")
+        list_path = os.path.join(lists_dir, slist.name+".txt")
         contents = "\n".join(slist.items)
         write_file(list_path, contents, line_endings)
     
@@ -219,8 +217,8 @@ def decompile(project, debug=True): # DEBUG: set to false
     
     line_endings = "\r\n"
     
-    (project_dir, name) = split_path(project.path)
-    project_dir = join_path(project_dir, "%s files" % project.name)
+    (project_dir, name) = os.path.split(project.path)
+    project_dir = os.path.join(project_dir, "%s files" % project.name)
     if os.path.exists(project_dir):
         raise FolderExistsException(project_dir)
     os.mkdir(project_dir)
@@ -228,7 +226,22 @@ def decompile(project, debug=True): # DEBUG: set to false
     log("Loading project %s..." % project.path)
     project.load()
     
+    # Thumbnail
+    thumb = project.info["thumbnail"]
+    if thumb:
+        log("Exporting thumbnail...", False)
+        thumb_path = os.path.join(project_dir, "thumbnail.png")
+        thumb.save(thumb_path)
+        log("Done.")
     
+    # Notes
+    notes = project.info["comment"]
+    notes_path = os.path.join(project_dir, "notes.txt")
+    f = open(notes_path, 'w')
+    f.write(notes.replace('\n', line_endings))
+    f.close()
+        
+    # Sprites
     decompile_start_time = time.time()
     
     log("Exporting sprites...")

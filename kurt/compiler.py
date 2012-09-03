@@ -24,8 +24,6 @@ Scripts are .txt files containing block plugin (scratchblocks) syntax.
 
 import time
 import os, sys
-from os.path import join as join_path
-from os.path import split as split_path
 
 import codecs
 def open(file, mode="r"):
@@ -35,8 +33,8 @@ def open(file, mode="r"):
 try:
     import kurt
 except ImportError: # try and find kurt directory
-    path_to_file = join_path(os.getcwd(), __file__)
-    path_to_lib = split_path(split_path(path_to_file)[0])[0]
+    path_to_file = os.path.join(os.getcwd(), __file__)
+    path_to_lib = os.path.split(os.path.split(path_to_file)[0])[0]
     sys.path.append(path_to_lib)
 
 from kurt import *
@@ -91,6 +89,7 @@ def split_filename_number(filename, path=None):
     name = " ".join(parts[1:])
 
     return (number, name)
+
 
 
 def read_costume_file(path):
@@ -153,7 +152,7 @@ def read_script_file(morph, path):
         try:
             line = file.readline()
         except EOFError:
-            raise InvalidFile(path, "no blocks found")
+            return
         line = line.strip()
 
         if line:
@@ -198,7 +197,7 @@ def read_script_file(morph, path):
 
 
 def import_sprite(project_dir, sprite_name):
-    sprite_dir = join_path(project_dir, sprite_name)
+    sprite_dir = os.path.join(project_dir, sprite_name)
     is_stage = (sprite_name in ("Stage", "00 Stage"))
     if is_stage:
         sprite_number = 0
@@ -223,7 +222,7 @@ def import_sprite(project_dir, sprite_name):
 
 
     # Variables
-    var_list_path = join_path(sprite_dir, "variables.txt")
+    var_list_path = os.path.join(sprite_dir, "variables.txt")
     if os.path.exists(var_list_path):
         var_file = open(var_list_path)
         for line in var_file:
@@ -231,12 +230,16 @@ def import_sprite(project_dir, sprite_name):
             if line:
                 parts = line.split(" = ")
                 var_name = parts[0]
+                
+                if find_block(var_name):
+                    log("WARNING: invalid variable name: %s" % var_name)
+                
                 value = " = ".join(parts[1:])
                 sprite.variables[var_name] = value
 
 
     # Lists
-    lists_dir = join_path(sprite_dir, "lists")
+    lists_dir = os.path.join(sprite_dir, "lists")
     if os.path.exists(lists_dir):
         list_names = os.listdir(lists_dir)
         for list_name in list_names:
@@ -255,23 +258,24 @@ def import_sprite(project_dir, sprite_name):
 
 
     # Scripts
-    scripts_dir = join_path(sprite_dir, "scripts")
+    scripts_dir = os.path.join(sprite_dir, "scripts")
     if os.path.exists(scripts_dir):
         script_names = os.listdir(scripts_dir)
 
         for script_name in script_names:
-            script_path = join_path(scripts_dir, script_name)
+            script_path = os.path.join(scripts_dir, script_name)
             script = read_script_file(sprite, script_path)
-            script.morph = sprite
-            sprite.scripts.append(script)
+            if script:
+                script.morph = sprite
+                sprite.scripts.append(script)
 
         sprite.scripts.sort(key=lambda script: script.pos.y)
 
     # Costumes/Backgrounds
     if is_stage:
-        costumes_dir = join_path(sprite_dir, "backgrounds")
+        costumes_dir = os.path.join(sprite_dir, "backgrounds")
     else:
-        costumes_dir = join_path(sprite_dir, "costumes")
+        costumes_dir = os.path.join(sprite_dir, "costumes")
 
     costumes = []
     selected_costume = None
@@ -321,7 +325,7 @@ def import_sprite(project_dir, sprite_name):
             filename = costume_args["filename"]
             log("  - " + filename)
 
-            costume_path = join_path(costumes_dir, filename)
+            costume_path = os.path.join(costumes_dir, filename)
             costume = Image.load(costume_path)
             if not costume:
                 raise InvalidFile(costume_path, "Couldn't load image")
@@ -391,11 +395,15 @@ def compile(project_dir, debug=True): # DEBUG: set to false
 
     if os.path.exists(project.path):
         raise FileExists(project.path)
-
+    
+    # Sprites
     log("Importing sprites...")
 
-    sprite_names = os.listdir(project_dir)
-
+    sprite_names = []
+    for name in os.listdir(project_dir):
+        if os.path.isdir(os.path.join(project_dir, name)):
+            sprite_names.append(name)
+    
     if "00 Stage" in sprite_names:
         stage_name = "00 Stage"
     elif "Stage" in sprite_names:
@@ -419,7 +427,8 @@ def compile(project_dir, debug=True): # DEBUG: set to false
     sprites.sort(key=lambda (n, s): n is None) # sort new sprites to end
     for (number, sprite) in sprites:
         project.sprites.append(sprite)
-
+    
+    # Check variables
     undefined_vars = set()
     for sprite in project.sprites:
         for script in sprite.scripts:
@@ -428,12 +437,29 @@ def compile(project_dir, debug=True): # DEBUG: set to false
             for var in script.find_undefined_variables(project.stage):
                 undefined_vars.add(var)
 
-    print 
+    log("")
     for var in undefined_vars:
-         print "WARNING: variable not found:", var
-
+         log("WARNING: variable not found: %s" % var)
+    
+    # Thumbnail
+    thumb_path = os.path.join(project_dir, "thumbnail.png")
+    if os.path.exists(thumb_path):
+        log("")
+        log("Importing thumbnail...")
+        project.info["thumbnail"] = Image.load(thumb_path)
+    
+    # Notes
+    notes_path = os.path.join(project_dir, "notes.txt")
+    notes = open(notes_path).read()
+    notes = notes.replace("\r\n", "\n")
+    if "kurt" not in notes.lower():
+        notes += "\n\n---\n\n"
+        notes += ScratchProjectFile.DEFAULT_COMMENT
+    project.info["comment"] = notes
+    
+    # Done!
     compile_time = time.time() - start_time
-    print "Compiled! %f" % compile_time
+    log("Compiled! %f" % compile_time)
 
     return project
 
@@ -451,25 +477,25 @@ def cmd_compile(path):
         compile_time = time.time()
 
         project = compile(path)
-        print
+        log("")
 
-        print "Saving..."
+        log("Saving...")
         save_time = time.time()
         project.save()
-        print "Saved!", (time.time() - save_time)
+        log("Saved! %f" % (time.time() - save_time))
 
-        print
-        print "Total %f secs" % (time.time() - compile_time)
+        log("")
+        log("Total %f secs" % (time.time() - compile_time))
 
     except FileExists, e:
-        print "File exists: %s" % unicode(e)
+        log("File exists: %s" % unicode(e))
 
     except InvalidFile, e:
-        print
-        print "Invalid file:", e
+        log("")
+        log("Invalid file: %s" % e)
 
     except FileNotFound, e:
-        print "File missing: %s" % unicode(e)
+        log("File missing: %s" % unicode(e))
 
     return project # useful for debugging
 
