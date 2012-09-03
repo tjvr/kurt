@@ -52,10 +52,11 @@ class InvalidFile(Exception):
         message = ("%s\n" % path) + unicode(error)
         Exception.__init__(self, message)
 
-class FileNotFound(Exception):
+
+class FolderNotFoundException(Exception):
     pass
 
-class FileExists(Exception):
+class FileExistsException(Exception):
     pass
 
 class ParseError(Exception):
@@ -389,12 +390,12 @@ def compile(project_dir, debug=True): # DEBUG: set to false
         project_dir += " files"
 
     if not os.path.exists(project_dir):
-        raise FileNotFound(project_dir)
+        raise FolderNotFoundException(project_dir)
 
     project = ScratchProjectFile.new(project_path)
 
     if os.path.exists(project.path):
-        raise FileExists(project.path)
+        raise FileExistsException(project.path)
     
     # Sprites
     log("Importing sprites...")
@@ -487,15 +488,15 @@ def cmd_compile(path):
         log("")
         log("Total %f secs" % (time.time() - compile_time))
 
-    except FileExists, e:
+    except FileExistsException, e:
         log("File exists: %s" % unicode(e))
 
     except InvalidFile, e:
         log("")
         log("Invalid file: %s" % e)
 
-    except FileNotFound, e:
-        log("File missing: %s" % unicode(e))
+    except FolderNotFoundException, e:
+        log("Folder missing: %s" % unicode(e))
 
     return project # useful for debugging
 

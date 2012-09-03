@@ -23,25 +23,24 @@
 Usage: kurt.py decompile "path/to/file.sb"
        kurt.py compile "path/to/project files/"
 
-decompile: scratch project  -> folders containing its contents
-compile:   folder structure -> scratch project.
+decompile: scratch project  -> folder structure with project contents
+compile:   folder structure -> scratch project
 
-Folder structure:
+Folder structure: (most subfolders are optional)
     00 Stage/                 [each sprite has its own directory]
         backgrounds/
         ...
     01 Sprite 1/
         costumes/             [export to PNG or JPG format files, 
-            01 costume1.png    import from most formats]
+            01 costume1.png              import from most formats]
             02 costume2.jpg
             ...
-        costumes.txt          [costume details: rotation centers]
-        lists/                [.txt files, item per line]
+        costumes.txt          [costume details, rotation centers]
+        lists/                [.txt file for each list, one item per line]
         scripts/              [.txt files: block plugin (scratchblocks) syntax]
             01 when green flag clicked.txt
             ...
-        variables.txt         [variable = value, one per line]
-"""
+        variables.txt         [variable = value, one per line]"""
 
 import os
 import sys
@@ -76,7 +75,10 @@ if __name__ == '__main__':
         elif command == "compile":
             cmd_f = cmd_compile
         else:
-            print __doc__
+            if not command or command == "help":
+                print __doc__
+            else:
+                print "Invalid command:", command
             cmd_f = None
         
         if cmd_f:

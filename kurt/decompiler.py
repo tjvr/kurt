@@ -51,6 +51,8 @@ class InvalidProject(Exception):
 class FolderExistsException(Exception):
     pass
 
+class FileNotFoundException(Exception):
+    pass
 
 
 def log(msg, newline=True):
@@ -217,6 +219,9 @@ def decompile(project, debug=True): # DEBUG: set to false
     
     line_endings = "\r\n"
     
+    if not os.path.exists(project.path):
+        raise FileNotFoundException(project.path)
+    
     (project_dir, name) = os.path.split(project.path)
     project_dir = os.path.join(project_dir, "%s files" % project.name)
     if os.path.exists(project_dir):
@@ -273,6 +278,8 @@ def cmd_decompile(path):
         decompile(project)
     except FolderExistsException, e:
         print "Folder exists: %s" % unicode(e)
+    except FileNotFoundException, e:
+        print "File missing: %s" % unicode(e)
     except InvalidProject, e:
         print "Invalid project: %s" % unicode(e)
     
