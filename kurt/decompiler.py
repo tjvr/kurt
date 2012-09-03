@@ -18,11 +18,10 @@
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
 """Decompiles a Scratch project to folders containing its contents.
-Images are exported to PNG or JPG format files.
-Scripts are converted to scratchblocks format txt files.
+Exports images to PNG or JPG format files.
+Exports scripts to .txt files with block plugin (scratchblocks) syntax.
 
-    Usage: decompile.py "path/to/file.sb"
-"""
+    Usage: decompile.py "path/to/file.sb" """
 
 import time
 import os, sys
@@ -44,7 +43,7 @@ except ImportError: # try and find kurt directory
 from kurt.files import ScratchProjectFile, ScratchSpriteFile
 from kurt import Stage
 
-from compile import read_script_file ### DEBUG
+#from compiler import read_script_file ### DEBUG
 import cStringIO
 
 
@@ -253,13 +252,8 @@ def decompile(project, debug=True): # DEBUG: set to false
 
 
 
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        path = sys.argv[1]
-    else:
-        print __doc__
-        exit()
-    
+def cmd_decompile(path):    
+    """Usage: decompile.py "path/to/file.sb" """
     project = ScratchProjectFile(path, load=False)
     
     try:
@@ -270,4 +264,17 @@ if __name__ == '__main__':
     except InvalidProject, e:
         print "Invalid project: %s" % unicode(e)
         exit(2)
+    
+    return project # useful for debugging
+
+
+
+if __name__ == '__main__':
+    if len(sys.argv) <= 1:
+        print __doc__
+        exit()
+        
+    else:
+        path = sys.argv[1]
+        cmd_decompile(path)
 

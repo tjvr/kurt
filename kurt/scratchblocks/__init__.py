@@ -6,7 +6,7 @@ except ImportError, e:
 
 
 from lexer import lex, tokens
-from parser import yacc
+from parser import block_plugin_parser
 
-def parse_scratchblocks(input):
-    return yacc.parse(input, tracking=True)
+def parse_block_plugin(input):
+    return block_plugin_parser.parse(input, tracking=True)

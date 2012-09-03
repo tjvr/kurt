@@ -681,7 +681,9 @@ class Image(ScratchMedia):
             )
             
         else:
-            image_file.convert("RGBA")
+            image_file = image_file.convert("RGBA")
+            assert image_file.mode == "RGBA"
+            
             (width, height) = image_file.size
             rgba_string = image_file.tostring()
             

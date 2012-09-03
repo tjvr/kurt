@@ -11,7 +11,7 @@ import htmlcolor
 htmlcolor_parser = htmlcolor.Parser()
 
 
-DEBUG = True
+DEBUG = False
 
 
 
@@ -475,16 +475,9 @@ def p_error(p):
 path_to_file = os.path.join(os.getcwd(), __file__)
 path_to_folder = os.path.split(path_to_file)[0]
 
-import logging
-logging.basicConfig(
-    level = logging.DEBUG,
-    filename = "parselog.txt",
-    filemode = "w",
-    format = "%(filename)10s:%(lineno)4d:%(message)s"
-)
-log = logging.getLogger()
+block_plugin_parser = yacc.yacc(debug=DEBUG, write_tables=0) 
+                               #outputdir=path_to_folder,
 
-yacc.yacc(debug=True, debuglog=log)
+# TODO: figure out how to make pip/setup.py be nice to PLY
+# so parsetab.py can be writeable
 
-
-# "if <<(x) > (3)> and <(y) < (4)>>\n    say [hi]\nend"

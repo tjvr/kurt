@@ -45,8 +45,8 @@ from kurt.files import *
 from kurt.scripts import *
 
 try:
-    from kurt.scratchblocks import parse_scratchblocks
+    from kurt.scratchblocks import parse_block_plugin
 except ImportError:
-    pass
+    print "WARNING: parser not available, requires PLY"
 
-__version__ = '1.3'
+__version__ = '1.4'
