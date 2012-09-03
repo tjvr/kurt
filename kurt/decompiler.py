@@ -188,9 +188,9 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
     
     # Variables
     var_list = ""
-    var_names = sorted(sprite.vars.keys())
+    var_names = sorted(sprite.variables.keys())
     for var_name in var_names:
-        value = sprite.vars[var_name]
+        value = sprite.variables[var_name]
         if " = " in var_name:
             raise InvalidProject("Invalid variable name %s" % var_name)
         var_list += var_name + " = " + unicode(value)

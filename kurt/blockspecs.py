@@ -199,11 +199,13 @@ blocks = (list(parse_blockspec(squeak_blockspecs)) +
     list(parse_blockspec(squeak_obsolete_blockspecs)))
 
 blocks += [
-    BlockType("readVariable", "%v", "r", "variables"),
+    BlockType("readVariable", "%v", "r", category="variables"),
     BlockType("changeVariable", "change %v by %n", category="variables", 
         defaults = [None, Symbol("changeVar:by:"), None]),
     BlockType("changeVariable", "set %v to %s", category="variables",
         defaults = [None, Symbol("setVar:to:"), None]),
+    
+    BlockType("contentsOfList:", "%l", "r", "variables"),
     
     BlockType("EventHatMorph", "when gf clicked", "S",  # alternate spelling
         defaults = ["Scratch-StartClicked"]),
