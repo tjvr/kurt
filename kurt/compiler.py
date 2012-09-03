@@ -207,13 +207,13 @@ def import_sprite(project_dir, sprite_name):
     sprite_dir = join_path(project_dir, sprite_name)
     is_stage = (sprite_name in ("Stage", "00 Stage"))
     if is_stage:    
-        number = 0
+        sprite_number = 0
     else:
         try:
-            (number, sprite_name) \
+            (sprite_number, sprite_name) \
                 = split_filename_number(sprite_name, project_dir)
         except InvalidFile:
-            number = None
+            sprite_number = None
             sprite_name = sprite_name
     
     log("* "+sprite_name, False)
@@ -267,7 +267,7 @@ def import_sprite(project_dir, sprite_name):
             costume_path = os.path.join(costumes_dir, costume["filename"])
             if ( costume["filename"] not in found_costumes or 
                  not os.path.exists(costume_path) ):
-                log("Couldn't find costume "+costume_path)
+                log("  - " + "Couldn't find costume: "+costume["filename"])
                 remove_costumes.append(costume)    
         for costume in remove_costumes:
             costumes.remove(costume)
@@ -372,7 +372,7 @@ def import_sprite(project_dir, sprite_name):
     sprite_save_time = time.time() - start_time
     log(sprite_save_time)
     
-    return (number, sprite)
+    return (sprite_number, sprite)
 
 
 
@@ -423,10 +423,11 @@ def compile(project_dir, debug=True): # DEBUG: set to false
     sprites = [import_sprite(project_dir, name) for name in sprite_names]
     sprites.sort(key=lambda (n, s): n)
     sprites.sort(key=lambda (n, s): n is None) # sort new sprites to end
-    sprites = [sprite for (number, sprite) in sprites]
-    project.sprites = sprites
+    for (number, sprite) in sprites:
+        print number
+        project.sprites.append(sprite)
     
-    for sprite in sprites:
+    for sprite in project.sprites:
         for script in sprite.scripts:
             script.replace_sprite_refs(lookup_sprite_named = project.get_sprite)
     
@@ -443,7 +444,8 @@ def cmd_compile(path):
         path = path[:-3]
     if path.endswith(" files"):
         path = path[:-6]
-
+    
+    project = None
     try:
         compile_time = time.time()
         
@@ -460,18 +462,16 @@ def cmd_compile(path):
     
     except FileExists, e:
         print "File exists: %s" % unicode(e)
-        exit(1)
 
     except InvalidFile, e:
         print
         print "Invalid file:", e
-        exit(2)
 
     except FileNotFound, e:
         print "File missing: %s" % unicode(e)
-        exit(2)
     
     return project # useful for debugging
+
 
 
 if __name__ == '__main__':

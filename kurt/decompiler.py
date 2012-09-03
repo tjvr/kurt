@@ -260,10 +260,8 @@ def cmd_decompile(path):
         decompile(project)
     except FolderExistsException, e:
         print "Folder exists: %s" % unicode(e)
-        exit(1)
     except InvalidProject, e:
         print "Invalid project: %s" % unicode(e)
-        exit(2)
     
     return project # useful for debugging
 

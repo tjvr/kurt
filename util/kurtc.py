@@ -69,7 +69,6 @@ if __name__ == '__main__':
     
     if not command:
         print __doc__
-        exit()
     
     else:
         if command == "decompile":
@@ -78,10 +77,10 @@ if __name__ == '__main__':
             cmd_f = cmd_compile
         else:
             print __doc__
-            exit()
+            cmd_f = None
         
-        if path:
-            project = cmd_f(path)
-        else:
-            print cmd_f.__doc__
-            exit()
+        if cmd_f:
+            if path:
+                project = cmd_f(path)
+            else:
+                print cmd_f.__doc__
