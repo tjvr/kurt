@@ -27,6 +27,7 @@ available fields [dir() won't show them.]
 from construct import Container
 import os
 import StringIO
+from array import array
 
 try:
     import PIL.Image
@@ -35,7 +36,6 @@ except ImportError:
 
 from inline_objects import Ref
 from fixed_objects import *
-
 
 
 def require_pil():
@@ -322,6 +322,7 @@ class ScriptableScratchMorph(BaseMorph):
                 yield block
     
     def normalize(self):
+        """Called before saving"""
         if not self.costume:
             for media in self.media + self.images:
                 if isinstance(media, Image):
@@ -401,6 +402,7 @@ class Sprite(ScriptableScratchMorph):
         self.sceneStates = {}
     
     def normalize(self):
+        """Called before saving"""
         ScriptableScratchMorph.normalize(self)
         
         if not self.bounds:
@@ -468,18 +470,20 @@ class Stage(ScriptableScratchMorph):
         
         image = Image(
             name = "background",
-            form = Form(
+            form = ColorForm(
                 width = 480,
                 height = 360,
-                depth = 32,
-                bits = Bitmap("\xff\xff\xff\xff"*480*360),
+                depth = 1,
+                bits = ByteArray("\xf5\x18\xff\x00\x00Ta\x00"),
             ),
         )
+        
         self.media = [image]
         self.images = [image]
         self.costume = image
     
     def normalize(self):
+        """Called before saving"""
         ScriptableScratchMorph.normalize(self)
         
         for sprite in self.sprites:
@@ -608,19 +612,29 @@ class ScratchMedia(UserObject):
 class Image(ScratchMedia):
     """An image file, used for costumes and backgrounds.
     
+    You can't modify image data in-place (excepting `textBox`) -- create a new
+    image object using load() or from_image() instead.
+    
     Class methods:
-        load(path) - load a PNG or JPEG image
+        load(path) — load a PNG or JPEG image
+        from_image(name, image) — create Image from a PIL.Image.Image object
     
     Instance methods:
         save(path) — save the image to an external file.
-    
-    PNG image data is stored internally on the "form" attribute.
-    """ ### TODO
+        get_image() — return a PIL.Image.Image object
+    """
  
     classID = 162
     _fields = ScratchMedia._fields + ("form", "rotationCenter", "textBox", 
         "jpegBytes", "compositeForm")
     _version = 4
+    
+    def built(self):
+        # Called after loading from file
+        if self.compositeForm:
+            self.form_without_text = self.form
+            self.form = self.compositeForm
+    
     
     @classmethod
     def load(cls, path):
@@ -633,115 +647,123 @@ class Image(ScratchMedia):
         else:
             name_without_extension = name
         
-        image = PIL.Image.open(path) # Doesn't read raster data yet :)
+        image_file = PIL.Image.open(path) # Doesn't read raster data yet :)
         
-        if image.format == 'JPEG':
+        if image_file.format == "JPEG":
             f = open(path, "rb")
             jpegBytes = f.read()
             f.close()
             
-            return cls(
+            image = cls(
                 name = name_without_extension,
+                jpegBytes = ByteArray(jpegBytes),
+            )
+            image.size = image_file.size
+            return image
+            
+        else:
+            return cls.from_image(name_without_extension, image_file)
+    
+    
+    @classmethod
+    def from_image(cls, name, image_file):
+        """Create Image from a PIL.Image.Image object"""
+        if image_file.format == "JPEG":
+            f = StringIO.StringIO()
+            image_file.save(f, format="JPEG")
+            
+            f.seek(0)
+            jpegBytes = f.read()
+            
+            image = cls(
+                name = name,
                 jpegBytes = ByteArray(jpegBytes),
             )
             
         else:
-            return cls(
-                name = name_without_extension,
-                form = Form.load_png(path),
+            image_file.convert("RGBA")
+            (width, height) = image_file.size
+            rgba_string = image_file.tostring()
+            
+            image = cls(
+                name = name,
+                form = Form.from_string(width, height, rgba_string),
             )
             
+        image.size = image_file.size
+        return image
+    
     
     def set_defaults(self):
         ScratchMedia.set_defaults(self)
         self.rotationCenter = Point(0, 0)
-    
-    def __getattr__(self, name):
-        value = ScratchMedia.__getattr__(self, name)
-        if value: 
-            return value
         
-        if name in ("width", "height"):
-            return getattr(self.form, name)
+        self.form_without_text = None
+        self.size = None
     
-    @property
-    def form_with_text(self):
-        if self.compositeForm:
-            return self.compositeForm
-        else:
-            return self.form
     
     @property
     def width(self):
-        if self.form:
-            return self.form.width
-        elif self.jpegBytes:
-            raise ValueError, "Can't get size of JPEGs yet" # TODO
-        else:
-            raise ValueError
-        
+        (width, height) = self.size
+        return width
+    
+    
     @property
     def height(self):
-        if self.form:
-            return self.form.height
-        elif self.jpegBytes:
-            raise ValueError, "Can't get size of JPEGs yet" # TODO
-        else:
-            raise ValueError
-
-    @property
-    def size(self):
-        return (self.width, self.height)
+        (width, height) = self.size
+        return height
+    
+    
+    def get_image(self):
+        """Return a PIL.Image.Image object"""
+        if self.jpegBytes:
+            image = PIL.Image.open(StringIO.StringIO(self.jpegBytes.value))
+        else:            
+            (width, height, rgba_array) = self.form.to_array()
+            size = (width, height)
+            image = PIL.Image.fromstring("RGBA", size, rgba_array)
+        
+        return image
+    
     
     def save(self, path, format=None):
         """Save the image data to an external file.
         Returns the filename with extension.
         Arguments:
             path - absolute/relative path to save to. Doesn't require extension.
-            format - extension to save as, "png" or "jpg". May throw an error if 
-                     image format is different.
+            format - "PNG", "JPEG", etc: passed to PIL.
         """
         guessed_from_extension = False
         (folder, name) = os.path.split(path)
-        if not format and "." in name:
-            guessed_from_extension = True
+        if "." in name:
             format = name.split('.')[-1]
+            format = format.lstrip(".").upper()
+            if format == "JPG": format = "JPEG"
+            guessed_from_extension = True
         
         if not format:
             if self.jpegBytes:
-                format = "jpg"
+                format = "JPEG"
             else:
-                format = "png"
-        
-        try:
-            format = format.lstrip(".").lower()
-            if format == "jpeg": format = "jpg"
-            
-            save_func = getattr(self, "save_%s"%format)
-            assert callable(save_func)
-            
-        except (AssertionError, AttributeError):
-            raise ValueError, "Invalid format %r" % format
-            
-        save_func(path)
+                format = "PNG"
         
         if not guessed_from_extension:
-            name = name + "." + format
+            extension = format.lower()
+            if extension == "jpeg": extension = "jpg"
+            path += "." + extension
+            name += "." + extension
+        
+        image = self.get_image()
+        image.save(path, format)
         return name
     
     def save_png(self, path):
-        self.form_with_text.save_png(path)    
-        
+        """Deprecated. Use .save(path, "PNG") instead"""
+        self.save(path, "PNG")
+    
     def save_jpg(self, path):
-        if not self.jpegBytes:
-            raise ValueError, "ImageMedia object %r is not in JPG format"
-        
-        if not path.endswith(".jpg"): path += ".jpg"
-        
-        f = open(path, "w")
-        f.write(self.jpegBytes.value)
-        f.flush()
-        f.close()
+        """Deprecated. Use .save(path, "JPEG") instead"""
+        self.save(path, "JPEG")
 
 
 class MovieMedia(ScratchMedia):
@@ -821,6 +843,7 @@ class ScratchListMorph(BorderedMorph):
         self.items = []
     
     def normalize(self):
+        """Called before saving"""
         self.items = [unicode(item) for item in self.items]
 
 

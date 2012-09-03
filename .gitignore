@@ -8,3 +8,5 @@ files/
 tests/
 kurt/scratchblocks/parsetab.py
 parser.out
+parselog.txt
+parsetab.py

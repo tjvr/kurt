@@ -474,8 +474,7 @@ class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
     classID = 13
     _construct = Struct("",
         UBInt32("length"),
-        construct.String("items", lambda ctx: ctx.length * 4, padchar="\x00", 
-                         paddir="right"),
+        construct.String("items", lambda ctx: ctx.length * 4),
         # Identically named "String" class -_-
     )
         
@@ -484,7 +483,10 @@ class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
         return cls(obj.items)
 
     def to_value(self):
-        return Container(items = self.value, length = (len(self.value) + 2) / 4)
+        value = self.value
+        length = (len(value) + 3) / 4
+        value += "\x00" *  (length * 4  -  len(value)) # padding
+        return Container(items = value, length = length)
     
     _int = Struct("int",
         UBInt8("_value"),
@@ -549,6 +551,12 @@ class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
             for pixel in run.pixels:
                 data += pixel
         return cls(data)
+    
+    
+    def compress(self):
+        """Compress to a ByteArray"""
+        raise NotImplementedError
+
 
 
 class Form(FixedObject, ContainsRefs):
@@ -635,9 +643,9 @@ class Form(FixedObject, ContainsRefs):
         pixel_count = 0
         num_pixels = self.width * self.height
 
-        # Rows are rounded to be a whole number of words (32 bits) long.  I
-        # *think* this is because Bitmaps are run-length encoded in 32-bit
-        # segments.
+        # Rows are rounded to be a whole number of words (32 bits) long.
+        # Presumably this is because Bitmaps are compressed (run-length encoded)
+        # in 32-bit segments.
         skip = 0
         if self.depth <= 8:
             pixels_per_word = 32 / self.depth
@@ -661,25 +669,40 @@ class Form(FixedObject, ContainsRefs):
                     pixel = pixels.next()
                 x = 0
         
+        length = self.width * self.height * 4
+        blank = array("B", (0, 0, 0, 0))
+        while len(rgba) < length: 
+            rgba.extend(blank)
+        
+        assert len(rgba) == length
+        
         return (self.width, self.height, rgba)
-    
-    def save_png(self, path):
-        if not path.endswith(".png"): path += ".png"
-        
-        if not png:
-            raise ValueError, "Missing dependency: pypng library needed for " \
-                              "PNG support"
-        
-        f = open(path, "wb")
-        (width, height, rgba_array) = self.to_array()
-        writer = png.Writer(width, height, alpha=True)
-        writer.write_array(f, rgba_array)
-        f.flush()
-        f.close()
+
+    @classmethod
+    def from_string(cls, width, height, rgba_string):
+        """Returns a Form with 32-bit RGBA pixels
+        Accepts string containing raw RGBA color values
+        """
+        # Convert RGBA string to ARGB
+        raw = ""
+        for i in range(0, len(rgba_string), 4):
+            raw += rgba_string[i+3]   # alpha
+            raw += rgba_string[i:i+3] # rgb
+
+        return Form(
+            width = width,
+            height = height,
+            depth = 32,
+            bits = Bitmap(raw),
+        )
 
     @classmethod
     def from_array(cls, width, height, rgba_array):
-        """Returns a Form with 32-bit RGBA pixels"""
+        """Returns a Form with 32-bit RGBA pixels
+        Accepts sequence of flattened r, g, b, a, r, g, b, a ... values for 
+        each pixel
+        """
+        # Unused now
         raw = ""
         for i in range(0, len(rgba_array), 4):
             (r, g, b, a) = (chr(x) for x in rgba_array[i:i+4])
@@ -691,22 +714,6 @@ class Form(FixedObject, ContainsRefs):
             depth = 32,
             bits = Bitmap(raw),
         )
-    
-    @classmethod
-    def load_png(cls, path):
-        reader = png.Reader(filename=path)
-        (width, height, color_array, metadata) = reader.read_flat()
-        if metadata["bitdepth"] != 8:
-            raise ValueError("Only PNG images with depth 8 are supported")
-
-        rgba_array = array('B')
-        pixel_size = 4 if metadata["alpha"] else 3
-        for i in range(0, len(color_array), pixel_size):
-            rgba_array += color_array[i:i+pixel_size]
-            if not metadata["alpha"]:
-                rgba_array += array('B', [255])
-
-        return cls.from_array(width, height, rgba_array)
 
 
 class ColorForm(Form):

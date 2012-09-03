@@ -295,11 +295,7 @@ def import_sprite(project_dir, sprite_name):
         costumes.sort(key=lambda c: c["number"])
         costumes.sort(key=lambda c: c["number"] is None) # sort new costumes to end
         
-        for costume_args in costumes:
-            if "selected" in costume_args:
-                selected_costume = costume
-                costume_args.pop("selected")
-    
+        for costume_args in costumes:    
             filename = costume_args["filename"]
             log("  - " + filename)
             
@@ -328,17 +324,23 @@ def import_sprite(project_dir, sprite_name):
                 if size:
                     (width, height) = size
                     costume.rotationCenter = Point(int(width / 2), int(height / 2))
-                
+            
+            if "selected" in costume_args:
+                selected_costume = costume
+            
             sprite.images.append(costume)
     
     if is_stage and not costumes:
         sprite.backgrounds = [stage_background]
+        selected_costume = stage_background
     
     if not selected_costume and costumes:
         selected_costume = costumes[0]
     
+    sprite.costume = selected_costume
     
-    # TODO: Variables
+    
+    # Variables
     var_list_path = join_path(sprite_dir, "variables.txt")
     var_file = open(var_list_path)
     for line in var_file:
@@ -377,6 +379,8 @@ def import_sprite(project_dir, sprite_name):
 
 
 def compile(project_dir, debug=True): # DEBUG: set to false
+    start_time = time.time()
+    
     if project_dir.endswith(".sb"):
         project_dir = project_dir[:-3]
     
@@ -427,6 +431,9 @@ def compile(project_dir, debug=True): # DEBUG: set to false
         for script in sprite.scripts:
             script.replace_sprite_refs(lookup_sprite_named = project.get_sprite)
     
+    compile_time = time.time() - start_time
+    print "Compiled! %f" % compile_time
+    
     return project
 
 
@@ -445,11 +452,18 @@ if __name__ == '__main__':
             path = path[:-6]
 
         try:
+            compile_time = time.time()
+            
             project = compile(path)
+            print
+            
             print "Saving..."
-            start_time = time.time()
-            project.save()
-            print time.time() - start_time
+            save_time = time.time()
+            project.save()            
+            print "Saved!", (time.time() - save_time)
+            
+            print
+            print "Total %f secs" % (time.time() - compile_time)
         
         except FileExists, e:
             print "File exists: %s" % unicode(e)

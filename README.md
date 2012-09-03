@@ -244,24 +244,22 @@ I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, n
 
 * ~~Import images from a separate `.png` or `.jpg` file and save them into a Scratch file.~~ DONE!
 
-* ~~"Default project" for building projects entirely "from scratch" (as it were) in Python code?~~ DONE! (Lists work, too!)
+* ~~"Default project" for building projects entirely "from scratch" (as it were) in Python code?~~ DONE!
 
-* ~~Compiler~~ Done, sort of — kind of a proof-of-concept.
-    * Booleans like `<(1) < (2)>` don't work, unsurprisingly
+* ~~Compiler~~ DONE!
+
+* ~~Optimise `ObjectNetworkAdapter` for building large files.~~ DONE
+
+* ~~Optimise image parsing.~~ DONE
 
 * ~~Parse images~~ DONE! :D
     * Compress Bitmap to ByteArray on save (using run-length encoding)
     * Images with depth `16` are not supported *(need an example)*
 
-* Make some decent tests
-
 * Read/write external Sound files
 
-* Optimise `ObjectNetworkAdapter` for building large files. 
+* Make some decent tests
 
-    Kurt is currently very quick at parsing files; but pretty slow at writing them, particularly ones with very long scripts.
-
-* Optimise image parsing.
 
 ## Notes
 

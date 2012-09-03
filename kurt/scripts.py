@@ -123,7 +123,6 @@ class Block(object):
             args.append(arg)
         
         x = cls(command, *args)
-        x._orig = orig ### DEBUG
         return x
     
     def to_array(self):
@@ -182,7 +181,7 @@ class Block(object):
     @property
     def name(self):
         print "WARNING: Block.name is deprecated -- use Block.command instead" 
-        # TODO — leave this out?
+        # DEPRECATED -- TODO: remove
         return self.command
     
     @property
@@ -408,7 +407,6 @@ class Script(object):
         for block in script.blocks:
             if isinstance(block, Block):
                 block.set_script(script)
-        script._orig = array ### DEBUG
         return script
     
     def to_array(self):
@@ -571,13 +569,6 @@ class SpriteRef(object):
     
     def __repr__(self):
         return 'SpriteRef(%s)' % self.name
-    
-    def __eq__(self, other): ### DEBUG
-        from user_objects import Sprite, Stage
-        return (
-            isinstance(other, SpriteRef) or 
-            isinstance(other, Sprite) or isinstance(other, Stage) 
-        ) and self.name == other.name
 
 
 

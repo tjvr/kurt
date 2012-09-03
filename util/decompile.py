@@ -114,8 +114,8 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
         count += 1
         
         ### DEBUG
-        test = read_script_file(sprite, script_path)
-        if test != script: ### DEBUG
+        #test = read_script_file(sprite, script_path)
+        if 0 and test != script: ### DEBUG
             def compare(script_a, script_b, stack='script'):
                 i = 0
                 for (block_a, block_b) in zip(script_a, script_b):
@@ -151,6 +151,7 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
             print
             compare(script, test)
     
+    
     # Costumes/Backgrounds
     if isinstance(sprite, Stage):
         costumes_dir = join_path(sprite_dir, "backgrounds")
@@ -176,8 +177,8 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
             costumes_list += "selected\n"
         
         if debug == True: # DEBUG
-            if costume.form_with_text:
-                costumes_list += "# depth: %i\n" % costume.form_with_text.depth
+            if costume.form:
+                costumes_list += "# depth: %i\n" % costume.form.depth
         
         costumes_list += "\n"
         count += 1
@@ -215,6 +216,8 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
 
 
 def decompile(project, debug=True): # DEBUG: set to false
+    start_time = time.time()
+    
     line_endings = "\r\n"
     
     (project_dir, name) = split_path(project.path)
@@ -225,6 +228,9 @@ def decompile(project, debug=True): # DEBUG: set to false
     
     log("Loading project %s..." % project.path)
     project.load()
+    
+    
+    decompile_start_time = time.time()
     
     log("Exporting sprites...")
     export_sprite(project_dir, project.stage, 0, line_endings, debug)
@@ -237,7 +243,13 @@ def decompile(project, debug=True): # DEBUG: set to false
         export_sprite(project_dir, sprite, number, line_endings, debug)
         number += 1
     
-    log("Done!")
+    decompile_time = time.time() - decompile_start_time
+    log("Decompiled! %f" % decompile_time)
+    
+    log("")
+    
+    total_time = time.time() - start_time
+    log("Total %f secs" % total_time)
 
 
 

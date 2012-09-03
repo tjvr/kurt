@@ -165,7 +165,6 @@ def block_from_parts(parts, flag=None):
                 type = poss_types[0]
                 print "WARNING: wrong args for '%s' block" % type.command
                 print ' '.join(map(repr, parts))
-                import pdb; pdb.set_trace()
 
         if type.command == "changeVariable":
             arguments.insert(1, None)
