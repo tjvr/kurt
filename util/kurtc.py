@@ -20,8 +20,8 @@
 
 """Scratch project  <--->  folder structure of scripts and images
 
-Usage: kurt.py decompile "path/to/file.sb"
-       kurt.py compile "path/to/project files/"
+Usage: kurtc.py decompile "path/to/file.sb"
+       kurtc.py compile "path/to/project files/"
 
 decompile: scratch project  -> folder structure with project contents
 compile:   folder structure -> scratch project

@@ -1,46 +1,57 @@
-
 # kurt
 
-Kurt is a Python library for reading/writing Scratch project (.sb) and sprite files.
+    Scratch project files  <--->  Python  <--->  Scratchblocks code & images
 
-So far, it can read/write sprites and their properties, including scripts, blocks, variables, and lists. It can read costumes and export them to separate image files. It can also export scripts to `scratchblocks` format for pasting into the Scratch forums/wiki.
+### A De/compiler
+
+Kurt can convert to/from a **folder structure of scripts and images**. You can decompile a project into its parts, edit the scripts as block plugin/“scratchblocks” code in a text editor (and images in an image editor), then recompile again. See [Using the Compiler](#using-the-compiler).
+
+### A Python library
+
+Kurt's also a Python library for reading/writing **Scratch project** (`.sb`) **& sprite files**. You can load the files, look at their internal structure — including sprites, scripts, variables, images, etc — make changes, and save them again! You can generate Scratch projects from Python code.
 
 You could use it for:
 
-* converting to another format (like the `scratchblocks` converter does)
 * generating Scratch projects using Python code
-* analysing the scripts in a project
-* *(someday, perhaps...)* making a "Scratch IDE" text-based editor for Scratch scripts... :)
+* analysing the scripts in a project ([example](https://gist.github.com/2967355))
+* converting to another format (like the `scratchblocks` converter does)
 
-[Install](#installation) Kurt, and then see [Usage](#usage) to get started!
+It *can't* read/write sounds yet, but they're on the [to-do list](#todo) — see below. Everything else works (as far as I'm aware).
 
-(It *can't* read/write sounds yet, but they're on the [to-do list](#todo) — see below)
 
-**WARNING**: Make sure you take a backup of your Scratch projects before saving anything with kurt! kurt is by no means fully tested. I can't accept responsibility for corrupting your files.
+**WARNING**: Make sure you take backups of your Scratch projects before saving anything with kurt! I can't accept responsibility for corrupting your files.
 
-If you're interested in technical details of how the format works: the code should be pretty self-documenting; but check out the documentation on the [Scratch wiki](http://wiki.scratch.mit.edu/wiki/Scratch_File_Format), which might be more readable...
 
+
+### The Scratch file format 
+
+If you're interested in technical details of how the format works: the code should be pretty self-documenting, but do check out the documentation on the [Scratch wiki](http://wiki.scratch.mit.edu/wiki/Scratch_File_Format), which might be more readable...
+
+[Scratch](http://scratch.mit.edu/) is created by the Lifelong Kindergarten Group at the MIT Media Lab.
+
+
+
+<!----------------------------------------------------------------------------->
 
 ## Installation
 
-Options 1 and 2 will automatically install kurt, and its dependencies
-[Construct](http://construct.wikispaces.com/) and
-[PyPNG](http://code.google.com/p/pypng/).
+Options 1 and 2 will automatically install kurt and its dependencies. *The installer (options 1 and 2) is thanks to [bboe](http://github.com/bboe)! :)*
 
-The new installer (options 1 and 2) are thanks to [bboe](http://github.com/bboe)! :)
+Please make sure you have at least **Python 2.6**. Tested with **Scratch 1.4**; not tested with earlier versions, but possibly works.
+
 
 ### Option 1: pip or easy_install
 
-If you have either `easy_install` or `pip` installed, installation is as simple
-as running one of the following:
+If you have either `easy_install` or `pip` installed, installation is as simple as running one of the following:
 
     pip install kurt
     easy_install kurt
 
+See [how to install pip](http://www.pip-installer.org/en/latest/installing.html) if you don't have it already.
+
 ### Option 2: setup.py
 
-Download (or git clone) the latest version of Kurt. From the kurt folder
-containing `setup.py` run:
+Download (or git clone) the latest version of Kurt. From the kurt folder containing `setup.py` run:
 
     python setup.py install
 
@@ -48,49 +59,114 @@ containing `setup.py` run:
 
 Download the latest version of Kurt and extract the `kurt` folder somewhere in your `sys.path` — or in the same directory as your code, if you prefer.
 
-You'll need the **latest version** of the awesome [**Construct**](http://construct.wikispaces.com/) library (used for defining the format). It currently appears to be available [here](http://pypi.python.org/pypi/construct). (I'm using Construct version 2.04).
+You also need:
 
-For saving images, you'll need the [**PyPNG**](http://code.google.com/p/pypng/) module. Kurt *should* work without it, if you don't want to save images — but it's strongly recommended.
+* The **latest version** (2.04+) of the awesome [**Construct**](http://construct.wikispaces.com/) library: [download Construct here](http://pypi.python.org/pypi/construct).
 
-Now see [Usage](#usage) to get started!
+* **[PIL](http://www.pythonware.com/products/pil/)**, for saving images.
 
-Tested with **Python 2.6**. Works with **Scratch 1.4**; not tested with earlier versions, but possibly works.
-
-[Scratch](http://scratch.mit.edu/) is created by the Lifelong Kindergarten Group at the MIT Media Lab.
+* **[PLY](http://www.dabeaz.com/ply/)**, for parsing block plugin syntax
 
 
-## Recent Changes 
 
-###v1.3, decompiler:
-* Can now build projects entirely "from scratch" (as it were) in Python code using `ScratchProjectFile.new()`
-* **Decompiler** to export all images, scripts from .sb file as PNG/JPG format and scratchblocks text files
-* Experimental **compiler** for making .sb files, the reverse of decompiler
-* *Highly* experimental scratchblocks **parser** for generating scripts
-* Most **images** now work! Details:
-    * Images with depth 1 and 2 now work — (fixed some buggy reverse-engineered code).
-    * Default color values ("squeak_colors") now work — fixed a bug saving all-white stage background.
+<!----------------------------------------------------------------------------->
 
+## Using the Compiler
 
-###v1.2, images:
-* Can now parse images! :D
+*You can skip to [Using the Library](#using-the-library) if you only want to use Kurt to make your own awesome Python stuff*
 
-    Well, most images. If not, try reloading the project with Scratch and saving it again — this sometimes helps.
+    Scratch project  <--->  folder structure of scripts and images
+
+If you install using easy_install, pip, or setup.py, the script `kurtc.py` should automatically be in your path. Try running it from the command line:
     
-    Unfortunately, Kurt doesn't compress the images when saving them back to the file again (yet), so it may massively increase your file size :P Again, you can just open it in Scratch and save it again, and the file size will be back to normal.
+    $ kurtc.py
 
-* Split Sprite.media into separate costumes/sounds lists.
+You should see a screenful of help text. If not, try installing again using options 1 or 2. Alternatively, the script can be found under `util/kurtc.py`.
 
-###v1.1, scripts:
-
-* `Script` and `Block` classes for manipulating scripts.
-* **Block plugin** formatter — reads all the scripts in a project file and outputs `[scratchblocks]` syntax code for posting on the Scratch forums/wiki.
-* Filled out the `_fields` list for most of the objects in `user_objects` from the Squeak source (not the unused ones), so there should now be no "undefined" fields.
-* `Color` is now parsed correctly
-* Added `ScratchProjectFile.sprites` shortcut as an alias for `project.stage.sprites`
+There are two commands: `compile`, and `decompile`.
 
 
-## Usage
-**Getting Started** | [Scripts](#scripts) | [Images](#images) | [Decompiler](#decompiler) | [Compiler](#compiler)
+### Decompile
+
+    scratch project -> folder structure with project contents
+
+Exports all the scripts, images, variables, lists in a Scratch project to separate files, with a folder for each sprite. Puts everything in a folder named `<project name> files`. (Think a Scratch [project summary](#note1) on steroids.)
+
+Just pass the path to your project file:
+
+    $ kurtc.py decompile tests/game.sb
+
+And get a folder structure a bit like this:
+
+    game files/
+        00 Stage/                   [each sprite has its own directory]
+            backgrounds/
+                01 background1.png
+            backgrounds.txt
+            lists/
+            scripts/
+            variables.txt
+        01 ScratchCat/
+            costumes/
+                01 costume1.png     [export to PNG or JPG format files,
+                02 costume2.jpg      import from most formats]
+            costumes.txt            [costume details, rotation centers]
+            lists/                  [.txt file for each list]
+            scripts/                [.txt files: block plugin syntax]
+                01 when green flag clicked.txt
+            variables.txt           [variable = value, one per line]
+        notes.txt
+        thumbnail.png
+
+Most of the subfolders are optional when compiling.
+
+Notes:
+
+* Scripts are in [Block Plugin](wiki.scratch.mit.edu/wiki/Block_Plugin) ("scratchblocks") syntax.
+* `costumes.txt` is entirely optional — you should probably ignore it.
+* Lists have one item per line.
+* Variable files have one variable per line, like `variable = value`.
+* Any un-numbered files/folders will be added last.
+
+
+### Compile
+
+    folder structure -> scratch project
+
+Takes a folder structure generated by decompile as an argument, and compiles all the images and scripts back into a .sb file.
+
+Try decompiling the provided `game.sb`, edit one of the scripts, and then compiling it!
+
+Again, just pass it the path to your project folder:
+
+    $ kurtc.py compile "tests/game files"
+
+
+### Notes & Restrictions
+
+* Sprite information such as position isn't saved — so make sure you set it in a "when green flag clicked" script (which is probably good practice anyway).
+
+* Parser SyntaxErrors currently report line numbers -2 the actual file. This is a bug.
+
+* Take care with the "length of" block: strings aren't dropdowns, lists are
+
+        length of [Hello!]      // string
+        length of [list v]      // list
+    
+* Variable names (and possibly other values, such as broadcasts) **can't**:
+
+    * contain special identifiers (like `end`, `if`, etc.)
+    * have trailing whitespace
+    * contain special characters, rather obviously: like any of `[]()<>` or equals `=`
+    * be named after a block, eg. a variable called "wait until" ([a screenshot](http://cl.ly/image/3z0X3O1O0m1w))
+
+
+
+<!----------------------------------------------------------------------------->
+
+## Using the Library
+
+**Getting Started** | [Scripts](#scripts) | [Images](#images)
 
 Here's a quick getting started — grab a Python interpreter (Python's `>>>` prompt — just type `python` into your terminal, or load up IDLE), and have a go!
 
@@ -98,33 +174,56 @@ You'll probably just want to use the provided `ScratchProjectFile` and `ScratchS
 
 You can import just these classes them using:
 
-    from kurt.files import *
+    >>> from kurt.files import *
 
 Load a file (you'll find a preview file, `game.sb`, saved in the `tests` directory; but feel free to try it with any Scratch project file).
 
-    # Just pass in the absolute or relative path to the file:
-    project = ScratchProjectFile("tests/game.sb")
+Just pass in the absolute or relative path to the file:
+
+    >>> project = ScratchProjectFile("tests/game.sb")
     
-    # You can reload the file at any time with .load()
+You can reload the file at any time with `.load()`.
 
 Inspect project:
 
-    project.info['author'] # u'blob8108'
-    project.stage # <Stage(Stage)>
+    >>> project.info['author'] 
+    u'blob8108'
+    >>> project.stage
+    <Stage(Stage)>
     
-    # List fields on object:
-    project.stage.fields.keys() # ['volume', 'hPan', 'sprites', 'lists', 'name', 'vars', 'obsoleteSavedState', 'color', 'media', 'bounds', 'submorphs', 'zoom', 'isClone', 'flags', 'costume', 'scripts', 'owner', 'tempoBPM', 'vPan', 'properties', 'sceneStates']
+List fields on object:
 
-    # Access fields using dot notation:
-    project.stage.tempoBPM # 60
-    project.stage.sprites # OrderedCollection([<ScratchSpriteMorph(ScratchCat)>])
-    
-    cat = project.stage.sprites[0]
-    cat.name # u'ScratchCat'
+    >>> project.stage.fields.keys()
+    ['volume', 'hPan', 'sprites', 'lists', 'name', 'obsoleteSavedState', 'color', 'media', 'variables', 'bounds', 'submorphs', 'zoom', 'isClone', 'flags', 'costume', 'scripts', 'owner', 'tempoBPM', 'vPan', 'properties', 'sceneStates']
 
-Most of the objects you're interested in, like `Stage` and `Sprite`, inherit from `UserObject`. You can use `.fields.keys()` to see the available fields on one of these objects.
+Access fields using dot notation:
 
-`FixedObjects` like `OrderedCollection` have a `.value` property to access their value.
+    >>> project.stage.tempoBPM
+    60
+    >>> project.stage.sprites
+    [<Sprite(ScratchCat)>]
+
+List sprites:
+
+    >>> project.sprites             # alias for `project.stage.sprites`
+    [<Sprite(ScratchCat)>]
+    >>> cat = project.sprites[0]
+    >>> cat.name
+    'ScratchCat'
+
+Can also index sprites list by name:
+
+    >>> cat = project.sprites['ScratchCat']
+
+Most of the objects you're interested in, like `Stage` and `Sprite`, inherit from `UserObject`. You can use `.fields.keys()` to see the
+available fields on one of these objects.
+
+`FixedObjects` like `Rectangle` have a `.value` property to access their value.
+
+    >>> project.stage.bounds
+    Rectangle([0, 0, 480, 360])
+    >>> project.stage.bounds.value
+    [0, 0, 480, 360]
 
 Inline objects, such as `int` and `bool`, are converted transparently to their Pythonic counterparts. `Array` and `Dictionary` are converted to `list` and `dict`, too. 
 
@@ -139,7 +238,7 @@ Save:
 
 Now re-open the project with Scratch!
 
-Everything should, of course, work perfectly; if you do have any problems, please file an issue, and I'll take a look! (:
+Everything should, of course, work perfectly; if you do have any problems, please send me an email or [file an issue on Github](https://github.com/blob8108/kurt/issues/new), and I'll take a look! (:
 
 ### Scripts
 A list of scripts can be found on the `scripts` property of both sprites and the stage.
@@ -197,41 +296,64 @@ Save to an external file:
 
     image.save("scratch_cat.png")
 
-### Decompiler
+### General Notes
 
-There's a script under `util/decompile.py` for exporting all the images, scripts, and most other stuff in a Scratch project to separate files, with a folder for each sprite. Think a Scratch [project summary](#note1) on steroids. It puts everything in a folder named `<project name> files`. Just pass it the path to your project file:
+Assigning directly to attributes, particularly `project.sprites` or `stage.scripts`, is generally a bad idea. Instead, modify the lists in-place by using `.append`, etc.
 
-    $ python util/decompile.py tests/game.sb
 
-And get a folder structure a bit like this:
+<!----------------------------------------------------------------------------->
 
-    game files/
-        00 Stage/
-            backgrounds/
-                01 background1.png
-            backgrounds.txt
-            lists/
-            scripts/
-            variables.txt
-        
-        01 ScratchCat/
-            costumes/
-                01 costume1.png
-                02 costume2.png
-            costumes.txt
-            lists/
-            scripts/
-                01 when gf clicked.txt
-            variables.txt
+## Recent Changes 
 
-### Compiler
-There's also a *proof-of-concept* compiler under `util/compile.py` that takes a folder structure generated by decompile as an argument, and compiles all the images and scripts back into a .sb file. It's rather incomplete, and doesn't include lists or variables, and the scratchblocks parser complains at lots of things like `<` and `>` signs, but it kinda works... :P
+###v1.4, compiler:
 
-Decompile the provided `game.sb`, edit one of the scripts (make sure your scratchblocks syntax is absolutely perfect), and then try compiling it!
+* New PLY-based "block plugin" syntax parser
+* Switch to PIL to support more image formats
+* Improved compiler
+* Optimised image loading
+* Optimised project saving
+* Single `kurtc.py` script with compile/decompile commands
 
-Again, just pass it the path to your project folder:
+Library changes:
+* Rename Sprite.vars, Stage.vars -> .variables
+* Rename ImageMedia -> Image; SoundMedia -> Sound
+* Make Block, Script constructors & repr messages more sensible
+* Sprites list now supports indexing by name (as well as index)
 
-    $ python util/decompile.py "tests/game files"
+
+###v1.3, decompiler:
+
+* Can now build projects entirely "from scratch" (as it were) in Python code using `ScratchProjectFile.new()`
+* **Decompiler** to export all images, scripts from .sb file as PNG/JPG format and scratchblocks text files
+* Experimental **compiler** for making .sb files, the reverse of decompiler
+* *Highly* experimental scratchblocks **parser** for generating scripts
+* Most **images** now work! Details:
+    * Images with depth 1 and 2 now work — (fixed some buggy reverse-engineered code).
+    * Default color values ("squeak_colors") now work — fixed a bug saving all-white stage background.
+
+
+###v1.2, images:
+
+* Can now parse images! :D
+
+    Well, most images. If not, try reloading the project with Scratch and saving it again — this sometimes helps.
+    
+    Unfortunately, Kurt doesn't compress the images when saving them back to the file again (yet), so it may massively increase your file size :P Again, you can just open it in Scratch and save it again, and the file size will be back to normal.
+
+* Split Sprite.media into separate costumes/sounds lists.
+
+
+###v1.1, scripts:
+
+* `Script` and `Block` classes for manipulating scripts.
+* **Block plugin** formatter — reads all the scripts in a project file and outputs `[scratchblocks]` syntax code for posting on the Scratch forums/wiki.
+* Filled out the `_fields` list for most of the objects in `user_objects` from the Squeak source (not the unused ones), so there should now be no "undefined" fields.
+* `Color` is now parsed correctly
+* Added `ScratchProjectFile.sprites` shortcut as an alias for `project.stage.sprites`
+
+
+
+<!----------------------------------------------------------------------------->
 
 ## Licence
 
@@ -239,6 +361,9 @@ Kurt is released under the [LGPL](http://www.gnu.org/licenses/lgpl) Version 3 (o
 
 I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, non-GPL'd code, any Kurt modifications must be distributed under the (L)GPL and include the source code. _(This is not legal advice and does not affect the terms as stated in the licence...)_
 
+
+
+<!----------------------------------------------------------------------------->
 
 ## Todo
 
@@ -260,6 +385,9 @@ I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, n
 
 * Make some decent tests
 
+
+
+<!----------------------------------------------------------------------------->
 
 ## Notes
 

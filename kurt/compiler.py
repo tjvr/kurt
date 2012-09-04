@@ -467,7 +467,10 @@ def compile(project_dir, debug=True): # DEBUG: set to false
 
 
 def cmd_compile(path):
-    """Usage: compile.py "path/to/project files/" """
+    """Usage: compile.py "path/to/project files/" 
+    
+    folder structure -> scratch project"""
+    
     if path.endswith(".sb"):
         path = path[:-3]
     if path.endswith(" files"):

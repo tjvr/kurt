@@ -271,7 +271,10 @@ def decompile(project, debug=True): # DEBUG: set to false
 
 
 def cmd_decompile(path):    
-    """Usage: decompile.py "path/to/file.sb" """
+    """Usage: decompile.py "path/to/file.sb" 
+
+    scratch project -> folder structure with project contents"""
+    
     project = ScratchProjectFile(path, load=False)
     
     try:
