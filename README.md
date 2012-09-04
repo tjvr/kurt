@@ -75,7 +75,7 @@ You also need:
 
 ## Using the Compiler
 
-*You can skip to [Using the Library](#using-the-library) if you only want to use Kurt to make your own awesome Python stuff*
+*Skip to [Using the Library](#using-the-library) if you only want to use Kurt to make your own awesome Python stuff*
 
     Scratch project  <--->  folder structure of scripts and images
 
@@ -233,12 +233,12 @@ Inline objects, such as `int` and `bool`, are converted transparently to their P
 
 Make changes:
 
-    cat.vars # {u'vx': 0.0}
-    cat.vars['vx'] = 100
+    >>> cat.vars # {u'vx': 0.0}
+    >>> cat.vars['vx'] = 100
 
 Save:
 
-    project.save()
+    >>> project.save()
 
 Now re-open the project with Scratch!
 
@@ -297,12 +297,12 @@ See [Scripts](https://github.com/blob8108/kurt/wiki/Script) on the kurt wiki.
 ### Images
 You can find costumes under a sprite's `costumes` property (similarly for stage `backgrounds`).
 
-    cat.costumes # [<ImageMedia(costume1)>, <ImageMedia(costume2)>]
-    image = cat.costumes[0]
+    >>> cat.costumes # [<ImageMedia(costume1)>, <ImageMedia(costume2)>]
+    >>> image = cat.costumes[0]
 
 Save to an external file:
 
-    image.save("scratch_cat.png")
+    >>> image.save("scratch_cat.png")
 
 
 ### General Notes
