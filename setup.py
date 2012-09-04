@@ -16,7 +16,7 @@ setup(name = 'kurt',
       install_requires = ['construct', 'PIL', 'PLY'],
       keywords = ['scratch'],
       license = 'LGPL',
-      packages = ['kurt', 'htmlcolor'],
+      packages = ['kurt', 'kurt.scratchblocks', 'htmlcolor'],
       scripts = ['util/kurtc.py'],
       classifiers = [
         "Programming Language :: Python",
