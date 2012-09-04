@@ -49,11 +49,13 @@ If you have either `easy_install` or `pip` installed, installation is as simple 
 
 See [how to install pip](http://www.pip-installer.org/en/latest/installing.html) if you don't have it already.
 
+
 ### Option 2: setup.py
 
 Download (or git clone) the latest version of Kurt. From the kurt folder containing `setup.py` run:
 
     python setup.py install
+
 
 ### Option 3: manual install
 
@@ -99,7 +101,7 @@ Just pass the path to your project file:
 And get a folder structure a bit like this:
 
     game files/
-        00 Stage/                   [each sprite has its own directory]
+        00 Stage/                                   [each sprite has its own directory]
             backgrounds/
                 01 background1.png
             backgrounds.txt
@@ -108,13 +110,13 @@ And get a folder structure a bit like this:
             variables.txt
         01 ScratchCat/
             costumes/
-                01 costume1.png     [export to PNG or JPG format files,
-                02 costume2.jpg      import from most formats]
-            costumes.txt            [costume details, rotation centers]
-            lists/                  [.txt file for each list]
-            scripts/                [.txt files: block plugin syntax]
+                01 costume1.png                     [export to PNG or JPG format files,
+                02 costume2.jpg                      import from most formats]
+            costumes.txt                            [costume details, rotation centers]
+            lists/                                  [.txt file for each list]
+            scripts/                                [.txt files: block plugin syntax]
                 01 when green flag clicked.txt
-            variables.txt           [variable = value, one per line]
+            variables.txt                           [variable = value, one per line]
         notes.txt
         thumbnail.png
 
@@ -194,7 +196,9 @@ Inspect project:
 List fields on object:
 
     >>> project.stage.fields.keys()
-    ['volume', 'hPan', 'sprites', 'lists', 'name', 'obsoleteSavedState', 'color', 'media', 'variables', 'bounds', 'submorphs', 'zoom', 'isClone', 'flags', 'costume', 'scripts', 'owner', 'tempoBPM', 'vPan', 'properties', 'sceneStates']
+    ['volume', 'hPan', 'sprites', 'lists', 'name', 'obsoleteSavedState', 
+    'color', 'media', 'variables', 'bounds', 'submorphs', 'zoom', 'isClone', 
+    'flags', 'costume', 'scripts', 'owner', 'tempoBPM', 'vPan', 'properties', 'sceneStates']
 
 Access fields using dot notation:
 
@@ -240,6 +244,7 @@ Now re-open the project with Scratch!
 
 Everything should, of course, work perfectly; if you do have any problems, please send me an email or [file an issue on Github](https://github.com/blob8108/kurt/issues/new), and I'll take a look! (:
 
+
 ### Scripts
 A list of scripts can be found on the `scripts` property of both sprites and the stage.
 
@@ -284,7 +289,10 @@ Use the `to_block_plugin` method to print them nicely:
         change x by (vx)
     end
 
-This is identical to `scratchblocks` format, so you can paste them straight into the Scratch forums or wiki.
+This is identical to `scratchblocks` format, so you can paste them straight into the Scratch forums or wiki. [See here](http://dl.dropbox.com/u/9598124/blocksplugin.html#when%2520green%2520flag%2520clicked%250Aset%2520x%2520to%2520%280%29%250Aforever%250A%2520%2520%2520%2520if%2520%253Ckey%2520%255Bright%2520arrow%2520v%255D%2520pressed%3F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520change%2520%255Bvx%2520v%255D%2520by%2520%282%29%250A%2520%2520%2520%2520end%250A%2520%2520%2520%2520if%2520%253Ckey%2520%255Bleft%2520arrow%2520v%255D%2520pressed%3F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520change%2520%255Bvx%2520v%255D%2520by%2520%28-2%29%250A%2520%2520%2520%2520end%250A%2520%2520%2520%2520set%2520%255Bvx%2520v%255D%2520to%2520%28%28vx%29%2520%2A%2520%280.8%29%29%250A%2520%2520%2520%2520change%2520x%2520by%2520%28vx%29%250Aend).
+
+See [Scripts](https://github.com/blob8108/kurt/wiki/Script) on the kurt wiki.
+
 
 ### Images
 You can find costumes under a sprite's `costumes` property (similarly for stage `backgrounds`).
@@ -296,9 +304,11 @@ Save to an external file:
 
     image.save("scratch_cat.png")
 
+
 ### General Notes
 
 Assigning directly to attributes, particularly `project.sprites` or `stage.scripts`, is generally a bad idea. Instead, modify the lists in-place by using `.append`, etc.
+
 
 
 <!----------------------------------------------------------------------------->
@@ -358,8 +368,6 @@ Library changes:
 ## Licence
 
 Kurt is released under the [LGPL](http://www.gnu.org/licenses/lgpl) Version 3 (or any later version).
-
-I'm not a lawyer; but I _think_ this means while you can use Kurt in your own, non-GPL'd code, any Kurt modifications must be distributed under the (L)GPL and include the source code. _(This is not legal advice and does not affect the terms as stated in the licence...)_
 
 
 
