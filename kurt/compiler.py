@@ -451,12 +451,13 @@ def compile(project_dir, debug=True): # DEBUG: set to false
     
     # Notes
     notes_path = os.path.join(project_dir, "notes.txt")
-    notes = open(notes_path).read()
-    notes = notes.replace("\r\n", "\n")
-    if "kurt" not in notes.lower():
-        notes += "\n\n---\n\n"
-        notes += ScratchProjectFile.DEFAULT_COMMENT
-    project.info["comment"] = notes
+    if os.path.exists(notes_path):
+        notes = open(notes_path).read()
+        notes = notes.replace("\r\n", "\n")
+        if "kurt" not in notes.lower():
+            notes += "\n\n---\n\n"
+            notes += ScratchProjectFile.DEFAULT_COMMENT
+        project.info["comment"] = notes
     
     # Done!
     compile_time = time.time() - start_time
