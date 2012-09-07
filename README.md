@@ -315,6 +315,10 @@ Assigning directly to attributes, particularly `project.sprites` or `stage.scrip
 
 ## Recent Changes 
 
+###v1.4.1
+
+Compiler: don't require `notes.txt`
+
 ###v1.4, compiler:
 
 * New PLY-based "block plugin" syntax parser
