@@ -42,17 +42,17 @@ def default_colormap():
     colormap = []
     # 1-bit colors
     colormap.append((255, 255, 255, 255))
-    colormap.append((0.0, 0.0, 0.0, 255))
+    colormap.append((0, 0, 0, 255))
     # additional 2-bit colors
     colormap.append((255, 255, 255, 255))
     colormap.append((127, 127, 127, 255))
     # additional 4-bit colors
-    colormap.append((255, 0.0, 0.0, 255))
-    colormap.append((0.0, 255, 0.0, 255))
-    colormap.append((0.0, 0.0, 255, 255))
-    colormap.append((0.0, 255, 255, 255))
-    colormap.append((255, 255, 0.0, 255))
-    colormap.append((255, 0.0, 255, 255))
+    colormap.append((255, 0, 0, 255))
+    colormap.append((0, 255, 0, 255))
+    colormap.append((0, 0, 255, 255))
+    colormap.append((0, 255, 255, 255))
+    colormap.append((255, 255, 0, 255))
+    colormap.append((255, 0, 255, 255))
     colormap.append((31, 31, 31, 255))
     colormap.append((63, 63, 63, 255))
     colormap.append((95, 95, 95, 255))
