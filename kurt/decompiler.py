@@ -275,6 +275,11 @@ def cmd_decompile(path):
 
     scratch project -> folder structure with project contents"""
     
+    if path.endswith(".sb"):
+        path = path[:-3]
+    if path.endswith(" files"):
+        path = path[:-6]
+    
     project = ScratchProjectFile(path, load=False)
     
     try:
