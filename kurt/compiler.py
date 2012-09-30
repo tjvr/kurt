@@ -267,7 +267,6 @@ def import_sprite(project_dir, sprite_name):
             script_path = os.path.join(scripts_dir, script_name)
             script = read_script_file(sprite, script_path)
             if script:
-                script.morph = sprite
                 sprite.scripts.append(script)
 
         sprite.scripts.sort(key=lambda script: script.pos.y)

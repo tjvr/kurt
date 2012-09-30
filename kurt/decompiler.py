@@ -105,7 +105,7 @@ def export_sprite(parent_dir, sprite, number, line_endings, debug):
         count_text = str(count)
         if len(count_text) == 1: count_text = "0"+count_text
         name = count_text + " "
-        name += escape_filename(script.blocks[0].to_block_plugin())
+        name += escape_filename(script.blocks[0].to_block_plugin().split('\n')[0])
         
         script_path = os.path.join(scripts_dir, name+".txt")
         write_file(script_path, contents, line_endings)
