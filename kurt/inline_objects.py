@@ -73,6 +73,28 @@ class RefAdapter(Adapter):
         return Ref.from_construct(obj)
 
 
+class LargeIntegerAdapter(Adapter):
+    def __init__(self, sign, *args, **kwargs):
+        self.sign = sign
+        Adapter.__init__(self, *args, **kwargs)
+    
+    def _decode(self, obj, context):
+        value = 0
+        for x in reversed(obj.data):
+            value <<= 8
+            value += x
+        if self.sign == '-':
+            value = -value
+        return value
+        
+    def _encode(self, obj, context):
+        bytes = []
+        while obj:
+            bytes.append(obj & 0xff)
+            obj >>= 8
+        return Container(length=len(bytes), data=bytes)
+
+
 class FieldAdapter(Adapter):
     def _encode(self, obj, context):
         assert not isinstance(obj, str)
@@ -88,11 +110,14 @@ class FieldAdapter(Adapter):
         elif isinstance(obj, Ref):
             classID = 'Ref'
         elif isinstance(obj, int):
-            # for now, assume SmallInteger
-            if -32768 <= obj and obj <= 32767:
+            if -32768 <= obj <= 32767:
                 classID = 'SmallInteger16'
-            else:
+            elif -2147483648 <= obj <= 2147483647:
                 classID = 'SmallInteger'
+            elif obj >= 0:
+                classID = 'LargePositiveInteger'
+            else:
+                classID = 'LargeNegativeInteger'
         else:
             raise NotImplementedError, 'no field type for %r' % obj
         return Container(classID=classID, value=obj)
@@ -122,14 +147,14 @@ Field = FieldAdapter(Struct("field",
         "false": Value("", lambda ctx: False),
         "SmallInteger": SBInt32(""),
         "SmallInteger16": SBInt16(""),
-        "LargePositiveInteger": Struct("",
+        "LargePositiveInteger": LargeIntegerAdapter('+', Struct("",
             UBInt16("length"),
             MetaRepeater(lambda ctx: ctx.length, UBInt8("data")),
-        ),
-        "LargeNegativeInteger": Struct("",
+        )),
+        "LargeNegativeInteger": LargeIntegerAdapter('-', Struct("",
             UBInt16("length"),
             MetaRepeater(lambda ctx: ctx.length, UBInt8("data")),
-        ),
+        )),
         "Float": BFloat64(""),
         "Ref": RefAdapter(BitStruct("",
             BitField("index", 24),

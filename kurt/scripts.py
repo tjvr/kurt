@@ -528,7 +528,9 @@ class ScriptCollection(list):
 
 
 
-from blockspecs import *  # YES THIS IS STUPID
+# circular imports are stupid
+from blockspecs import BlockType
+from blockspecs import blocks_by_cmd, block_plugin_inserts, find_block
 
 
 
