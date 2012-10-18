@@ -27,6 +27,7 @@ Construct them by passing them a path.
 from construct import Container, Struct, Bytes, Rename
 from construct.text import Literal
 from objtable import ObjTable, InfoTable
+from fixed_objects import Form
 from user_objects import Stage, Image
 
 import os.path
@@ -124,6 +125,17 @@ class ScratchProjectFile(BinaryFile):
     EXTENSION = "sb"
     
     DEFAULT_COMMENT = "Made with Kurt \nhttp://github.com/blob8108/kurt"
+    DEFAULT_INFO = {
+        "comment": DEFAULT_COMMENT,
+        "scratch-version": '1.4 of 30-Jun-09',
+        "language": "en",
+        "author": u"",
+        "isHosting": False,
+        "platform": "", 
+        "os-version": "",
+        "thumbnail": None,
+        "history": "",
+    }
     
     _construct = Struct("scratch_file",
         Literal("ScratchV02"),
@@ -132,24 +144,14 @@ class ScratchProjectFile(BinaryFile):
     )
     
     def __init__(self, *args, **kwargs):
-        self.info = {
-            "comment": self.DEFAULT_COMMENT,
-            "scratch-version": '1.4 of 30-Jun-09',
-            "language": "en",
-            "author": u"",
-            "isHosting": False,
-            "platform": "", 
-            "os-version": "",
-            "thumbnail": None,
-            "history": "",
-        }
+        self.info = self.DEFAULT_INFO.copy()
         BinaryFile.__init__(self, *args, **kwargs)
 
     def _load(self, bytes):
         project = self._construct.parse(bytes)
         self.info.update(project.info)
         
-        if self.info["thumbnail"]:
+        if self.info["thumbnail"] and isinstance(self.info["thumbnail"], Form):
             self.info["thumbnail"] = Image(
                 name = self.name + " thumbnail",
                 form = self.info["thumbnail"],
@@ -160,16 +162,16 @@ class ScratchProjectFile(BinaryFile):
         #self.info.__doc__ = InfoTable.__doc__
         self.stage = project.stage
     
-    def _save(self):
+    def _save(self):        
+        info = self.info.copy()
+        if info["thumbnail"]:
+            info["thumbnail"] = info["thumbnail"].form
+        info["comment"] = info["comment"].replace("\n", "\r")
+        
         self.stage.normalize()
         
-        if self.info["thumbnail"]:
-            self.info["thumbnail"] = self.info["thumbnail"].form
-        
-        self.info["comment"] = self.info["comment"].replace("\n", "\r")
-        
         project = Container(
-            info = self.info,
+            info = info,
             stage = self.stage,
         )
         return self._construct.build(project)
@@ -185,7 +187,17 @@ class ScratchProjectFile(BinaryFile):
         #project.path = path # do this now so project doesn't attempt
         #                    # to .load() itself
         return project
-        
+    
+    def __getattr__(self, name):
+        if name in self.DEFAULT_INFO:
+            return self.info[name]
+    
+    def __setattr__(self, name, value):
+        if name in self.DEFAULT_INFO:
+            self.info[name] = value
+        else:
+            object.__setattr__(self, name, value)
+    
     @property
     def sprites(self):
         return self.stage.sprites
