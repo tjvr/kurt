@@ -109,7 +109,7 @@ class FieldAdapter(Adapter):
             classID = 'Float'
         elif isinstance(obj, Ref):
             classID = 'Ref'
-        elif isinstance(obj, int):
+        elif isinstance(obj, int) or isinstance(obj, long):
             if -32768 <= obj <= 32767:
                 classID = 'SmallInteger16'
             elif -2147483648 <= obj <= 2147483647:
