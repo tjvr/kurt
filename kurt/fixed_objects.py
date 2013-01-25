@@ -447,7 +447,7 @@ class Point(FixedObject):
     
     @classmethod
     def from_string(cls, string):
-        (x, y) = string.split(",")
+        (x, y) = string.lstrip("(").rstrip(")").split(",")
         return cls(float(x), float(y))
 
 class Rectangle(FixedObject):

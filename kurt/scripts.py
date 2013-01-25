@@ -413,10 +413,10 @@ class Script(object):
     Methods:
         to_block_plugin() — returns the script in scratchblocks format.
     """
-    def __init__(self, pos=(0,0), blocks=None):
+    def __init__(self, pos=(20,20), blocks=None):
         self.morph = None
         if blocks is None: blocks = []
-        self.pos = pos
+        self.pos = Point(pos)
         self.blocks = blocks
 
         for block in blocks:
@@ -435,7 +435,7 @@ class Script(object):
                      command.value == 'scratchComment' ):
                     return Comment.from_array(morph, pos, block)
 
-        script = cls(pos, [Block.from_array(block) for block in blocks])
+        script = cls(Point(pos), [Block.from_array(block) for block in blocks])
         script.morph = morph
         for block in script.blocks:
             if isinstance(block, Block):
@@ -443,7 +443,7 @@ class Script(object):
         return script
 
     def to_array(self):
-        return (self.pos, [block.to_array() for block in self.blocks])
+        return (Point(self.pos), [block.to_array() for block in self.blocks])
 
     def __eq__(self, other):
         return (

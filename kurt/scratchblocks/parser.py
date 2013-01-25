@@ -112,7 +112,7 @@ def parse_color(hexcode):
 
 def block_from_parts(parts, flag=None):
     # flag is currently unused
-    
+
     text = ""
     arguments = []
     for part in parts:
@@ -246,7 +246,7 @@ def variable_named(variable_name):
 
 def p_file(t):
     """file : script"""
-    t[0] = Script(None, blocks = t[1])
+    t[0] = Script(blocks = t[1])
 
 def p_script_end_newlines(t):
     """script : script NEWLINE"""

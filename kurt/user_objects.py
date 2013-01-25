@@ -423,6 +423,8 @@ class Sprite(ScriptableScratchMorph):
 
 
 class SpriteCollection(OrderedCollection):
+    """Provides indexing by sprite name as well as index"""
+    # TODO: use OrderedDict?
     def __getitem__(self, item):
         try:
             index = int(item)
@@ -434,6 +436,15 @@ class SpriteCollection(OrderedCollection):
 
     def __repr__(self):
         return repr(self.value)
+
+    def __contains__(self, item):
+        if item in self.value:
+            return True
+        for sprite in self.value:
+            if sprite.name == item:
+                return True
+        return False
+        
 
 
 class Stage(ScriptableScratchMorph):
@@ -635,6 +646,10 @@ class Image(ScratchMedia):
             self.form_without_text = self.form
             self.form = self.compositeForm
 
+    def _encode_field(self, name, value):
+        if name == 'name':
+            return unicode(value)
+        return value
 
     @classmethod
     def load(cls, path):
@@ -668,6 +683,7 @@ class Image(ScratchMedia):
     @classmethod
     def from_image(cls, name, image_file):
         """Create Image from a PIL.Image.Image object"""
+        name = unicode(name)
         if image_file.format == "JPEG":
             f = StringIO.StringIO()
             image_file.save(f, format="JPEG")
