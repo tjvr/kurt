@@ -9,8 +9,9 @@ Kurt also includes a compiler/decompiler for converting to/from a folder structu
 Use it for:
 
 * generating Scratch projects using Python code
-* analysing projects ([example that counts blocks](https://gist.github.com/2967355))
+* analysing projects ([eg counting blocks](https://gist.github.com/2967355))
 * converting to another format
+* [importing font files](http://github.com/blob8108/kurt/blob/master/examples/fonts.py) as costumes
 * *...anything else you think of!*
 
 It supports sprites, scripts, variables, images, etc. It *can't* read/write sounds yet, but they're on the [to-do list](#todo). Everything else works (as far as I'm aware).

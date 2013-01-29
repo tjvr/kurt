@@ -1,9 +1,23 @@
+"""
+Load fonts into Scratch as costumes, complete with a script for stamping text.
+
+Each font is loaded into a sprite, and can write any message you please — feel
+free to export any of the sprites and use them in your own projects!
+
+Customise the options below...
+
+"""
 from PIL import Image, ImageDraw, ImageFont
 import kurt
 import os
 import sys
 import re
 
+################################################################################
+
+
+
+### SETTINGS: ###
 
 
 # Text color (r, g, b)
@@ -26,14 +40,15 @@ FONT_PATHS = [
 ]
 
 # The list of characters 
-# Default is ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~'
+# Default is A-z, 0-9, and ' !"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
 CHARACTERS = ''.join(map(chr, range(32, 127)))
 
 # Set the Fonts.Message variable
 # Used in the demo script
 MESSAGE = "The quick brown fox jumps over the lazy dog. "
 
-# End of settings
+
+### End of settings ###
 
 
 
