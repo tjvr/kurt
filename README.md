@@ -2,21 +2,18 @@
 
     Scratch project files  <--->  Python  <--->  Scratchblocks code & images
 
-### A De/compiler
+Kurt's a Python library for reading and writing Scratch project `.sb` & sprite files. 
 
-Kurt can convert to/from a **folder structure of scripts and images**. You can decompile a project into its parts, edit the scripts as block plugin/“scratchblocks” code in a text editor (and images in an image editor), then recompile again. See [Using the Compiler](#using-the-compiler).
+Kurt also includes a compiler/decompiler for converting to/from a folder structure of scripts and images. You can decompile a project into its parts, edit the scripts as block plugin/“scratchblocks” code in a text editor (and images in an image editor), then recompile again. *See [Using the Compiler](#using-the-compiler).*
 
-### A Python library
-
-Kurt's also a Python library for reading/writing **Scratch project** (`.sb`) **& sprite files**. You can load the files, look at their internal structure — including sprites, scripts, variables, images, etc — make changes, and save them again! You can generate Scratch projects from Python code.
-
-You could use it for:
+Use it for:
 
 * generating Scratch projects using Python code
-* analysing the scripts in a project ([example](https://gist.github.com/2967355))
-* converting to another format (like the `scratchblocks` converter does)
+* analysing projects ([example that counts blocks](https://gist.github.com/2967355))
+* converting to another format
+* *...anything else you think of!*
 
-It *can't* read/write sounds yet, but they're on the [to-do list](#todo) — see below. Everything else works (as far as I'm aware).
+It supports sprites, scripts, variables, images, etc. It *can't* read/write sounds yet, but they're on the [to-do list](#todo). Everything else works (as far as I'm aware).
 
 
 **WARNING**: Make sure you take backups of your Scratch projects before saving anything with kurt! I can't accept responsibility for corrupting your files.
