@@ -141,6 +141,24 @@ class Block(object):
                 array.append(arg)
         return array
 
+    def to_json(self):
+        array = []
+        if self.command:
+            array.append(self.command)
+        else:
+            array.append('')
+
+        for arg in self.args:
+            if isinstance(arg, Block):
+                array.append(arg.to_json())
+            elif isinstance(arg, list):
+                array.append([block.to_json() for block in arg])
+            elif isinstance(arg, Sprite):
+                array.append(arg.name)
+            else:
+                array.append(arg)
+        return array
+
     def set_script(self, script):
         if self.script and self.script is not script:
             if self in self.script:
@@ -444,6 +462,10 @@ class Script(object):
 
     def to_array(self):
         return (Point(self.pos), [block.to_array() for block in self.blocks])
+
+    def to_json(self):
+        (x, y) = self.pos
+        return (int(x), int(y), [block.to_json() for block in self.blocks])
 
     def __eq__(self, other):
         return (
