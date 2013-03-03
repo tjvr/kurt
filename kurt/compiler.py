@@ -43,6 +43,13 @@ from kurt import *
 
 IGNORED_NAMES = [".DS_Store"]
 
+def is_ignored(filename):
+    return (
+        filename.startswith(".") or
+        filename.endswith(".swp") or
+        filename in IGNORED_NAMES
+    )
+
 
 class InvalidFile(Exception):
     def __init__(self, path, error):
@@ -244,7 +251,7 @@ def import_sprite(project_dir, sprite_name):
     if os.path.exists(lists_dir):
         list_names = os.listdir(lists_dir)
         for list_name in list_names:
-            if list_name in IGNORED_NAMES:
+            if is_ignored(list_name):
                 continue
             list_path = os.path.join(lists_dir, list_name)
 
@@ -264,6 +271,9 @@ def import_sprite(project_dir, sprite_name):
         script_names = os.listdir(scripts_dir)
 
         for script_name in script_names:
+            if is_ignored(script_name):
+                continue
+
             script_path = os.path.join(scripts_dir, script_name)
             script = read_script_file(sprite, script_path)
             if script:
@@ -285,9 +295,7 @@ def import_sprite(project_dir, sprite_name):
             costumes = read_costume_file(costume_file)
 
         found_costumes = os.listdir(costumes_dir)
-        for ignore in IGNORED_NAMES:
-            while ignore in found_costumes:
-                found_costumes.remove(ignore)
+        found_costumes = filter(lambda n: not is_ignored(n), found_costumes)
         found_costumes.sort()
 
         remove_costumes = []
@@ -414,9 +422,7 @@ def compile(project_dir, debug=True): # DEBUG: set to false
     if stage_name:
         sprite_names.remove(stage_name)
 
-    for ignore in IGNORED_NAMES:
-        while ignore in sprite_names:
-            sprite_names.remove(ignore)
+    sprite_names = filter(lambda n: not is_ignored(n), sprite_names)
 
     if stage_name is not None:
         (_, stage) = import_sprite(project_dir, stage_name)
