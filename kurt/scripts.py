@@ -23,7 +23,7 @@
 """
 
 from fixed_objects import Symbol, Color, Point
-from user_objects import BaseMorph
+from user_objects import BaseMorph, Sprite
 
 from pprint import pformat
 
@@ -166,7 +166,7 @@ class Block(object):
         return not self == other
 
     def __repr__(self):
-        string = "Block(%s," % repr(self.command)
+        string = "Block(%s, " % repr(self.command)
         for arg in self.args:
             if isinstance(arg, Block):
                 string = string.rstrip("\n")
@@ -519,6 +519,7 @@ class Script(object):
 
 
 class ScriptCollection(list):
+    """List with pretty-printing."""
     def __init__(self, scripts=None):
         if scripts is None: scripts = []
         self += scripts

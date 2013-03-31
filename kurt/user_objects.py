@@ -218,6 +218,8 @@ class StringMorph(BaseMorph):
 
 class UpdatingStringMorph(StringMorph):
     classID = 106
+    _fields = StringMorph._fields + ("format", "target", "getSelector",
+        "putSelector", "parameter", "floatPrecision", "growable", "stepTime")
 
 class SimpleSliderMorph(BorderedMorph):
     classID = 107
@@ -653,7 +655,7 @@ class Image(ScratchMedia):
 
     @classmethod
     def load(cls, path):
-        """Load image file and return an Image subclass by format."""
+        """Load image file and return an Image."""
         require_pil()
 
         (_, name) = os.path.split(path)
