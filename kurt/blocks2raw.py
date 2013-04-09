@@ -2,7 +2,7 @@
 # Comment/Script superclass?
 # -> meh.
 import kurt
-from kurt2 import BlockType
+from kurt import BlockType
 
 import itertools
 
