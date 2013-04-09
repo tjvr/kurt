@@ -648,6 +648,9 @@ class Image(ScratchMedia):
             self.form_without_text = self.form
             self.form = self.compositeForm
 
+        if not self.size and self.form:
+            self.size = (self.form.width, self.form.height)
+
     def _encode_field(self, name, value):
         if name == 'name':
             return unicode(value)
