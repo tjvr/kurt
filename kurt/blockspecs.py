@@ -225,8 +225,17 @@ for block in blocks:
 assert blocks_by_cmd['EventHatMorph'][0].text == 'when green flag clicked'
 blocks_by_cmd['EventHatMorph'][0].defaults = ["Scratch-StartClicked"]
 
+assert blocks_by_cmd['EventHatMorph'][1].text == 'when I receive %e'
+blocks_by_cmd['EventHatMorph'][1].defaults = [""]
+
 assert blocks_by_cmd['MouseClickEventHatMorph'][0].text == 'when %m clicked'
 blocks_by_cmd['MouseClickEventHatMorph'][0].defaults = ["Scratch-MouseClickEvent"]
+
+blocks_by_cmd['contentsOfList:'][0].defaults = ["list"]
+blocks_by_cmd['KeyEventHatMorph'][0].defaults = ["space"]
+blocks_by_cmd['doIfElse'][0].defaults = [False, None]
+blocks_by_cmd['readVariable'][0].defaults = ['var']
+
 
 
 def strip_block_text(parts):
