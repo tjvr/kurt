@@ -6,6 +6,8 @@
 Welcome to Kurt's documentation!
 ================================
 
+.. include:: warning.rst
+
 Contents:
 
 .. toctree::
