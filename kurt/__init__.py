@@ -50,7 +50,8 @@ Scripts use the following classes:
 * :class:`Comment`
 * :class:`BlockType`
 
-There are two :class:`Costume` subclasses:
+There are two :class:`Costume` subclasses, so kurt can implement lazy loading
+of image data:
 
 * :class:`CostumeFromFile`
 * :class:`CostumeFromPIL`
@@ -140,7 +141,7 @@ def _clean_filename(name):
 #-- Project: main entry point --#
 
 class Project(object):
-    """The main Kurt class. Stores the contents of a project file.
+    """The main kurt class. Stores the contents of a project file.
 
     Contents include the :attr:`stage` and :attr:`sprites`, each with their own
     :attr:`scripts`, :attr:`costumes`, :attr:`sounds`, :attr:`variables` and
@@ -1212,7 +1213,7 @@ class Costume(Media):
 
     To load an image file by path, use :attr:`CostumeFromFile.from_path`.
 
-    The reason for having multiple constructors is so that Kurt can implement
+    The reason for having multiple constructors is so that kurt can implement
     lazy loading of image data -- in many cases, a PIL image will never need to
     be created.
 
