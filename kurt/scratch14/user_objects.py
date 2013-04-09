@@ -1,6 +1,4 @@
-#coding=utf8
-
-# Copyright © 2012 Tim Radvan
+# Copyright (C) 2012 Tim Radvan
 #
 # This file is part of Kurt.
 #
@@ -376,7 +374,7 @@ class ScriptableScratchMorph(BaseMorph):
 class SensorBoardMorph(BaseMorph):
     classID = 123
     _fields = BaseMorph._fields + ("unknown",)
-                                  # TODO — I have NO idea what this does.
+                                  # TODO - I have NO idea what this does.
 
 
 class Sprite(ScriptableScratchMorph):
@@ -400,7 +398,7 @@ class Sprite(ScriptableScratchMorph):
 
         self.name = "Sprite1"
         self.color = Color(0, 0, 1023)
-        # self.owner — Stage
+        # self.owner - Stage
         # self.bounds = Rectangle() - default to size of costume?
 
         self.visibility = 100
@@ -541,7 +539,7 @@ class Stage(ScriptableScratchMorph):
         self.images = value
 
 
-from scripts import Script, Comment, ScriptCollection
+from scripts import Script, Comment
 # Yes, this is stupid. Circular dependencies ftw. -_-
 
 
@@ -636,12 +634,12 @@ class Image(ScratchMedia):
     image object using load() or from_image() instead.
 
     Class methods:
-        load(path) — load a PNG or JPEG image
-        from_image(name, image) — create Image from a PIL.Image.Image object
+        load(path) - load a PNG or JPEG image
+        from_image(name, image) - create Image from a PIL.Image.Image object
 
     Instance methods:
-        save(path) — save the image to an external file.
-        get_image() — return a PIL.Image.Image object
+        save(path) - save the image to an external file.
+        get_image() - return a PIL.Image.Image object
     """
 
     classID = 162
@@ -883,5 +881,17 @@ class ScrollingStringMorph(BaseMorph):
     classID = 176
 
 
+
+
+
+
+class ScriptCollection(list):
+    """List with pretty-printing."""
+    def __init__(self, scripts=None):
+        if scripts is None: scripts = []
+        self += scripts
+
+    def __repr__(self):
+        return pformat(list(self))
 
 

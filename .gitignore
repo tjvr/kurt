@@ -8,3 +8,4 @@ files/
 tests/
 parser.out
 parselog.txt
+*.swp

@@ -1,6 +1,4 @@
-#coding=utf8
-
-# Copyright © 2012 Tim Radvan
+# Copyright (C) 2012 Tim Radvan
 # 
 # This file is part of Kurt.
 # 
@@ -20,7 +18,7 @@
 """Classes for saving/loading Scratch files.
 Construct them by passing them a path.
 
-    ScratchProjectFile - .sb
+    ScratchProjectFile - .sb
     ScratchSpriteFile - .sprite
 """
 
@@ -114,12 +112,12 @@ class BinaryFile(object):
 
 
 class ScratchProjectFile(BinaryFile):
-    """A Scratch Project file.
-    @param path: path to .sb file.
+    """Using this interface directly is DEPRECATED -- use kurt.Project instead,
+    which provides conversion between multiple formats.
     
     Attributes:
-        info - a Dictionary containing project info (author, notes, thumbnail)
-        stage - the stage. Contains contents, including sprites and media.
+        info - a Dictionary containing project info (author, notes, thumbnail)
+        stage - the stage. Contains contents, including sprites and media.
     """
     
     EXTENSION = "sb"
@@ -217,9 +215,9 @@ class ScratchSpriteFile(BinaryFile):
     @param path: path to .sprite file.
     
     Attributes:
-        stage - the root object of the file (Sprite files actually contain a 
+        stage - the root object of the file (Sprite files actually contain a 
                 serialised Stage)
-        sprite - convenience property for accessing the first (only) sprite in 
+        sprite - convenience property for accessing the first (only) sprite in 
                  the file.
     """
 

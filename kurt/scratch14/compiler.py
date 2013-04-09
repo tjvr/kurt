@@ -1,6 +1,4 @@
-#coding=utf8
-
-# Copyright © 2012 Tim Radvan
+# Copyright (C) 2012 Tim Radvan
 #
 # This file is part of Kurt.
 #

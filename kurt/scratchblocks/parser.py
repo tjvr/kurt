@@ -1,10 +1,27 @@
-﻿from ply import yacc
+# Copyright (C) 2012 Tim Radvan
+# 
+# This file is part of Kurt.
+# 
+# Kurt is free software: you can redistribute it and/or modify it under the 
+# terms of the GNU Lesser General Public License as published by the Free 
+# Software Foundation, either version 3 of the License, or (at your option) any 
+# later version.
+# 
+# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY 
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more 
+# details.
+# 
+# You should have received a copy of the GNU Lesser General Public License along 
+# with Kurt. If not, see <http://www.gnu.org/licenses/>.
+
+from ply import yacc
 import os
 from lexer import tokens, pretty_error
 
-from kurt.blockspecs import find_block, blocks_by_cmd
-from kurt.scripts import Block, Script, SpriteRef
-from kurt import Symbol, Color
+from kurt.scratch14.blockspecs import find_block, blocks_by_cmd
+from kurt.scratch14.scripts import Block, Script, SpriteRef
+from kurt.scratch14 import Symbol, Color
 
 
 import htmlcolor

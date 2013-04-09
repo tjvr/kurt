@@ -1,6 +1,4 @@
-#coding=utf8
-
-# Copyright © 2012 Tim Radvan
+# Copyright (C) 2012 Tim Radvan
 #
 # This file is part of Kurt.
 #
@@ -17,20 +15,22 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
-"""Classes for manipulating scripts.
-    Script - a stack; contains a list of blocks.
-    Block - a single block.
+"""This module is DEPRECATED! It is provided for compatibility with Kurt 1.4.
+
+You should use the classes provided
 """
 
-from fixed_objects import Symbol, Color, Point
-from user_objects import BaseMorph, Sprite
+from kurt.scratch14.fixed_objects import Symbol, Color, Point
+from kurt.scratch14.user_objects import BaseMorph, Sprite
 
 from pprint import pformat
 
 
 
 class Block(object):
-    """A single block.
+    """This class is DEPRECATED! Use kurt.Block instead.
+
+    A single block.
     Arguments:
         script - the parent script that this block belongs to
         command - names the command this block performs (see BlockType.command)
@@ -40,7 +40,7 @@ class Block(object):
         type - BlockType instance (found to match self.command)
 
     Methods:
-        to_block_plugin() — returns the block in scratchblocks format.
+        to_block_plugin() - returns the block in scratchblocks format.
     """
     def __init__(self, command_or_type=None, *args):
         self.script = None
@@ -412,9 +412,11 @@ class Block(object):
 
 
 class Script(object):
-    """A single stack of blocks.
+    """This class is DEPRECATED! Use kurt.Script instead.
 
-    The first block self.blocks[0] is usually a “when” block, eg. an
+    A single stack of blocks.
+
+    The first block self.blocks[0] is usually a "when" block, eg. an
     EventHatMorph.
 
     Scripts implement the `list` interface, so can be indexed directly; eg
@@ -424,12 +426,12 @@ class Script(object):
     Arguments/attributes:
         morph - ScriptableScratchMorph (Stage or Sprite) instance that this
                 script belongs to
-        pos - (x, y) position of script in the “blocks bin”, the script pane in
+        pos - (x, y) position of script in the "blocks bin", the script pane in
               the Scratch interface.
-        blocks - list of blocks.
+        blocks - list of blocks.
 
     Methods:
-        to_block_plugin() — returns the script in scratchblocks format.
+        to_block_plugin() - returns the script in scratchblocks format.
     """
     def __init__(self, pos=(20,20), blocks=None):
         self.morph = None
@@ -540,24 +542,16 @@ class Script(object):
 
 
 
-class ScriptCollection(list):
-    """List with pretty-printing."""
-    def __init__(self, scripts=None):
-        if scripts is None: scripts = []
-        self += scripts
-
-    def __repr__(self):
-        return pformat(list(self))
-
-
-
 # circular imports are stupid
 from blockspecs import BlockType
-from blockspecs import blocks_by_cmd, block_plugin_inserts, find_block
+from blockspecs import blocks_by_cmd, block_plugin_inserts
+from blockspecs import find_block
 
 
 
 class Comment(Script):
+    """This class is DEPRECATED! Use kurt.Comment instead."""
+
     type = BlockType("scratchComment", "// %s", defaults = ["", True, 112])
 
     def __init__(self, pos=None, comment="", showing=True, width=112, anchor=None):
@@ -627,7 +621,9 @@ class Comment(Script):
 
 
 class SpriteRef(object):
-    """Used by `kurt.scratchblocks.parser` so that compile() doesn't have to
+    """DEPRECATED
+    
+    Used by `kurt.scratchblocks.parser` so that compile() doesn't have to
     build all the sprites before parsing all the scripts."""
     def __init__(self, name):
         self.name = name
