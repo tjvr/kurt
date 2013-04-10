@@ -706,7 +706,8 @@ class Sprite(Scriptable, Actor):
 class Watcher(Actor):
     """A monitor for displaying a data value on the stage.
 
-    Watchers are always visible. To hide them, simply remove them.
+    Some formats won't save hidden watchers, and so their position won't be
+    remembered.
 
     """
 
@@ -740,11 +741,22 @@ class Watcher(Actor):
         self.pos = (0, 0)
         """``(x, y)`` position from the top-left of the stage in pixels."""
 
+        self.visible = True
+        """Whether the watcher is displayed on the screen.
+
+        Some formats won't save hidden watchers, and so their position won't be
+        remembered.
+
+        """
+
         if project:
             project.children.append(self)
 
     def _normalize(self):
         assert self.style in ("normal", "large", "slider")
+
+        self.pos = Pos(self.pos)
+        self.visible = bool(self.visible)
 
         if isinstance(self.value, List):
             assert self.style == "normal"
