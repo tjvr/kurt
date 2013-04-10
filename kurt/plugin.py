@@ -69,6 +69,8 @@ class KurtPlugin(object):
     Used by :attr:`Project.load` to recognise its files.
     """
 
+    has_stage_specific_variables = False
+
 
     def load(self, path):
         """Load a project from a file with this format.

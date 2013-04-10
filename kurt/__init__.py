@@ -1,18 +1,18 @@
 # Copyright (C) 2012 Tim Radvan
-# 
+#
 # This file is part of Kurt.
-# 
-# Kurt is free software: you can redistribute it and/or modify it under the 
-# terms of the GNU Lesser General Public License as published by the Free 
-# Software Foundation, either version 3 of the License, or (at your option) any 
+#
+# Kurt is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
 # later version.
-# 
-# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY 
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more 
+#
+# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
 # details.
-# 
-# You should have received a copy of the GNU Lesser General Public License along 
+#
+# You should have received a copy of the GNU Lesser General Public License along
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
 """
@@ -99,6 +99,10 @@ import kurt.scratch14.scripts as scripts
 
 
 
+# magic Actor.project
+
+# magic script.scriptable, block.script
+
 # is name even a thing?
 
 # normalize actions should run automagically
@@ -148,14 +152,12 @@ def _clean_filename(name):
 class Project(object):
     """The main kurt class. Stores the contents of a project file.
 
-    Contents include the :attr:`stage` and :attr:`sprites`, each with their own
-    :attr:`scripts`, :attr:`costumes`, :attr:`sounds`, :attr:`variables` and
-    :attr:`lists`.
-
-    Global variables and lists are stored on the :attr:`stage`.
+    Contents include global variables and lists, the :attr:`stage` and
+    :attr:`sprites`, each with their own :attr:`scripts`, :attr:`costumes`,
+    :attr:`sounds`, :attr:`variables` and :attr:`lists`.
 
     A Project can be loaded from or saved to disk, in a format which can be
-    read by a Scratch program or one of its derivatives. 
+    read by a Scratch program or one of its derivatives.
 
     Loading a project::
 
@@ -201,7 +203,8 @@ class Project(object):
 
         """
 
-        self.stage = Stage(self)
+        self.stage = Stage()
+        self.stage.project = self # TODO
         """The :class:`Stage`."""
 
         self.sprites = OrderedMediaDict()
@@ -217,6 +220,12 @@ class Project(object):
 
         """
         # TODO specify stacking order
+
+        self.variables = MediaDict()
+        """:class:`MediaDict` of global :class:`Variables <Variable>`."""
+
+        self.lists = MediaDict()
+        """:class:`MediaDict` of global :class:`Lists <List>`."""
 
         self.thumbnail = None
         """A screenshot of the project. May be displayed in project browser."""
@@ -384,6 +393,15 @@ class Project(object):
         self.comment = unicode(self.comment)
         self.comment = self.comment.replace("\r\n", "\n").replace("\r", "\n")
 
+        # global variables & lists
+        if not self._plugin.has_stage_specific_variables:
+            self.variables.update(self.stage.variables)
+            self.lists.update(self.stage.lists)
+
+        # make lists variables
+
+
+
 
 
 
@@ -511,7 +529,7 @@ class OrderedMediaDict(MediaDict):
         objects = objects or []
         objects = map(lambda o: (unicode(o.name), o), objects)
         self._objects = collections.OrderedDict(objects)
-    
+
     def __getitem__(self, item):
         if isinstance(item, int): # by index
             return self._objects.values()[item]
@@ -552,8 +570,8 @@ class Actor(object):
 
     """
 
-    def __init__(self, project):
-        self.project = project
+    def __init__(self):
+        self.project = None
         """The :class:`project` this actor belongs to."""
 
 
@@ -564,8 +582,8 @@ class Scriptable(object):
 
     """
 
-    def __init__(self, project):
-        self.project = project
+    def __init__(self):
+        self.project = None
         """The :class:`project` this actor belongs to."""
 
         self.scripts = []
@@ -629,12 +647,15 @@ class Stage(Scriptable):
     The stage does not require a costume. If none is given, it is assumed to be
     white (#FFF).
 
+    Not all formats have stage-specific variables and lists. Global variables
+    and lists are stored on the :class:`Project`.
+
     """
 
     name = "Stage"
 
-    def __init__(self, project):
-        Scriptable.__init__(self, project)
+    def __init__(self):
+        Scriptable.__init__(self)
 
     @property
     def backgrounds(self):
@@ -654,8 +675,8 @@ class Sprite(Scriptable, Actor):
 
     """
 
-    def __init__(self, project, name=u"Sprite1"):
-        Scriptable.__init__(self, project)
+    def __init__(self, name=u"Sprite1"):
+        Scriptable.__init__(self)
 
         self.name = name
         """The sprite's name."""
@@ -704,15 +725,15 @@ class Sprite(Scriptable, Actor):
 
 
 class Watcher(Actor):
-    """A monitor for displaying a data value on the stage.
+    """A monitor for displaying a data value (such as a variable) on the stage.
 
     Some formats won't save hidden watchers, and so their position won't be
     remembered.
 
     """
 
-    def __init__(self, project, value, style="normal"):
-        Actor.__init__(self, project)
+    def __init__(self, value, style="normal"):
+        Actor.__init__(self)
 
         self.value = value
         """The data the watcher displays.
@@ -749,14 +770,19 @@ class Watcher(Actor):
 
         """
 
-        if project:
-            project.children.append(self)
+        self._normalize()
 
     def _normalize(self):
         assert self.style in ("normal", "large", "slider")
 
-        self.pos = Pos(self.pos)
+        if isinstance(self.value, Variable) or isinstance(self.value, List):
+            self.value.watcher = self
+
+        self.pos = _pos(self.pos)
         self.visible = bool(self.visible)
+
+        if self.project:
+            self.project.children.append(self)
 
         if isinstance(self.value, List):
             assert self.style == "normal"
@@ -771,13 +797,15 @@ class Watcher(Actor):
 class Variable(object):
     """A memory value used in scripts.
 
-    There are both :attr`global variables <Stage.variables> and
+    There are both :attr`global variables <Project.variables> and
     :attr:`sprite-specific variables <Sprite.variables>`.
+
+    Some formats also have :attr:`stage-specific variables <Stage.variables`.
 
     """
 
     def __init__(self, name, value=None, is_cloud=False):
-        self.name = unicode(name)
+        self.name = name
         """The name of the variable, as referred to in scripts."""
 
         self.value = value
@@ -795,9 +823,16 @@ class Variable(object):
 
         """
 
+        self.watcher = None
+        """The :class:`Watcher` displaying this variable. May be None."""
+
+        self._normalize()
+
     def _normalize(self):
         self.name = unicode(self.name)
         self.is_cloud = bool(self.is_cloud)
+        if self.watcher and self.watcher.value != self:
+            self.watcher = None
 
     def __repr__(self):
         r = "%s(%r" % (self.__class__.__name__, self.name)
@@ -820,10 +855,10 @@ class List(object):
 
     """
     def __init__(self, name, value=None, is_cloud=False):
-        self.name = unicode(name)
+        self.name = name
         """The name of the list, as referred to in scripts."""
 
-        self.value = map(unicode, value) or []
+        self.value = value or []
         """The value of the list. A Python list of unicode strings."""
 
         self.is_cloud = is_cloud
@@ -833,10 +868,17 @@ class List(object):
 
         """
 
+        self.watcher = None
+        """The :class:`Watcher` displaying this list. May be None."""
+
+        self._normalize()
+
     def _normalize(self):
         self.name = unicode(self.name)
         self.value = map(unicode, self.value)
         self.is_cloud = bool(self.is_cloud)
+        if self.watcher and self.watcher.value != self:
+            self.watcher = None
 
     def __repr__(self):
         r = "%s(%r" % (self.__class__.__name__, self.name)
@@ -854,7 +896,7 @@ class BlockType(object):
     To quickly find a BlockType by its text, use :func:`find_block` (from the
     `blockspecs` module).
 
-    >>> BlockType('say:duration:elapsed:from:', 'say %s for %n secs', 
+    >>> BlockType('say:duration:elapsed:from:', 'say %s for %n secs',
     ...           shape='stack', category='looks', defaults=['Hello!', 2])
     <BlockType(say:duration:elapsed:from:)>
 
@@ -947,7 +989,7 @@ class BlockType(object):
     def __ne__(self, other):
         return not self == other
 
-    
+
     def copy(self):
         """Return a new BlockType instance with the same attributes."""
         return BlockType(self.command, self.text, self.flag, self.category,
@@ -961,7 +1003,7 @@ class BlockType(object):
 
         """
         return filter(None, self._INSERT_RE.split(self.text))
-    
+
     @property
     def inserts(self):
         """The type of each of the block's inserts. Found by filtering
@@ -971,7 +1013,7 @@ class BlockType(object):
 
         """
         return filter(lambda p: p[0] == "%", self.parts)
-    
+
     def __repr__(self):
         r = "BlockType(%s," % self.command
         r += "\n\t" + self.text
@@ -980,7 +1022,7 @@ class BlockType(object):
         return r + ")"
 
         return 'BlockType(%s)' % self.command
-    
+
     def make_default(self):
         """Return a Block instance of this type with the default arguments."""
         return Block(self, *list(self.defaults))
@@ -1221,7 +1263,7 @@ class Media(object):
 #        self.name = name
 #        self.extension = extension
 #        self.file = f
-#        self.image = 
+#        self.image =
 #
 #
 #class MediaFromPath(MediaFromFile):
@@ -1379,7 +1421,7 @@ class CostumeFromFile(Costume):
         Costume.__init__(self, name)
         self.name = name
         self.image_format = image_format
-        
+
         if isinstance(file_, basestring):
             self.file = StringIO(file_)
         else:
