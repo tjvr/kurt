@@ -98,6 +98,9 @@ from kurt.scratch14 import ScratchProjectFile
 import kurt.scratch14.scripts as scripts
 
 
+
+# is name even a thing?
+
 # normalize actions should run automagically
 
 # Should the Project interface have a specific format?
@@ -107,6 +110,8 @@ import kurt.scratch14.scripts as scripts
 # Block definitions
 
 # Does json need open("rb")?
+
+# ``eblock`` -- >2 C-slots?
 
 # Script x/y < 0
 
@@ -189,7 +194,7 @@ class Project(object):
         """The path to the project file."""
 
         self._plugin = None
-        """The file format plugin of this project.
+        """The file format plugin used to load this project.
 
         Get the current format using the :attr:`format` property. Use
         :attr:`convert()` to change between formats.
@@ -226,13 +231,16 @@ class Project(object):
         self.author = u""
         """The username of the project's author, eg. ``'blob8108'``."""
 
+    def __repr__(self):
+        return "<Project(%r)>" % self.name
+
     @property
     def format(self):
         """The file format of the project.
 
         :class:`Project` is mainly a universal representation, and so a project
-        has no specfic format. To convert to a different format, use
-        :attr:`save()`.
+        has no specfic format. This is the format the project was loaded with.
+        To convert to a different format, use :attr:`save()`.
 
         """
         return self._format.name
@@ -270,9 +278,11 @@ class Project(object):
         project = plugin.load(path)
 
         project.path = path
-        project.original_format = plugin.name
+        project._plugin = plugin
         if not project.name:
             project.name = name # use filename
+
+        project._normalize()
 
         return project
 
@@ -318,9 +328,12 @@ class Project(object):
         self.path = path
 
         self._normalize()
-        self._plugin.save(path, self)
+        result = self._plugin.save(path, self)
 
-        return path
+        if result is not None: # Allow returning result as a debugging aid
+            return result
+        else:
+            return path
 
     def convert(self, format):
         """Convert the project to a different file format.
@@ -457,7 +470,14 @@ class MediaDict(object):
 
     def add(self, obj):
         """Adds obj to end of collection."""
+        name = getattr(obj, "name", obj)
+        if name in self:
+            del self[name]
         self[obj.name] = obj
+
+    def index(self, obj):
+        name = getattr(obj, "name", obj)
+        return self.keys().index(name)
 
 
 class OrderedMediaDict(MediaDict):
@@ -579,14 +599,14 @@ class Scriptable(object):
 
         self.volume = 100
 
-        self.tempoBPM = 60
+        self.tempo = 60
 
     def _normalize(self):
         self.scripts = list(self.scripts)
         self.variables = MediaDict(self.variables)
         self.lists = MediaDict(self.lists)
-        self.costumes = OrderedMediaDict(self.lists)
-        self.sounds = OrderedMediaDict(self.lists)
+        self.costumes = OrderedMediaDict(self.costumes)
+        self.sounds = OrderedMediaDict(self.sounds)
 
         if self.costume:
             # Make sure it's in costumes
@@ -622,7 +642,7 @@ class Stage(Scriptable):
         return self.costumes
 
     def __repr__(self):
-        return "<Stage()>"
+        return "<Stage>"
 
 
 class Sprite(Scriptable, Actor):
@@ -633,10 +653,6 @@ class Sprite(Scriptable, Actor):
     without one.
 
     """
-
-    ROTATION_STYLE_NORMAL = "normal"
-    ROTATION_STYLE_LEFT_RIGHT = "leftRight"
-    ROTATION_STYLE_NONE = "none"
 
     def __init__(self, project, name=u"Sprite1"):
         Scriptable.__init__(self, project)
@@ -674,11 +690,15 @@ class Sprite(Scriptable, Actor):
 
         """
 
-        if project:
-            project.sprites.add(self)
+        # TODO make MediaDict auto-update key on name change
+        # so this isn't broken
+        #if project:
+        #    project.sprites.add(self)
 
     def _normalize(self):
         Scriptable._normalize(self)
+        assert self.rotation_style in ("normal", "leftRight", "none")
+        self.position = _pos(self.position)
         if not self.costume:
             raise ValueError, "%r doesn't have a costume" % self
 
@@ -757,7 +777,7 @@ class Variable(object):
         """
 
         self.is_cloud = is_cloud
-        """Whether the value of the variable is persisted on the server.
+        """Whether the value of the variable is shared with other users.
 
         For Scratch 2.0.
 
@@ -795,7 +815,7 @@ class List(object):
         """The value of the list. A Python list of unicode strings."""
 
         self.is_cloud = is_cloud
-        """Whether the value of the list is persisted on the server.
+        """Whether the value of the list is shared with other users.
 
         For Scratch 2.0.
 
@@ -828,7 +848,7 @@ class BlockType(object):
 
     """
 
-    INSERT_RE = re.compile(r'(%.(?:\.[A-z]+)?)')
+    _INSERT_RE = re.compile(r'(%.(?:\.[A-z]+)?)')
 
     def __init__(self, command, text, shape='stack', category='',
                  defaults=None):
@@ -928,7 +948,7 @@ class BlockType(object):
         eg. ``['say ', '%s', ' for ', '%n', ' secs']``
 
         """
-        return filter(None, self.INSERT_RE.split(self.text))
+        return filter(None, self._INSERT_RE.split(self.text))
     
     @property
     def inserts(self):
@@ -1097,7 +1117,8 @@ class Script(object):
         pixels.
 
         """
-        self.blocks = list(blocks) or []
+        self.blocks = blocks or []
+        self.blocks = list(self.blocks)
         """The list of :class:`Blocks <Block>`."""
 
     def _normalize(self):
@@ -1224,15 +1245,17 @@ class Costume(Media):
 
     :ivar name:         Name used by scripts to refer to this Costume.
     :ivar size:         ``(width, height)`` in pixels.
-    :ivar width:        Alias for ``size[0]``.
-    :ivar height:       Alias for ``size[1]``.
     :ivar image_format: Format of the image file. None if unknown.
 
     """
 
     def __init__(self, name):
         Media.__init__(self, name)
+
         self.rotation_center = (0, 0)
+        """``(x, y)`` position of the center of the image from the top-left
+        corner, about which the sprite rotates."""
+
         self._decoded_costume = None
 
     def _normalize(self):
@@ -1313,11 +1336,13 @@ class Costume(Media):
 
     @property
     def width(self):
+        """Alias for ``size[0]``."""
         (width, height) = self.size
         return width
 
     @property
     def height(self):
+        """Alias for ``size[1]``."""
         (width, height) = self.size
         return height
 
@@ -1330,23 +1355,23 @@ class CostumeFromFile(Costume):
     :attr:`CostumeFromFile.from_path` instead.
 
     :param name:         Name of the ``Costume`` as referred to from scripts.
-    :param image_format: Format of the image file. Leave as None if it's
-                         unknown.
-    :param fp:           File-like object (must be opened in binary mode).
+    :param file_:           File-like object (must be opened in binary mode).
                          May also be a bytestring containing the raw file
                          contents.
+    :param image_format: Format of the image file. Leave as None if it's
+                         unknown.
 
     """
 
-    def __init__(self, name, fp, image_format=None):
+    def __init__(self, name, file_, image_format=None):
         Costume.__init__(self, name)
         self.name = name
         self.image_format = image_format
         
-        if isinstance(fp, basestring):
-            self.file = StringIO(fp)
+        if isinstance(file_, basestring):
+            self.file = StringIO(file_)
         else:
-            self.file = fp
+            self.file = file_
 
     @classmethod
     def from_path(cls, path):
