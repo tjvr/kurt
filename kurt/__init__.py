@@ -883,9 +883,9 @@ class List(object):
     def __repr__(self):
         r = "%s(%r" % (self.__class__.__name__, self.name)
         if self.is_cloud:
-            r += ", %r, is_cloud=%r)" % (self.value, self.is_cloud)
+            r += ", %r, is_cloud=%r)" % (self.items, self.is_cloud)
         else:
-            r += ", %r)" % self.value
+            r += ", %r)" % self.items
         return r
 
 
