@@ -63,6 +63,21 @@ collections:
 * :class:`OrderedMediaDict`
 
 
+File Formats
+------------
+
+Supported file formats:
+
+    =============== =========== =========
+    Format Name     Description Extension
+    =============== =========== =========
+    ``"scratch14"`` Scratch 1.4 ``.sb``
+    ``"scratch20"`` Scratch 2.0 ``.sb2``
+    =============== =========== =========
+
+Use "Format name" for :attr:`Project.convert()`.
+
+
 ----
 
 """

@@ -17,7 +17,9 @@
 
 """How to write your own plugin.
 
-Subclass :class:`KurtPlugin` something like this::
+Support for a file format is supported by a :class:`KurtPlugin`.
+
+To support a new file format, write a new subclass::
 
     from kurt.plugin import Kurt, KurtPlugin
 
@@ -33,6 +35,13 @@ Subclass :class:`KurtPlugin` something like this::
             # ...
 
     Kurt.register(MyScratchModPlugin())
+
+To get a list of available plugins:
+
+    >>> kurt.plugin.Kurt.plugins
+    {'scratch14': kurt.scratch14.Scratch14Plugin()}
+
+
 
 """
 
@@ -96,7 +105,7 @@ class KurtPlugin(object):
         raise NotImplementedError
 
     def __repr__(self):
-        return "<KurtPlugin(%r)>" % self.name
+        return self.__module__ + "." + self.__class__.__name__ + "()"
 
 
 class Kurt(object):

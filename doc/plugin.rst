@@ -1,5 +1,5 @@
-File format plugins
-===================
+Writing plugins
+===============
 
 .. include:: warning.rst
 
