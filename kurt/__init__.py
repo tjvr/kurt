@@ -854,12 +854,12 @@ class List(object):
     list values, and this class is not used.
 
     """
-    def __init__(self, name, value=None, is_cloud=False):
+    def __init__(self, name, items=None, is_cloud=False):
         self.name = name
         """The name of the list, as referred to in scripts."""
 
-        self.value = value or []
-        """The value of the list. A Python list of unicode strings."""
+        self.items = items or []
+        """The items contained in the list. A Python list of unicode strings."""
 
         self.is_cloud = is_cloud
         """Whether the value of the list is shared with other users.
@@ -875,7 +875,7 @@ class List(object):
 
     def _normalize(self):
         self.name = unicode(self.name)
-        self.value = map(unicode, self.value)
+        self.items = map(unicode, self.items)
         self.is_cloud = bool(self.is_cloud)
         if self.watcher and self.watcher.value != self:
             self.watcher = None
