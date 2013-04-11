@@ -221,7 +221,6 @@ class Project(object):
         """
 
         self.stage = Stage()
-        self.stage.project = self # TODO
         """The :class:`Stage`."""
 
         self.sprites = OrderedMediaDict()
@@ -257,6 +256,8 @@ class Project(object):
 
         self.author = u""
         """The username of the project's author, eg. ``'blob8108'``."""
+
+        self._normalize()
 
     def __repr__(self):
         return "<Project(%r)>" % self.name
@@ -392,6 +393,16 @@ class Project(object):
 
         """
 
+        # project
+        self.name = unicode(self.name)
+        self.sprites = OrderedMediaDict(self.sprites)
+        self.children = list(self.children)
+        self.variables = MediaDict(self.variables)
+        self.lists = MediaDict(self.lists)
+        self.comment = unicode(self.comment)
+
+        self.stage.project = self # TODO
+
         # sync self.sprites and self.children
         for sprite in self.sprites:
             if sprite not in self.children:
@@ -400,6 +411,7 @@ class Project(object):
             if isinstance(actor, Sprite):
                 if actor not in self.sprites:
                     self.sprites.add(actor)
+            actor.project = self # TODO
 
         # normalize children
         self.stage._normalize()
@@ -412,9 +424,11 @@ class Project(object):
         self.comment = self.comment.replace("\r\n", "\n").replace("\r", "\n")
 
         # global variables & lists
-        if not self._plugin.has_stage_specific_variables:
+        if self._plugin and not self._plugin.has_stage_specific_variables:
             self.variables.update(self.stage.variables)
             self.lists.update(self.stage.lists)
+            self.stage.variables = MediaDict()
+            self.stage.lists = MediaDict()
 
         # make lists variables
 
