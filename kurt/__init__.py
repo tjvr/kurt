@@ -114,6 +114,8 @@ import kurt.scratch14.scripts as scripts
 
 
 
+# NamedObjects
+
 # magic Actor.project
 
 # magic script.scriptable, block.script
@@ -234,6 +236,7 @@ class Project(object):
         Synced with :attr:`sprites` on save.
 
         """
+        # TODO rename actors?
         # TODO specify stacking order
 
         self.variables = MediaDict()
@@ -775,7 +778,10 @@ class Watcher(Actor):
         """
 
         self.pos = (0, 0)
-        """``(x, y)`` position from the top-left of the stage in pixels."""
+        """``(x, y)`` position of the top-left of the watcher from the top-left
+        of the stage in pixels.
+
+        """
 
         self.visible = True
         """Whether the watcher is displayed on the screen.
@@ -805,6 +811,10 @@ class Watcher(Actor):
             assert self.style != "slider"
         elif isinstance(self.value, Variable):
             pass
+
+    def __repr__(self):
+        name = getattr(self.value, "name", str(self.value))
+        return "<Watcher(%s, %s)>" % (name, self.style)
 
 
 #-- Media / Scriptable attributes --#
