@@ -15,23 +15,19 @@
 # You should have received a copy of the GNU Lesser General Public License along 
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
-"""A Kurt plugin for Scratch 1.4.
+"""A Kurt plugin for Scratch 1.4."""
 
 
-INTERNALS:
-
-The main classes used by this package are ScratchProjectFile and
-ScratchSpriteFile classes.
-
-Most of the objects, like Stage and Sprite, inherit from :class:`UserObject`.
-You can use ``.fields.keys()`` to see the available fields on one of these
-objects.
-
-:class:`FixedObjects` have a ``.value`` property to access their value. Inline
-objects, such as int and bool, are converted to their Pythonic counterparts.
-Array and Dictionary are converted to list and dict.
-
-"""
+# The main classes used by this package are ScratchProjectFile and
+# ScratchSpriteFile classes.
+#
+# Most of the objects, like Stage and Sprite, inherit from :class:`UserObject`.
+# You can use ``.fields.keys()`` to see the available fields on one of these
+# objects.
+#
+# :class:`FixedObjects` have a ``.value`` property to access their value. Inline
+# objects, such as int and bool, are converted to their Pythonic counterparts.
+# Array and Dictionary are converted to list and dict.
 
 import kurt
 import kurt.plugin
@@ -43,7 +39,7 @@ from kurt.scratch14.scripts import *
 try:
     from kurt.scratchblocks import parse_block_plugin
 except ImportError:
-    print "WARNING: parser not available, requires PLY"
+    pass
 
 
 
@@ -92,24 +88,16 @@ def _load_script(v14_script):
 def _save_script(kurt_script):
     return Script()
 
-
 def _load_variable((name, value)):
     return kurt.Variable(name, value)
 
 def _save_variable(kurt_variable):
     return (kurt_variable.name, kurt_variable.value)
 
-def _load_lists(v14_lists): # dict
-    return []
-
-def _save_lists(kurt_lists): # MediaDict
-    return {}
-
-def _load_scriptable(kurt_scriptable, v14_scriptable):
+def _load_scriptable(kurt_scriptable, v14_scriptable, kurt_project):
     kurt_scriptable.scripts = map(_load_script, v14_scriptable.scripts)
     kurt_scriptable.variables = map(_load_variable,
             v14_scriptable.variables.items())
-    kurt_scriptable.lists = _load_lists(v14_scriptable.lists)
     kurt_scriptable.costumes = map(_load_image, v14_scriptable.images)
     #kurt_scriptable.sounds = map(_load_sound, v14_scriptable.sounds) # TODO
 
@@ -119,6 +107,16 @@ def _load_scriptable(kurt_scriptable, v14_scriptable):
     kurt_scriptable.volume = v14_scriptable.volume
     kurt_scriptable.tempo = v14_scriptable.tempoBPM
 
+    # lists
+    for v14_list in v14_scriptable.lists.values():
+        kurt_list = kurt.List(v14_list.name, map(unicode, v14_list.items))
+
+        kurt_watcher = kurt.Watcher(kurt_list)
+        (x, y, w, h) = v14_list.bounds.value
+        kurt_watcher.pos = (x, y)
+        kurt_project.children.append(kurt_watcher)
+
+    # sprite
     if isinstance(kurt_scriptable, kurt.Sprite):
         kurt_scriptable.name = v14_scriptable.name
         kurt_scriptable.direction = v14_scriptable.rotationDegrees
@@ -126,17 +124,16 @@ def _load_scriptable(kurt_scriptable, v14_scriptable):
         kurt_scriptable.is_draggable = v14_scriptable.draggable
 
         # bounds
-        (x, y, w, h) = v14_scriptable.bounds.value
+        (x, y, right, bottom) = v14_scriptable.bounds.value
         (rx, ry) = v14_scriptable.costume.rotationCenter
         x = x + rx - 240
         y = 180 - y - ry
         kurt_scriptable.position = (x, y)
 
-def _save_scriptable(kurt_scriptable, v14_scriptable):
-    v14_scriptable.scripts = map(_save_script, kurt_scriptable.scripts)
+def _save_scriptable(kurt_scriptable, v14_scriptable, v14_project):
+    #v14_scriptable.scripts = map(_save_script, kurt_scriptable.scripts)
     v14_scriptable.variables = dict(map(_save_variable,
         kurt_scriptable.variables))
-    v14_scriptable.lists = _save_lists(kurt_scriptable.lists)
     v14_scriptable.images = map(_save_image, kurt_scriptable.costumes)
     #v14_scriptable.sounds = map(_save_sound, kurt_scriptable.sounds) # TODO
 
@@ -146,6 +143,22 @@ def _save_scriptable(kurt_scriptable, v14_scriptable):
     v14_scriptable.volume = kurt_scriptable.volume
     v14_scriptable.tempoBPM = kurt_scriptable.tempo
 
+    # lists
+    for kurt_list in kurt_scriptable.lists:
+        v14_list = ScratchListMorph(
+            name = kurt_list.name,
+            items = kurt_list.items,
+        )
+        if kurt_list.watcher:
+            (x, y) = kurt_list.watcher.pos
+            v14_list.bounds = Rectangle([x, y, x+95, y+115])
+        if kurt_list.watcher.visible:
+            v14_list.owner = v14_project.stage
+            v14_list.target = v14_scriptable
+            v14_project.stage.submorphs.append(v14_list)
+        v14_scriptable.lists[v14_list.name] = v14_list
+
+    # sprite
     if isinstance(kurt_scriptable, kurt.Sprite):
         v14_scriptable.name = kurt_scriptable.name
         v14_scriptable.rotationDegrees = kurt_scriptable.direction
@@ -158,7 +171,7 @@ def _save_scriptable(kurt_scriptable, v14_scriptable):
         x = x + 240 - rx
         y = 180 - y - ry
         (w, h) = kurt_scriptable.costume.size
-        v14_scriptable.bounds = Rectangle([x, y, w, h])
+        v14_scriptable.bounds = Rectangle([x, y, x+w, y+h])
 
 
 
@@ -173,12 +186,12 @@ class Scratch14Plugin(kurt.plugin.KurtPlugin):
         kurt_project.thumbnail = _load_image(v14_project.info['thumbnail'])
 
         # stage
-        _load_scriptable(kurt_project.stage, v14_project.stage)
+        _load_scriptable(kurt_project.stage, v14_project.stage, kurt_project)
 
         # sprites
         for v14_sprite in v14_project.sprites:
-            kurt_sprite = kurt.Sprite(kurt_project)
-            _load_scriptable(kurt_sprite, v14_sprite)
+            kurt_sprite = kurt.Sprite()
+            _load_scriptable(kurt_sprite, v14_sprite, kurt_project)
             kurt_project.sprites.add(kurt_sprite)
 
         # actors
@@ -200,12 +213,12 @@ class Scratch14Plugin(kurt.plugin.KurtPlugin):
         v14_project.info['thumbnail'] = _save_image(kurt_project.thumbnail)
 
         # stage
-        _save_scriptable(kurt_project.stage, v14_project.stage)
+        _save_scriptable(kurt_project.stage, v14_project.stage, v14_project)
 
         # sprites
         for kurt_sprite in kurt_project.sprites:
             v14_sprite = Sprite()
-            _save_scriptable(kurt_sprite, v14_sprite)
+            _save_scriptable(kurt_sprite, v14_sprite, v14_project)
             v14_project.sprites.append(v14_sprite)
 
         # actors
