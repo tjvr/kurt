@@ -181,6 +181,13 @@ class UserObject(object):
 
 ### Squeak & Morphic classes ###
 class BaseMorph(UserObject):
+    """Base Morph.
+
+    bounds are (left, top, right, bottom)
+    right = left + width
+    bottom = top + height
+
+    """
     _fields = ("bounds", "owner", "submorphs", "color", "flags", "properties")
 
     def set_defaults(self):
@@ -860,7 +867,7 @@ class ScratchListMorph(BorderedMorph):
 
         self.borderColor = Color(594, 582, 582)
         self.borderWidth = 2
-        self.bounds = Rectangle([0, 0, 150, 360]) # ?
+        self.bounds = Rectangle([375, 10, 470, 125]) # ?
         self.color = Color(774, 786, 798)
 
         self.items = []
