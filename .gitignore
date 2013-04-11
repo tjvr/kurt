@@ -4,6 +4,7 @@
 build/
 construct/
 dist/
+doc/_*
 files/
 tests/
 parser.out
