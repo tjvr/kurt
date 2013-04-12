@@ -22,11 +22,12 @@ They support dot notation for accessing fields. Use .fields.keys() to see
 available fields [dir() won't show them.]
 """
 
-from construct import Container
+from pprint import pformat
 import os
 import StringIO
 from array import array
 
+from construct import Container
 try:
     import PIL.Image
 except ImportError:
@@ -230,7 +231,7 @@ class SimpleSliderMorph(BorderedMorph):
     classID = 107
     _fields = BorderedMorph._fields + ("slider", "value", "setValueSelector",
         "sliderShadow", "sliderColor", "descending", "model", "target",
-        "actionSelector", "arguments", "actWhen")
+        "arguments", "minVal", "maxVal", "truncate", "sliderThickness")
 
 class SimpleButtonMorph(RectangleMorph):
     classID = 108
@@ -478,7 +479,6 @@ class Stage(ScriptableScratchMorph):
 
         self.name = "Stage"
         self.bounds = Rectangle([0, 0, 480, 360])
-        self.color = Color(1023, 1023, 1023)
 
         self.zoom = 1.0
         self.hPan =  0
@@ -598,6 +598,138 @@ class WatcherMorph(AlignmentMorph):
         "scratchSlider", "watcher", "isSpriteSpecific", "unused", "sliderMin",
         "sliderMax", "isLarge")
     _version = 5
+
+    def set_defaults(self):
+        self.borderColor = Color(594, 582, 582)
+        self.borderWidth = 1
+        self.bounds = Rectangle([10, 10, 73, 31])
+        self.centering = Symbol('center')
+        self.color = Color(774, 786, 798)
+        self.flags = 0
+        self.hResizing = Symbol('shrinkWrap')
+        self.vResizing = Symbol('shrinkWrap')
+        self.inset = 2
+        self.isLarge = False
+        self.isSpriteSpecific = False
+        self.orientation = Symbol('vertical')
+        self.owner = None # '<Stage>' -- SET THIS
+        self.properties = None
+        self.scratchSlider = None
+        self.sliderMax = 100
+        self.sliderMin = 0
+        self.unused = None
+
+        self.readout = UpdatingStringMorph(
+            bounds = Rectangle([44, 14, 52, 26]),
+            color = Color(1023, 1023, 1023),
+            contents = u'', # -- SET THIS?
+            emphasis = 0,
+            flags = 0,
+            floatPrecision = 0.1,
+            font_with_size = [Symbol('VerdanaBold'), 10],
+            format = Symbol('default'),
+            getSelector = Symbol('getVar:'),
+            growable = True,
+            owner = None, # self.readoutFrame
+            parameter = u'x',
+            properties = None,
+            putSelector = None,
+            stepTime = 100,
+            submorphs = [],
+            target = None, # Stage or Sprite -- SET THIS
+        )
+
+        self.readoutFrame = WatcherReadoutFrameMorph(
+            borderColor = Color(1023, 1023, 1023),
+            borderWidth = 2,
+            bounds = Rectangle([28, 13, 68, 27]),
+            color = Color(972, 473, 117),
+            flags = 0,
+            owner = None, # self.watcher
+            properties = None,
+            submorphs = [
+                self.readout
+            ],
+        )
+
+        self.readout.owner = self.readoutFrame
+
+        self.titleMorph = StringMorph(
+            bounds = Rectangle([16, 14, 24, 26]),
+            color = Color(0, 0, 0),
+            contents = u'???', # -- SET THIS?
+            emphasis = 0,
+            flags = 0,
+            font_with_size = [Symbol('VerdanaBold'), 10],
+            owner = None, # self.watcher
+            properties = None,
+            submorphs = [],
+        )
+
+        self.watcher = AlignmentMorph(
+            borderColor = Color(0, 0, 0),
+            borderWidth = 0,
+            bounds = Rectangle([13, 13, 70, 27]),
+            centering = Symbol('center'),
+            color = TranslucentColor(0, 0, 0, 0),
+            flags = 0,
+            hResizing = Symbol('shrinkWrap'),
+            vResizing = Symbol('shrinkWrap'),
+            inset = 0,
+            orientation = Symbol('horizontal'),
+            owner = self,
+            properties = None,
+        )
+
+        self.watcher.submorphs = [
+            Morph(
+                bounds = Rectangle([13, 18, 16, 21]),
+                color = Color(774, 786, 798),
+                flags = 0,
+                owner = self.watcher,
+                properties = None,
+                submorphs = [],
+            ),
+            self.titleMorph,
+            AlignmentMorph(
+                borderColor = Color(0, 0, 0),
+                borderWidth = 0,
+                bounds = Rectangle([24, 13, 28, 27]),
+                centering = Symbol('topLeft'),
+                color = Color(774, 786, 798),
+                flags = 0,
+                hResizing = Symbol('rigid'),
+                inset = 2,
+                orientation = Symbol('horizontal'),
+                properties = None,
+                submorphs = [],
+                vResizing = Symbol('spaceFill'),
+            ),
+            self.readoutFrame,
+            Morph(
+                bounds = Rectangle([68, 19, 70, 21]),
+                color = Color(774, 786, 798),
+                flags = 0,
+                owner = self.watcher,
+                properties = None,
+                submorphs = [],
+            )
+        ]
+
+        for m in self.watcher.submorphs:
+            m.owner = self.watcher
+
+        self.submorphs = [
+            self.watcher,
+            Morph(
+                bounds = Rectangle([39, 27, 44, 28]),
+                color = TranslucentColor(0, 0, 0, 0),
+                flags = 0,
+                owner = self,
+                properties = None,
+                submorphs = [],
+            )
+        ]
 
     @property
     def name(self):
@@ -847,8 +979,9 @@ class WatcherReadoutFrameMorph(BorderedMorph):
     classID = 173
 
 class WatcherSliderMorph(SimpleSliderMorph):
-    """unused?"""
+    """slider for variable watchers"""
     classID = 174
+    _version = 1
 
 class ScratchListMorph(BorderedMorph):
     """List of items.

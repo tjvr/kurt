@@ -94,7 +94,38 @@ def _load_variable((name, value)):
 def _save_variable(kurt_variable):
     return (kurt_variable.name, kurt_variable.value)
 
-def _load_scriptable(kurt_scriptable, v14_scriptable, kurt_project):
+def _load_lists(v14_lists, kurt_project):
+    kurt_lists = []
+    for v14_list in v14_lists.values():
+        kurt_list = kurt.List(v14_list.name, map(unicode, v14_list.items))
+
+        kurt_watcher = kurt.Watcher(kurt_list)
+        (x, y, w, h) = v14_list.bounds.value
+        kurt_watcher.pos = (x, y)
+        kurt_project.actors.append(kurt_watcher)
+
+        kurt_lists.append(kurt_list)
+    return kurt_lists
+
+def _save_lists(kurt_lists, v14_morph, v14_project):
+    for kurt_list in kurt_lists:
+        v14_list = ScratchListMorph(
+            name = kurt_list.name,
+            items = kurt_list.items,
+        )
+
+        if kurt_list.watcher:
+            (x, y) = kurt_list.watcher.pos
+            v14_list.bounds = Rectangle([x, y, x+95, y+115])
+
+        if kurt_list.watcher.visible:
+            v14_list.owner = v14_project.stage
+            v14_list.target = v14_morph
+            v14_project.stage.submorphs.append(v14_list)
+
+        v14_morph.lists[v14_list.name] = v14_list
+
+def _load_scriptable(kurt_scriptable, v14_scriptable):
     kurt_scriptable.scripts = map(_load_script, v14_scriptable.scripts)
     kurt_scriptable.variables = map(_load_variable,
             v14_scriptable.variables.items())
@@ -106,15 +137,6 @@ def _load_scriptable(kurt_scriptable, v14_scriptable, kurt_project):
 
     kurt_scriptable.volume = v14_scriptable.volume
     kurt_scriptable.tempo = v14_scriptable.tempoBPM
-
-    # lists
-    for v14_list in v14_scriptable.lists.values():
-        kurt_list = kurt.List(v14_list.name, map(unicode, v14_list.items))
-
-        kurt_watcher = kurt.Watcher(kurt_list)
-        (x, y, w, h) = v14_list.bounds.value
-        kurt_watcher.pos = (x, y)
-        kurt_project.children.append(kurt_watcher)
 
     # sprite
     if isinstance(kurt_scriptable, kurt.Sprite):
@@ -130,7 +152,7 @@ def _load_scriptable(kurt_scriptable, v14_scriptable, kurt_project):
         y = 180 - y - ry
         kurt_scriptable.position = (x, y)
 
-def _save_scriptable(kurt_scriptable, v14_scriptable, v14_project):
+def _save_scriptable(kurt_scriptable, v14_scriptable):
     #v14_scriptable.scripts = map(_save_script, kurt_scriptable.scripts)
     v14_scriptable.variables = dict(map(_save_variable,
         kurt_scriptable.variables))
@@ -142,21 +164,6 @@ def _save_scriptable(kurt_scriptable, v14_scriptable, v14_project):
 
     v14_scriptable.volume = kurt_scriptable.volume
     v14_scriptable.tempoBPM = kurt_scriptable.tempo
-
-    # lists
-    for kurt_list in kurt_scriptable.lists:
-        v14_list = ScratchListMorph(
-            name = kurt_list.name,
-            items = kurt_list.items,
-        )
-        if kurt_list.watcher:
-            (x, y) = kurt_list.watcher.pos
-            v14_list.bounds = Rectangle([x, y, x+95, y+115])
-        if kurt_list.watcher.visible:
-            v14_list.owner = v14_project.stage
-            v14_list.target = v14_scriptable
-            v14_project.stage.submorphs.append(v14_list)
-        v14_scriptable.lists[v14_list.name] = v14_list
 
     # sprite
     if isinstance(kurt_scriptable, kurt.Sprite):
@@ -186,18 +193,47 @@ class Scratch14Plugin(kurt.plugin.KurtPlugin):
         kurt_project.thumbnail = _load_image(v14_project.info['thumbnail'])
 
         # stage
-        _load_scriptable(kurt_project.stage, v14_project.stage, kurt_project)
+        _load_scriptable(kurt_project.stage, v14_project.stage)
+        kurt_project.lists = _load_lists(v14_project.stage.lists, kurt_project)
+        
+        # global vars
+        kurt_project.variables = kurt_project.stage.variables
+        kurt_project.stage.variables = {}
 
         # sprites
         for v14_sprite in v14_project.sprites:
             kurt_sprite = kurt.Sprite()
-            _load_scriptable(kurt_sprite, v14_sprite, kurt_project)
+            _load_scriptable(kurt_sprite, v14_sprite)
+            kurt_sprite.lists = _load_lists(v14_sprite.lists, kurt_project)
             kurt_project.sprites.add(kurt_sprite)
 
-        # actors
+        # variable watchers
         for v14_morph in v14_project.stage.submorphs:
-            if v14_morph not in v14_project.sprites:
-                pass # TODO watchers
+            if v14_morph in v14_project.sprites:
+                continue
+            if isinstance(v14_morph, WatcherMorph):
+                v14_watcher = v14_morph
+
+                v14_sprite = v14_watcher.readout.target
+                if v14_sprite == v14_project.stage:
+                    kurt_thing = kurt_project
+                else:
+                    kurt_thing = kurt_project.sprites[v14_sprite.name]
+
+                name = v14_watcher.readout.parameter
+                kurt_var = kurt_thing.variables[name]
+
+                kurt_watcher = kurt.Watcher(kurt_var)
+
+                (x, y, right, bottom) = v14_watcher.bounds.value
+                kurt_watcher.pos = (x, y)
+
+                if v14_watcher.isLarge:
+                    kurt_watcher.style = "large"
+                elif v14_watcher.scratchSlider:
+                    kurt_watcher.style = "slider"
+
+                kurt_project.actors.append(kurt_watcher)
 
         kurt_project.original = v14_project # DEBUG
 
@@ -213,20 +249,101 @@ class Scratch14Plugin(kurt.plugin.KurtPlugin):
         v14_project.info['thumbnail'] = _save_image(kurt_project.thumbnail)
 
         # stage
-        _save_scriptable(kurt_project.stage, v14_project.stage, v14_project)
+        _save_scriptable(kurt_project.stage, v14_project.stage)
+        _save_lists(kurt_project.lists, v14_project.stage, v14_project)
+        v14_project.stage.variables = dict(map(_save_variable,
+            kurt_project.variables))
 
         # sprites
         for kurt_sprite in kurt_project.sprites:
             v14_sprite = Sprite()
-            _save_scriptable(kurt_sprite, v14_sprite, v14_project)
+            _save_scriptable(kurt_sprite, v14_sprite)
+            _save_lists(kurt_sprite.lists, v14_sprite, v14_project)
             v14_project.sprites.append(v14_sprite)
 
-        # actors
-        for kurt_actor in kurt_project.children:
-            if kurt_actor not in kurt_project.sprites:
-                pass # TODO watchers
+        # variable watchers
+        for kurt_actor in kurt_project.actors:
+            if kurt_actor in kurt_project.sprites:
+                v14_project.stage.submorphs.append(
+                    v14_project.sprites[kurt_actor.name]
+                )
+                continue
+
+            if isinstance(kurt_actor, kurt.Watcher):
+                kurt_watcher = kurt_actor
+                if isinstance(kurt_watcher.value, kurt.List):
+                    continue
+
+                v14_watcher = WatcherMorph()
+
+                (x, y) = kurt_watcher.pos
+
+                kurt_parent = kurt_watcher.value.parent
+                if kurt_parent == kurt_project:
+                    v14_morph = v14_project.stage
+                    v14_watcher.isSpriteSpecfic = False
+                else:
+                    v14_morph = v14_project.sprites[kurt_parent.name]
+
+                v14_watcher.readout.target = v14_morph
+                v14_watcher.owner = v14_project.stage
+
+                if isinstance(kurt_watcher.value, kurt.Variable):
+                    v14_watcher.readout.parameter = kurt_watcher.value.name
+
+                    v14_watcher.name = kurt_watcher.value.name
+
+                (w, h) = (63, 21)
+
+                if kurt_watcher.style == "large":
+                    v14_watcher.isLarge = True
+                    v14_watcher.readout.font_with_size[1] = 14
+                    (w, h) = (52, 26)
+
+                elif kurt_watcher.style == "slider":
+                    v14_watcher.scratchSlider = slider = WatcherSliderMorph(
+                        arguments = [u'slider'],
+                        borderColor = Symbol('inset'),
+                        borderWidth = 0,
+                        bounds = Rectangle([59, 273, 134, 283]),
+                        color = Color(512, 512, 512),
+                        descending = False,
+                        flags = 0,
+                        maxVal = 100,
+                        minVal = 0,
+                        model = None,
+                        owner = v14_watcher,
+                        properties = None,
+                        setValueSelector = Symbol('setVar:to:'),
+                                                sliderColor = None,
+                        sliderShadow = None,
+                        sliderThickness = 0,
+                        target = v14_project.stage,
+                        truncate = True,
+                        value = 0.0,
+                    )
+
+                    slider.slider = ImageMorph(
+                        bounds = Rectangle([59, 273, 69, 283]),
+                        color = Color(0, 0, 1023),
+                        flags = 0,
+                        owner = slider,
+                        properties = None,
+                        submorphs = [],
+                        transparency = 1.0,
+                    )
+
+                    slider.submorphs = [slider.slider]
+
+                    v14_watcher.submorphs.append(v14_watcher.scratchSlider)
+
+                v14_watcher.bounds = Rectangle([x, y, x+w, x+h])
+
+                v14_project.stage.submorphs.append(v14_watcher)
 
         v14_project.save(path)
+
+        # TODO: stacking order
 
         return v14_project
 

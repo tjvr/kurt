@@ -29,16 +29,14 @@ The main interface:
 
 * :class:`Project`
 
-The following :class:`Actors <Actor>` may be found on the project stage under
-:attr:`Project.children`:
+The following :class:`Actors <Actor>` may be found on the project stage:
 
 * :class:`Stage`
 * :class:`Sprite`
 * :class:`Watcher`
 
-The two :class:`Scriptables <Scriptable>` (:class:`Stage` and
-:class:`Sprite`) have instances of the following contained in their
-attributes:
+The two :class:`Scriptables <Scriptable>` (:class:`Stage` and :class:`Sprite`)
+have instances of the following contained in their attributes:
 
 * :class:`Variable`
 * :class:`List`
@@ -173,8 +171,8 @@ class Project(object):
     :attr:`sprites`, each with their own :attr:`scripts`, :attr:`costumes`,
     :attr:`sounds`, :attr:`variables` and :attr:`lists`.
 
-    A Project can be loaded from or saved to disk, in a format which can be
-    read by a Scratch program or one of its derivatives.
+    A Project can be loaded from or saved to disk in a format which can be read
+    by a Scratch program or one of its derivatives.
 
     Loading a project::
 
@@ -226,7 +224,7 @@ class Project(object):
         self.sprites = OrderedMediaDict()
         """:class:`OrderedMediaDict` of :class:`Sprites <Sprite>`."""
 
-        self.children = []
+        self.actors = []
         """List of each :class:`Actor` on the stage.
 
         Includes :class:`Watchers <Watcher>` as well as :class:`Sprites
@@ -261,6 +259,11 @@ class Project(object):
 
     def __repr__(self):
         return "<Project(%r)>" % self.name
+
+    def __setattr__(self, name, value): # TODO
+        if name == "variables":
+            value = MediaDict(value)
+        object.__setattr__(self, name, value)
 
     @property
     def format(self):
@@ -396,26 +399,31 @@ class Project(object):
         # project
         self.name = unicode(self.name)
         self.sprites = OrderedMediaDict(self.sprites)
-        self.children = list(self.children)
+        self.actors = list(self.actors)
         self.variables = MediaDict(self.variables)
         self.lists = MediaDict(self.lists)
         self.comment = unicode(self.comment)
 
+        for variable in self.variables:
+            variable.parent = self
+        for list_ in self.lists:
+            list_.parent = self
+
         self.stage.project = self # TODO
 
-        # sync self.sprites and self.children
+        # sync self.sprites and self.actors
         for sprite in self.sprites:
-            if sprite not in self.children:
-                self.children.append(sprite)
-        for actor in self.children:
+            if sprite not in self.actors:
+                self.actors.append(sprite)
+        for actor in self.actors:
             if isinstance(actor, Sprite):
                 if actor not in self.sprites:
                     self.sprites.add(actor)
             actor.project = self # TODO
 
-        # normalize children
+        # normalize actors
         self.stage._normalize()
-        for actor in set(self.children):
+        for actor in self.actors:
             actor._normalize()
 
         # make everything unicode
@@ -604,7 +612,7 @@ class Actor(object):
 
     def __init__(self):
         self.project = None
-        """The :class:`project` this actor belongs to."""
+        """The :class:`Project` this actor belongs to."""
 
 
 class Scriptable(object):
@@ -657,6 +665,11 @@ class Scriptable(object):
         self.lists = MediaDict(self.lists)
         self.costumes = OrderedMediaDict(self.costumes)
         self.sounds = OrderedMediaDict(self.sounds)
+
+        for variable in self.variables:
+            variable.parent = self
+        for list_ in self.lists:
+            list_.parent = self
 
         if self.costume:
             # Make sure it's in costumes
@@ -755,6 +768,13 @@ class Sprite(Scriptable, Actor):
         if not self.costume:
             raise ValueError, "%r doesn't have a costume" % self
 
+    def __setattr__(self, name, value): # TODO
+        if name == "variables":
+            value = MediaDict(value)
+        object.__setattr__(self, name, value)
+
+
+
 
 class Watcher(Actor):
     """A monitor for displaying a data value (such as a variable) on the stage.
@@ -817,7 +837,8 @@ class Watcher(Actor):
         self.visible = bool(self.visible)
 
         if self.project:
-            self.project.children.append(self)
+            if self not in self.project.actors:
+                self.project.actors.append(self)
 
         if isinstance(self.value, List):
             assert self.style == "normal"
@@ -865,6 +886,12 @@ class Variable(object):
         self.watcher = None
         """The :class:`Watcher` displaying this variable. May be None."""
 
+        self.parent = None
+        """The :class:`Scriptable` or :class:`Project` (for global variables)
+        this variable belongs to.
+
+        """
+
         self._normalize()
 
     def _normalize(self):
@@ -909,6 +936,12 @@ class List(object):
 
         self.watcher = None
         """The :class:`Watcher` displaying this list. May be None."""
+
+        self.parent = None
+        """The :class:`Scriptable` or :class:`Project` (for global variables)
+        this variable belongs to.
+
+        """
 
         self._normalize()
 
