@@ -406,8 +406,13 @@ class Project(object):
 
         for variable in self.variables:
             variable.parent = self
+            if variable.watcher.visible:
+                self.actors.append(variable.watcher)
+
         for list_ in self.lists:
             list_.parent = self
+            if list_.watcher.visible:
+                self.actors.append(list_.watcher)
 
         self.stage.project = self # TODO
 
@@ -668,8 +673,13 @@ class Scriptable(object):
 
         for variable in self.variables:
             variable.parent = self
+            if variable.watcher.visible:
+                self.project.actors.append(variable.watcher)
+
         for list_ in self.lists:
             list_.parent = self
+            if list_.watcher.visible:
+                self.project.actors.append(list_.watcher)
 
         if self.costume:
             # Make sure it's in costumes
@@ -784,7 +794,7 @@ class Watcher(Actor):
 
     """
 
-    def __init__(self, value, style="normal"):
+    def __init__(self, value, style="normal", visible=True, pos=None):
         Actor.__init__(self)
 
         self.value = value
@@ -811,13 +821,13 @@ class Watcher(Actor):
 
         """
 
-        self.pos = (0, 0)
+        self.pos = pos
         """``(x, y)`` position of the top-left of the watcher from the top-left
-        of the stage in pixels.
+        of the stage in pixels. None if not specified.
 
         """
 
-        self.visible = True
+        self.visible = visible
         """Whether the watcher is displayed on the screen.
 
         Some formats won't save hidden watchers, and so their position won't be
@@ -833,7 +843,8 @@ class Watcher(Actor):
         if isinstance(self.value, Variable) or isinstance(self.value, List):
             self.value.watcher = self
 
-        self.pos = _pos(self.pos)
+        if self.pos is not None:
+            self.pos = _pos(self.pos)
         self.visible = bool(self.visible)
 
         if self.project:
@@ -864,7 +875,7 @@ class Variable(object):
 
     """
 
-    def __init__(self, name, value=None, is_cloud=False):
+    def __init__(self, name, value=0, is_cloud=False):
         self.name = name
         """The name of the variable, as referred to in scripts."""
 
@@ -883,8 +894,8 @@ class Variable(object):
 
         """
 
-        self.watcher = None
-        """The :class:`Watcher` displaying this variable. May be None."""
+        self.watcher = Watcher(self, visible=False)
+        """The :class:`Watcher` displaying this variable."""
 
         self.parent = None
         """The :class:`Scriptable` or :class:`Project` (for global variables)
@@ -898,7 +909,7 @@ class Variable(object):
         self.name = unicode(self.name)
         self.is_cloud = bool(self.is_cloud)
         if self.watcher and self.watcher.value != self:
-            self.watcher = None
+            self.watcher = Watcher(self, visible=False)
 
     def __repr__(self):
         r = "%s(%r" % (self.__class__.__name__, self.name)
@@ -934,8 +945,8 @@ class List(object):
 
         """
 
-        self.watcher = None
-        """The :class:`Watcher` displaying this list. May be None."""
+        self.watcher = Watcher(self, visible=False)
+        """The :class:`Watcher` displaying this list."""
 
         self.parent = None
         """The :class:`Scriptable` or :class:`Project` (for global variables)
@@ -950,7 +961,7 @@ class List(object):
         self.items = map(unicode, self.items)
         self.is_cloud = bool(self.is_cloud)
         if self.watcher and self.watcher.value != self:
-            self.watcher = None
+            self.watcher = Watcher(self, visible=False, pos=(375, 10))
 
     def __repr__(self):
         r = "%s(%r" % (self.__class__.__name__, self.name)
@@ -959,6 +970,7 @@ class List(object):
         else:
             r += ", %r)" % self.items
         return r
+        # TODO: limit self.items length?
 
 
 

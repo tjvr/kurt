@@ -63,6 +63,9 @@ def _load_image(v14_image):
         return kurt.CostumeFromPIL(v14_image.name, v14_image.get_image())
 
 def _save_image(kurt_image):
+    if not kurt_image:
+        return
+
     if isinstance(kurt_image, kurt.CostumeFromFile):
         if kurt_image.format == "JPEG": # raw JPEG
             v14_image = Image(
@@ -100,11 +103,17 @@ def _load_lists(v14_lists, kurt_project):
         kurt_list = kurt.List(v14_list.name, map(unicode, v14_list.items))
 
         kurt_watcher = kurt.Watcher(kurt_list)
+        kurt_watcher.visible = bool(v14_list.owner)
+
         (x, y, w, h) = v14_list.bounds.value
+        if not kurt_watcher.visible:
+            x -= 534
+            y -= 71
         kurt_watcher.pos = (x, y)
         kurt_project.actors.append(kurt_watcher)
 
         kurt_lists.append(kurt_list)
+
     return kurt_lists
 
 def _save_lists(kurt_lists, v14_morph, v14_project):
@@ -115,12 +124,21 @@ def _save_lists(kurt_lists, v14_morph, v14_project):
         )
 
         if kurt_list.watcher:
-            (x, y) = kurt_list.watcher.pos
+            pos = kurt_list.watcher.pos
+            if pos:
+                (x, y) = pos
+            else:
+                (x, y) = (375, 10)
+                # TODO: stack them prettily!
+
+            if not kurt_list.watcher.visible:
+                x += 534
+                y += 71
             v14_list.bounds = Rectangle([x, y, x+95, y+115])
 
+        v14_list.target = v14_morph
         if kurt_list.watcher.visible:
             v14_list.owner = v14_project.stage
-            v14_list.target = v14_morph
             v14_project.stage.submorphs.append(v14_list)
 
         v14_morph.lists[v14_list.name] = v14_list
@@ -159,8 +177,9 @@ def _save_scriptable(kurt_scriptable, v14_scriptable):
     v14_scriptable.images = map(_save_image, kurt_scriptable.costumes)
     #v14_scriptable.sounds = map(_save_sound, kurt_scriptable.sounds) # TODO
 
-    costume_index = kurt_scriptable.costumes.index(kurt_scriptable.costume)
-    v14_scriptable.costume = v14_scriptable.images[costume_index]
+    if kurt_scriptable.costume:
+        costume_index = kurt_scriptable.costumes.index(kurt_scriptable.costume)
+        v14_scriptable.costume = v14_scriptable.images[costume_index]
 
     v14_scriptable.volume = kurt_scriptable.volume
     v14_scriptable.tempoBPM = kurt_scriptable.tempo
@@ -276,7 +295,10 @@ class Scratch14Plugin(kurt.plugin.KurtPlugin):
 
                 v14_watcher = WatcherMorph()
 
-                (x, y) = kurt_watcher.pos
+                if kurt_watcher.pos:
+                    (x, y) = kurt_watcher.pos
+                else:
+                    (x, y) = (10, 10)
 
                 kurt_parent = kurt_watcher.value.parent
                 if kurt_parent == kurt_project:
