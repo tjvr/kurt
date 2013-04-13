@@ -148,23 +148,55 @@ import kurt.scratch14.scripts as scripts
 
 
 
-#-- Utility functions --#
-
-def _pos(value):
-    """``(x, y)`` tuple."""
-    (x, y) = value
-    return (int(x), int(y))
+#-- Utils --#
 
 def _clean_filename(name):
     """Strip non-alphanumeric characters to makes name safe to be used as
     filename."""
     return re.sub("[^\w ]", "", name)
 
+def _pos(value):
+    """``(x, y)`` tuple."""
+    (x, y) = value
+    return (int(x), int(y))
+
+
+class TypedAttributes(object):
+    def __init__(self):
+        self._fields = {}
+
+    def __setattr__(self, name, value):
+        if not name.startswith("_") and name not in ("value", "parent"):
+            if name in self._fields:
+                c = self._fields[name]
+                value = c(value)
+            elif value is not None:
+                c = type(value)
+                if c not in (Costume, Project, Watcher):
+                    self._fields[name] = c
+
+            if isinstance(value, MediaDict):
+                value.parent = self
+
+        object.__setattr__(self, name, value)
+
+        #self.pos
+        #str
+        #unicode
+        #list
+        #MediaDict
+        #OrderedMediaDict
+        #int
+        #float
+        #bool
+
+
+
 
 
 #-- Project: main entry point --#
 
-class Project(object):
+class Project(TypedAttributes):
     """The main kurt class. Stores the contents of a project file.
 
     Contents include global variables and lists, the :attr:`stage` and
@@ -199,6 +231,8 @@ class Project(object):
     # TODO doc
 
     def __init__(self):
+        TypedAttributes.__init__(self)
+
         self.name = u""
         """The name of the project.
 
@@ -259,11 +293,6 @@ class Project(object):
 
     def __repr__(self):
         return "<Project(%r)>" % self.name
-
-    def __setattr__(self, name, value): # TODO
-        if name == "variables":
-            value = MediaDict(value)
-        object.__setattr__(self, name, value)
 
     @property
     def format(self):
@@ -405,12 +434,10 @@ class Project(object):
         self.comment = unicode(self.comment)
 
         for variable in self.variables:
-            variable.parent = self
             if variable.watcher.visible:
                 self.actors.append(variable.watcher)
 
         for list_ in self.lists:
-            list_.parent = self
             if list_.watcher.visible:
                 self.actors.append(list_.watcher)
 
@@ -443,14 +470,9 @@ class Project(object):
             self.stage.variables = MediaDict()
             self.stage.lists = MediaDict()
 
-        # make lists variables
 
 
-
-
-
-
-#-- errors --#
+#-- Errors --#
 
 class UnknownFormat(Exception):
     """The file extension is not recognised.
@@ -463,10 +485,52 @@ class UnknownFormat(Exception):
 
 
 
-#-- MediaDicts --#
+#-- Collections --#
+
+class NamedObject(object):
+    """An object with a :attr:`name` attribute that can be added to a
+    :class:`MediaDict`.
+
+    """
+
+    def __init__(self):
+        self._media_dict = None
+        self._name = None
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, new_name):
+        if self._name != new_name:
+            old_name = self._name
+            self._name = unicode(new_name)
+            if self._media_dict:
+                self._media_dict._rename(old_name, new_name)
+
+    def _set_dict(self, new_dict):
+        if self._media_dict != new_dict:
+            if self._media_dict:
+                self._media_dict.remove(self)
+            self._media_dict = new_dict
+
+    @property
+    def parent(self):
+        """The :class:`Project` or :class:`Scriptable` this object belongs to.
+
+        """
+        if self._media_dict:
+            return self._media_dict.parent
+
+    def __repr__(self):
+        return "<%s(%s)>" % (self.__class__.__name__, self.name)
+
+
 
 class MediaDict(object):
-    """A dictionary that uses :attr:`obj.name` as the key.
+    """A dictionary of :attr:`NamedObjects <NamedObject>` that uses
+    :attr:`obj.name` as the key.
 
     >>> p = Project()
     >>> p.sprites = MediaDict([  # init takes list of objects
@@ -497,8 +561,10 @@ class MediaDict(object):
 
     def __init__(self, objects=None):
         objects = objects or []
-        objects = map(lambda o: (unicode(o.name), o), objects)
+        objects = [(unicode(o.name), o) for o in objects]
         self._objects = dict(objects)
+        for o in self:
+            o._set_dict(self)
 
     def __getattr__(self, name):
         return getattr(self._objects, name)
@@ -521,6 +587,9 @@ class MediaDict(object):
         return self._objects[unicode(name)]
 
     def __setitem__(self, name, obj):
+        assert isinstance(obj, NamedObject)
+        obj._set_dict(self)
+
         name = unicode(name)
         obj.name = name
         self._objects[name] = obj
@@ -538,9 +607,17 @@ class MediaDict(object):
             del self[name]
         self[obj.name] = obj
 
+    def remove(self, obj):
+        obj = getattr(obj, "name", obj)
+        del self[obj]
+
     def index(self, obj):
         name = getattr(obj, "name", obj)
         return self.keys().index(name)
+
+    def _rename(self, old_name, new_name):
+        self[new_name] = self[old_name]
+        del self[old_name]
 
 
 class OrderedMediaDict(MediaDict):
@@ -572,8 +649,10 @@ class OrderedMediaDict(MediaDict):
 
     def __init__(self, objects=None):
         objects = objects or []
-        objects = map(lambda o: (unicode(o.name), o), objects)
+        objects = [(unicode(o.name), o) for o in objects]
         self._objects = collections.OrderedDict(objects)
+        for o in self:
+            o._set_dict(self)
 
     def __getitem__(self, item):
         if isinstance(item, int): # by index
@@ -604,6 +683,12 @@ class OrderedMediaDict(MediaDict):
     def __iter__(self):
         return iter(self.values())
 
+    def _rename(self, old_name, new_name):
+        self._objects = collections.OrderedDict([
+            (new_name, v) if k == old_name else (k, v)
+            for k, v in self._objects.items()
+        ])
+
 
 
 #-- Actors & Scriptables --#
@@ -620,7 +705,7 @@ class Actor(object):
         """The :class:`Project` this actor belongs to."""
 
 
-class Scriptable(object):
+class Scriptable(TypedAttributes):
     """Superclass for all scriptable objects.
 
     Subclasses are :class:`Stage` and :class:`Sprite`.
@@ -628,6 +713,8 @@ class Scriptable(object):
     """
 
     def __init__(self):
+        TypedAttributes.__init__(self)
+
         self.project = None
         """The :class:`project` this actor belongs to."""
 
@@ -665,19 +752,11 @@ class Scriptable(object):
         self.tempo = 60
 
     def _normalize(self):
-        self.scripts = list(self.scripts)
-        self.variables = MediaDict(self.variables)
-        self.lists = MediaDict(self.lists)
-        self.costumes = OrderedMediaDict(self.costumes)
-        self.sounds = OrderedMediaDict(self.sounds)
-
         for variable in self.variables:
-            variable.parent = self
             if variable.watcher.visible:
                 self.project.actors.append(variable.watcher)
 
         for list_ in self.lists:
-            list_.parent = self
             if list_.watcher.visible:
                 self.project.actors.append(list_.watcher)
 
@@ -689,9 +768,6 @@ class Scriptable(object):
             # No costume!
             if self.costumes:
                 self.costume = self.costumes[0]
-
-    def __repr__(self):
-        return "<%s(%s)>" % (self.__class__.__name__, self.name)
 
 
 class Stage(Scriptable):
@@ -721,7 +797,7 @@ class Stage(Scriptable):
         return "<Stage>"
 
 
-class Sprite(Scriptable, Actor):
+class Sprite(Scriptable, Actor, NamedObject):
     """A scriptable object displayed on the project stage. Can be moved and
     rotated, unlike the :class:`Stage`.
 
@@ -732,8 +808,9 @@ class Sprite(Scriptable, Actor):
 
     def __init__(self, name=u"Sprite1"):
         Scriptable.__init__(self)
+        NamedObject.__init__(self)
 
-        self.name = name
+        self.name = unicode(name)
         """The sprite's name."""
 
         self.position = (0, 0)
@@ -778,15 +855,8 @@ class Sprite(Scriptable, Actor):
         if not self.costume:
             raise ValueError, "%r doesn't have a costume" % self
 
-    def __setattr__(self, name, value): # TODO
-        if name == "variables":
-            value = MediaDict(value)
-        object.__setattr__(self, name, value)
 
-
-
-
-class Watcher(Actor):
+class Watcher(Actor, TypedAttributes):
     """A monitor for displaying a data value (such as a variable) on the stage.
 
     Some formats won't save hidden watchers, and so their position won't be
@@ -795,6 +865,7 @@ class Watcher(Actor):
     """
 
     def __init__(self, value, style="normal", visible=True, pos=None):
+        TypedAttributes.__init__(self)
         Actor.__init__(self)
 
         self.value = value
@@ -805,7 +876,7 @@ class Watcher(Actor):
 
         """
 
-        self.style = style
+        self.style = str(style)
         """How the watcher should appear. Valid values:
 
         ``'normal'``
@@ -827,7 +898,7 @@ class Watcher(Actor):
 
         """
 
-        self.visible = visible
+        self.visible = bool(visible)
         """Whether the watcher is displayed on the screen.
 
         Some formats won't save hidden watchers, and so their position won't be
@@ -838,19 +909,17 @@ class Watcher(Actor):
         self._normalize()
 
     def _normalize(self):
-        assert self.style in ("normal", "large", "slider")
-
         if isinstance(self.value, Variable) or isinstance(self.value, List):
             self.value.watcher = self
 
         if self.pos is not None:
             self.pos = _pos(self.pos)
-        self.visible = bool(self.visible)
 
         if self.project:
             if self not in self.project.actors:
                 self.project.actors.append(self)
 
+        assert self.style in ("normal", "large", "slider")
         if isinstance(self.value, List):
             assert self.style == "normal"
         elif isinstance(self.value, Block):
@@ -863,9 +932,10 @@ class Watcher(Actor):
         return "<Watcher(%s, %s)>" % (name, self.style)
 
 
+
 #-- Media / Scriptable attributes --#
 
-class Variable(object):
+class Variable(NamedObject, TypedAttributes):
     """A memory value used in scripts.
 
     There are both :attr`global variables <Project.variables> and
@@ -876,7 +946,10 @@ class Variable(object):
     """
 
     def __init__(self, name, value=0, is_cloud=False):
-        self.name = name
+        TypedAttributes.__init__(self)
+        NamedObject.__init__(self)
+
+        self.name = unicode(name)
         """The name of the variable, as referred to in scripts."""
 
         self.value = value
@@ -887,7 +960,7 @@ class Variable(object):
 
         """
 
-        self.is_cloud = is_cloud
+        self.is_cloud = bool(is_cloud)
         """Whether the value of the variable is shared with other users.
 
         For Scratch 2.0.
@@ -897,7 +970,7 @@ class Variable(object):
         self.watcher = Watcher(self, visible=False)
         """The :class:`Watcher` displaying this variable."""
 
-        self.parent = None
+        self.parent
         """The :class:`Scriptable` or :class:`Project` (for global variables)
         this variable belongs to.
 
@@ -906,8 +979,6 @@ class Variable(object):
         self._normalize()
 
     def _normalize(self):
-        self.name = unicode(self.name)
-        self.is_cloud = bool(self.is_cloud)
         if self.watcher and self.watcher.value != self:
             self.watcher = Watcher(self, visible=False)
 
@@ -922,7 +993,7 @@ class Variable(object):
         return r
 
 
-class List(object):
+class List(NamedObject, TypedAttributes):
     """A sequence of items used in scripts.
 
     Each item takes a :class:`Variable`-like value.
@@ -932,13 +1003,16 @@ class List(object):
 
     """
     def __init__(self, name, items=None, is_cloud=False):
-        self.name = name
+        TypedAttributes.__init__(self)
+        NamedObject.__init__(self)
+
+        self.name = unicode(name)
         """The name of the list, as referred to in scripts."""
 
-        self.items = items or []
+        self.items = list(items) if items else []
         """The items contained in the list. A Python list of unicode strings."""
 
-        self.is_cloud = is_cloud
+        self.is_cloud = bool(is_cloud)
         """Whether the value of the list is shared with other users.
 
         For Scratch 2.0.
@@ -948,8 +1022,8 @@ class List(object):
         self.watcher = Watcher(self, visible=False)
         """The :class:`Watcher` displaying this list."""
 
-        self.parent = None
-        """The :class:`Scriptable` or :class:`Project` (for global variables)
+        self.parent
+        """The :class:`Scriptable` or :class:`Project` (for global lists)
         this variable belongs to.
 
         """
@@ -957,9 +1031,7 @@ class List(object):
         self._normalize()
 
     def _normalize(self):
-        self.name = unicode(self.name)
         self.items = map(unicode, self.items)
-        self.is_cloud = bool(self.is_cloud)
         if self.watcher and self.watcher.value != self:
             self.watcher = Watcher(self, visible=False, pos=(375, 10))
 
@@ -971,7 +1043,6 @@ class List(object):
             r += ", %r)" % self.items
         return r
         # TODO: limit self.items length?
-
 
 
 class BlockType(object):
@@ -1073,11 +1144,16 @@ class BlockType(object):
     def __ne__(self, other):
         return not self == other
 
-
     def copy(self):
         """Return a new BlockType instance with the same attributes."""
         return BlockType(self.command, self.text, self.flag, self.category,
                 list(self.defaults))
+
+    @classmethod
+    def get(cls, block_type):
+        bt = BlockType(block_type, block_type) # TODO
+        bt.scratch14_command = block_type
+        return bt
 
     @property
     def parts(self):
@@ -1096,7 +1172,7 @@ class BlockType(object):
         eg. ``['%s', '%n']``
 
         """
-        return filter(lambda p: p[0] == "%", self.parts)
+        return [p for p in self.parts if p[0] == "%"]
 
     def __repr__(self):
         r = "BlockType(%s," % self.command
@@ -1328,16 +1404,15 @@ class Comment(object):
         self.text = unicode(self.text)
 
 
-class Media(object):
+class Media(NamedObject):
     """Superclass for media files associated with a :class:`Scriptable`, such
     as :class:`Costume` and :class:`Sound`."""
 
     def __init__(self, name):
-        self.name = unicode(name)
-        """Name used by scripts to refer to this object."""
+        NamedObject.__init__(self)
 
-    def _normalize(self):
-        self.name = unicode(self.name)
+        self.name = name
+        """Name used by scripts to refer to this object."""
 
 
 #class MediaFromFile(Media):
@@ -1558,4 +1633,3 @@ class CostumeFromPIL(Costume):
 
     def _save(self, path, image_format):
         self.pil_image.save(path, image_format)
-
