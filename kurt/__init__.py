@@ -111,18 +111,24 @@ from kurt.scratch14 import ScratchProjectFile
 import kurt.scratch14.scripts as scripts
 
 
+# Remove Costume.name!
 
-# NamedObjects
+# tempo is global!
+
+# what if the path at Project.save(path) already exists?
+
+# magic: add Variable/List watchers to project.actors
+
+# float positions?
 
 # magic Actor.project
 
 # magic script.scriptable, block.script
 
-# is name even a thing?
+# is Project.name even a thing?
+# - in snap, yes.
 
-# normalize actions should run automagically
-
-# Should the Project interface have a specific format?
+# normalize update hooks on setattr
 
 # Lists vs. Variables
 
@@ -130,6 +136,7 @@ import kurt.scratch14.scripts as scripts
 
 # Does json need open("rb")?
 
+# Block inserts
 # ``eblock`` -- >2 C-slots?
 
 # Script x/y < 0
@@ -143,7 +150,7 @@ import kurt.scratch14.scripts as scripts
 #   kurt.scripts.Block
 #   the Script, Block interfaces
 
-# scratchblocks handling
+# scratchblocks Block constructors
 # -> Leave for now. Can always add later...
 
 
@@ -162,6 +169,10 @@ def _pos(value):
 
 
 class TypedAttributes(object):
+    """Magically cast attributes to the correct type when they're set.
+
+    The correct type is inferred from the first time the attribute is set.
+    """
     def __init__(self):
         self._fields = {}
 
@@ -170,10 +181,11 @@ class TypedAttributes(object):
             if name in self._fields:
                 c = self._fields[name]
                 value = c(value)
-            elif value is not None:
-                c = type(value)
-                if c not in (Costume, Project, Watcher):
-                    self._fields[name] = c
+            else:
+                if value is not None:
+                    c = type(value)
+                    if c not in (Costume, Project, Watcher):
+                        self._fields[name] = c
 
             if isinstance(value, MediaDict):
                 value.parent = self
@@ -192,9 +204,7 @@ class TypedAttributes(object):
 
 
 
-
-
-#-- Project: main entry point --#
+#-- Project: main class --#
 
 class Project(TypedAttributes):
     """The main kurt class. Stores the contents of a project file.
@@ -237,7 +247,7 @@ class Project(TypedAttributes):
         """The name of the project.
 
         May be displayed to the user. Doesn't have to match the filename in
-        :attr:`path`.
+        :attr:`path`. May not be saved for some formats.
 
         """
 
@@ -279,10 +289,12 @@ class Project(TypedAttributes):
         self.thumbnail = None
         """A screenshot of the project. May be displayed in project browser."""
 
-        self.comment = "Made with Kurt\nhttp://github.com/blob8108/kurt"
-        """Notes about the project.
+        self.notes = "Made with Kurt\nhttp://github.com/blob8108/kurt"
+        """Notes about the project, aka project comments.
 
-        May be displayed on the website next to the project.
+        Displayed on the website next to the project.
+
+        Line endings will be converted to ``\n``.
 
         """
 
@@ -426,13 +438,6 @@ class Project(TypedAttributes):
         """
 
         # project
-        self.name = unicode(self.name)
-        self.sprites = OrderedMediaDict(self.sprites)
-        self.actors = list(self.actors)
-        self.variables = MediaDict(self.variables)
-        self.lists = MediaDict(self.lists)
-        self.comment = unicode(self.comment)
-
         for variable in self.variables:
             if variable.watcher.visible:
                 self.actors.append(variable.watcher)
@@ -458,10 +463,8 @@ class Project(TypedAttributes):
         for actor in self.actors:
             actor._normalize()
 
-        # make everything unicode
-        self.name = unicode(self.name)
-        self.comment = unicode(self.comment)
-        self.comment = self.comment.replace("\r\n", "\n").replace("\r", "\n")
+        # notes - line endings
+        self.notes = self.notes.replace("\r\n", "\n").replace("\r", "\n")
 
         # global variables & lists
         if self._plugin and not self._plugin.has_stage_specific_variables:
@@ -514,6 +517,7 @@ class NamedObject(object):
             if self._media_dict:
                 self._media_dict.remove(self)
             self._media_dict = new_dict
+        self._onchange_parent()
 
     @property
     def parent(self):
@@ -522,6 +526,9 @@ class NamedObject(object):
         """
         if self._media_dict:
             return self._media_dict.parent
+
+    def _onchange_parent(self):
+        pass
 
     def __repr__(self):
         return "<%s(%s)>" % (self.__class__.__name__, self.name)
@@ -979,7 +986,7 @@ class Variable(NamedObject, TypedAttributes):
         self._normalize()
 
     def _normalize(self):
-        if self.watcher and self.watcher.value != self:
+        if self.watcher.value != self:
             self.watcher = Watcher(self, visible=False)
 
     def __repr__(self):
@@ -991,6 +998,10 @@ class Variable(NamedObject, TypedAttributes):
         else:
             r += ")"
         return r
+
+    def _onchange_parent(self):
+        if self.parent:
+            self.parent.actors.add(self.watcher)
 
 
 class List(NamedObject, TypedAttributes):
@@ -1447,14 +1458,14 @@ class Costume(Media):
 
     To load an image file by path, use :attr:`CostumeFromFile.from_path`.
 
-    The reason for having multiple constructors is so that kurt can implement
-    lazy loading of image data -- in many cases, a PIL image will never need to
-    be created.
-
     **Image formats:** :attr:`image_format` is an uppercase string
     corresponding to the :attr:`PIL ImageFile.format
     <PIL.ImageFile.ImageFile.format>` attribute.  Valid values include
     ``"JPEG"`` and ``"PNG"``.
+
+    The reason for having multiple constructors is so that kurt can implement
+    lazy loading of image data -- in many cases, a PIL image will never need to
+    be created.
 
     :ivar name:         Name used by scripts to refer to this Costume.
     :ivar size:         ``(width, height)`` in pixels.
@@ -1477,7 +1488,6 @@ class Costume(Media):
 
     def decode(self):
         if not self._decoded_costume:
-            print "Decode!"
             self._decoded_costume = self._decode()
         return self._decoded_costume
 
@@ -1486,7 +1496,6 @@ class Costume(Media):
         raise NotImplementedError # Override in subclass
 
     def __getattr__(self, name):
-        print name
         if name in ("size", "image_format", "pil_image"):
             return getattr(self.decode(), name)
         raise AttributeError, "'%s' object has no attribute '%s'" % (
@@ -1541,9 +1550,21 @@ class Costume(Media):
         return path
 
     def _save(self, path, image_format):
-        # Override in subclass
+        # Override in subclass.
+        # Make sure to also override _save_to_string
         if self.pil_image:
             self.pil_image.save(path, image_format)
+        else:
+            raise ValueError
+
+    def _save_to_string(self, image_format):
+        # Override in subclass.
+        if self.pil_image:
+            output = StringIO()
+            self.pil_image.save(output, image_format)
+            contents = output.getvalue()
+            output.close()
+            return contents
         else:
             raise ValueError
 

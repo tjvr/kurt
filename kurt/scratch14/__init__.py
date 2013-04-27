@@ -17,6 +17,19 @@
 
 """A Kurt plugin for Scratch 1.4."""
 
+import kurt
+from kurt.plugin import Kurt, KurtPlugin
+
+from kurt.scratch14.objtable import *
+from kurt.scratch14.files import *
+from kurt.scratch14.scripts import *
+
+try:
+    from kurt.scratchblocks import parse_block_plugin
+except ImportError:
+    pass
+
+
 
 # The main classes used by this package are ScratchProjectFile and
 # ScratchSpriteFile classes.
@@ -28,18 +41,6 @@
 # :class:`FixedObjects` have a ``.value`` property to access their value. Inline
 # objects, such as int and bool, are converted to their Pythonic counterparts.
 # Array and Dictionary are converted to list and dict.
-
-import kurt
-import kurt.plugin
-
-from kurt.scratch14.objtable import *
-from kurt.scratch14.files import *
-from kurt.scratch14.scripts import *
-
-try:
-    from kurt.scratchblocks import parse_block_plugin
-except ImportError:
-    pass
 
 
 
@@ -85,11 +86,45 @@ def _load_sound(v14_sound):
 def _save_sound(kurt_sound):
     pass
 
+def _load_block(v14_block):
+    args = []
+    for arg in v14_block.args:
+        if isinstance(arg, Block):
+            arg = _load_block(arg)
+        elif isinstance(arg, list):
+            arg = map(_load_block, arg)
+        elif isinstance(arg, Symbol):
+            print arg
+            arg = arg.value
+        args.append(arg)
+    return kurt.Block(v14_block.command, *args)
+
 def _load_script(v14_script):
-    return kurt.Script()
+    return kurt.Script(
+        map(_load_block, v14_script.blocks),
+        pos = v14_script.pos,
+    )
+
+def _save_block(kurt_block):
+    args = []
+    for arg in kurt_block.args:
+        if isinstance(arg, kurt.Block):
+            arg = _save_block(arg)
+        elif isinstance(arg, list):
+            arg = map(_save_block, arg)
+        args.append(arg)
+
+    cmd = kurt_block.type.scratch14_command
+    if cmd == "changeVariable":
+        args[1] = Symbol(args[1])
+
+    return Block(cmd, *args)
 
 def _save_script(kurt_script):
-    return Script()
+    return Script(
+        kurt_script.pos,
+        map(_save_block, kurt_script.blocks),
+    )
 
 def _load_variable((name, value)):
     return kurt.Variable(name, value)
@@ -123,18 +158,17 @@ def _save_lists(kurt_lists, v14_morph, v14_project):
             items = kurt_list.items,
         )
 
-        if kurt_list.watcher:
-            pos = kurt_list.watcher.pos
-            if pos:
-                (x, y) = pos
-            else:
-                (x, y) = (375, 10)
-                # TODO: stack them prettily!
+        pos = kurt_list.watcher.pos
+        if pos:
+            (x, y) = pos
+        else:
+            (x, y) = (375, 10)
+            # TODO: stack them prettily!
 
-            if not kurt_list.watcher.visible:
-                x += 534
-                y += 71
-            v14_list.bounds = Rectangle([x, y, x+95, y+115])
+        if not kurt_list.watcher.visible:
+            x += 534
+            y += 71
+        v14_list.bounds = Rectangle([x, y, x+95, y+115])
 
         v14_list.target = v14_morph
         if kurt_list.watcher.visible:
@@ -171,7 +205,8 @@ def _load_scriptable(kurt_scriptable, v14_scriptable):
         kurt_scriptable.position = (x, y)
 
 def _save_scriptable(kurt_scriptable, v14_scriptable):
-    #v14_scriptable.scripts = map(_save_script, kurt_scriptable.scripts)
+    v14_scriptable.scripts = user_objects.ScriptCollection(
+            map(_save_script, kurt_scriptable.scripts))
     v14_scriptable.variables = dict(map(_save_variable,
         kurt_scriptable.variables))
     v14_scriptable.images = map(_save_image, kurt_scriptable.costumes)
@@ -201,13 +236,17 @@ def _save_scriptable(kurt_scriptable, v14_scriptable):
 
 
 
-class Scratch14Plugin(kurt.plugin.KurtPlugin):
+class Scratch14Plugin(KurtPlugin):
+    name = "scratch14"
+    display_name = "Scratch 1.4"
+    extension = ".sb"
+
     def load(self, path):
         v14_project = ScratchProjectFile(path)
         kurt_project = kurt.Project()
 
         # project info
-        kurt_project.comment = v14_project.info['comment']
+        kurt_project.notes = v14_project.info['comment']
         kurt_project.author = v14_project.info['author']
         kurt_project.thumbnail = _load_image(v14_project.info['thumbnail'])
 
@@ -263,7 +302,7 @@ class Scratch14Plugin(kurt.plugin.KurtPlugin):
         v14_project = ScratchProjectFile.new()
 
         # project info
-        v14_project.info['comment'] = kurt_project.comment
+        v14_project.info['comment'] = kurt_project.notes
         v14_project.info['author'] = kurt_project.author
         v14_project.info['thumbnail'] = _save_image(kurt_project.thumbnail)
 
@@ -291,6 +330,9 @@ class Scratch14Plugin(kurt.plugin.KurtPlugin):
             if isinstance(kurt_actor, kurt.Watcher):
                 kurt_watcher = kurt_actor
                 if isinstance(kurt_watcher.value, kurt.List):
+                    continue
+
+                if not kurt_watcher.visible:
                     continue
 
                 v14_watcher = WatcherMorph()
@@ -364,6 +406,7 @@ class Scratch14Plugin(kurt.plugin.KurtPlugin):
                 v14_project.stage.submorphs.append(v14_watcher)
 
         v14_project.save(path)
+        #v14_project.path = path
 
         # TODO: stacking order
 
@@ -371,4 +414,4 @@ class Scratch14Plugin(kurt.plugin.KurtPlugin):
 
 
 
-kurt.plugin.Kurt.register(Scratch14Plugin())
+Kurt.register(Scratch14Plugin())
