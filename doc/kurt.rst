@@ -1,5 +1,5 @@
-The ``kurt`` package
-====================
+``kurt``
+========
 
 .. include:: warning.rst
 

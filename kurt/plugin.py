@@ -15,37 +15,52 @@
 # You should have received a copy of the GNU Lesser General Public License along 
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
-"""How to write your own plugin.
+"""
+To add support for a new file format, write a new :class:`KurtPlugin` subclass::
 
-Support for a file format is supported by a :class:`KurtPlugin`.
-
-To support a new file format, write a new subclass::
-
+    import kurt
     from kurt.plugin import Kurt, KurtPlugin
 
     class MyScratchModPlugin(KurtPlugin):
         def load(self, path):
-            project = Project()
             f = open(path)
-            # ...
-            return project
+            kurt_project = kurt.Project()
+            # ... set kurt_project attributes ... #
+            return kurt_project
 
-        def save(self, path, project):
+        def save(self, path, kurt_project):
             f = open(path, "w")
-            # ...
+            # ... save kurt_project attributes to file ...
 
     Kurt.register(MyScratchModPlugin())
 
-To get a list of available plugins:
+Take a look at :mod:`kurt.scratch20` for a more detailed example.
+
+
+List available plugins
+~~~~~~~~~~~~~~~~~~~~~~
+
+To get a list of the plugins registered with :class:`Kurt`:
 
     >>> kurt.plugin.Kurt.plugins
     {'scratch14': kurt.scratch14.Scratch14Plugin()}
 
+You should see your plugin in the output, unless you forgot to :attr:`register
+<Kurt.register>` it.
 
+
+Notes
+~~~~~
+
+Some things to keep in mind:
+
+* Most Scratch file formats have the *stage* as the base object -- so project
+  attributes, such as the notes and the list of sprites, are stored on the
+  stage object.
 
 """
 
-# Format dict:
+# Format dict: (wth?) TODO
 
 
 class KurtPlugin(object):
@@ -79,6 +94,11 @@ class KurtPlugin(object):
     """
 
     has_stage_specific_variables = False
+    """Whether the Project can have stage-specific variables and lists, in
+    addition to global variables and lists (which are stored on the
+    :class:`Project`).
+
+    """
 
 
     def load(self, path):
@@ -86,6 +106,8 @@ class KurtPlugin(object):
 
         :attr:`Project.path` will be set later. :attr:`Project.name` will be
         set to the filename of ``path`` if unset.
+
+        The file at ``path`` is not guaranteed to exist.
 
         :param path: Path to the file, including the plugin's extension. 
         :returns: :class:`Project`
@@ -121,11 +143,11 @@ class Kurt(object):
     def register(cls, plugin):
         """Register a new :class:`KurtPlugin`.
 
-        It can then be used by :class:`Project`, when:
+        Once registered, the plugin can be used by :class:`Project`, when:
 
         * :attr:`Project.load` sees a file with the right extension
 
-        * :attr:`Project.save` is called with the format as a parameter
+        * :attr:`Project.convert` is called with the format as a parameter
 
         """
         cls.plugins[plugin.name] = plugin

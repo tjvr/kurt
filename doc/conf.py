@@ -13,6 +13,10 @@
 
 import sys, os
 
+from sphinx.ext import autodoc
+
+
+
 sys.path.append(os.path.abspath('../'))
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -291,6 +295,17 @@ epub_copyright = u'2013, Tim Radvan'
 
 
 
+class SimpleDocumenter(autodoc.MethodDocumenter):
+    objtype = "simple"
+
+    #do not indent the content
+    content_indent = ""
+
+    #do not add a header to the docstring
+    def add_directive_header(self, sig):
+        pass
+
+
 
 intersphinx_mapping = {'python': ('http://docs.python.org/2.7', None)}
 
@@ -309,4 +324,4 @@ def warn_undocumented_members(app, what, name, obj, options, lines):
 
 def setup(app):
     app.connect('autodoc-process-docstring', warn_undocumented_members);
-
+    app.add_autodocumenter(SimpleDocumenter)

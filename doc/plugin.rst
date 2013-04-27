@@ -1,8 +1,27 @@
-Writing plugins
+``kurt.plugin``
 ===============
 
 .. include:: warning.rst
 
-.. automodule:: kurt.plugin
-    :member-order: bysource
 
+Writing plugins
+---------------
+
+.. automodule:: kurt.plugin
+    :no-members:
+
+
+----
+
+
+
+``KurtPlugin``
+--------------
+
+.. autoclass:: kurt.plugin.KurtPlugin
+
+
+``Kurt``
+--------
+
+.. autoclass:: kurt.plugin.Kurt
