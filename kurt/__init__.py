@@ -54,13 +54,6 @@ of image data:
 * :class:`CostumeFromFile`
 * :class:`CostumeFromPIL`
 
-:class:`Project` and :class:`Scriptable` use the following classes for
-collections:
-
-* :class:`MediaDict`
-* :class:`OrderedMediaDict`
-
-
 File Formats
 ------------
 
@@ -82,7 +75,7 @@ Use "Format name" for :attr:`Project.convert()`.
 
 __version__ = '2.0.0'
 
-import collections
+from collections import OrderedDict
 import re
 import os
 try:
@@ -111,22 +104,11 @@ from kurt.scratch14 import ScratchProjectFile
 import kurt.scratch14.scripts as scripts
 
 
-# Remove Costume.name!
-
 # tempo is global!
 
 # what if the path at Project.save(path) already exists?
 
-# magic: add Variable/List watchers to project.actors
-
 # float positions?
-
-# magic Actor.project
-
-# magic script.scriptable, block.script
-
-# is Project.name even a thing?
-# - in snap, yes.
 
 # normalize update hooks on setattr
 
@@ -162,56 +144,11 @@ def _clean_filename(name):
     filename."""
     return re.sub("[^\w ]", "", name)
 
-def _pos(value):
-    """``(x, y)`` tuple."""
-    (x, y) = value
-    return (int(x), int(y))
-
-
-class TypedAttributes(object):
-    """Magically cast attributes to the correct type when they're set.
-
-    The correct type is inferred from the first time the attribute is set on
-    any instance of the class.
-
-    """
-
-    def __setattr__(self, name, value):
-        try:
-            fields = self.__class__._fields
-        except AttributeError:
-            fields = self.__class__._fields = {}
-
-        if not name.startswith("_") and name not in ("value", "parent"):
-            if value is not None:
-                if name in fields:
-                    c = fields[name]
-                    value = c(value)
-                else:
-                    c = type(value)
-                    if c not in (Costume, Project, Watcher, Stage):
-                        fields[name] = c
-
-            if isinstance(value, MediaDict):
-                value.parent = self
-
-        object.__setattr__(self, name, value)
-
-        #self.pos
-        #str
-        #unicode
-        #list
-        #MediaDict
-        #OrderedMediaDict
-        #int
-        #float
-        #bool
-
 
 
 #-- Project: main class --#
 
-class Project(TypedAttributes):
+class Project(object):
     """The main kurt class. Stores the contents of a project file.
 
     Contents include global variables and lists, the :attr:`stage` and
@@ -246,8 +183,6 @@ class Project(TypedAttributes):
     # TODO doc
 
     def __init__(self):
-        TypedAttributes.__init__(self)
-
         self.name = u""
         """The name of the project.
 
@@ -270,8 +205,8 @@ class Project(TypedAttributes):
         self.stage = Stage()
         """The :class:`Stage`."""
 
-        self.sprites = OrderedMediaDict()
-        """:class:`OrderedMediaDict` of :class:`Sprites <Sprite>`."""
+        self.sprites = OrderedDict()
+        """:class:`OrderedDict` of :class:`Sprites <Sprite>` by name."""
 
         self.actors = []
         """List of each :class:`Actor` on the stage.
@@ -282,14 +217,13 @@ class Project(TypedAttributes):
         Synced with :attr:`sprites` on save.
 
         """
-        # TODO rename actors?
         # TODO specify stacking order
 
-        self.variables = MediaDict()
-        """:class:`MediaDict` of global :class:`Variables <Variable>`."""
+        self.variables = {}
+        """:class:`dict` of global :class:`Variables <Variable>` by name."""
 
-        self.lists = MediaDict()
-        """:class:`MediaDict` of global :class:`Lists <List>`."""
+        self.lists = {}
+        """:class:`dict` of global :class:`Lists <List>` by name."""
 
         self.thumbnail = None
         """A screenshot of the project. May be displayed in project browser."""
@@ -442,17 +376,6 @@ class Project(TypedAttributes):
 
         """
 
-        # project
-        for variable in self.variables:
-            if variable.watcher.visible:
-                self.actors.append(variable.watcher)
-
-        for list_ in self.lists:
-            if list_.watcher.visible:
-                self.actors.append(list_.watcher)
-
-        self.stage.project = self # TODO
-
         # sync self.sprites and self.actors
         for sprite in self.sprites:
             if sprite not in self.actors:
@@ -461,7 +384,6 @@ class Project(TypedAttributes):
             if isinstance(actor, Sprite):
                 if actor not in self.sprites:
                     self.sprites.add(actor)
-            actor.project = self # TODO
 
         # normalize actors
         self.stage._normalize()
@@ -475,8 +397,8 @@ class Project(TypedAttributes):
         if self._plugin and not self._plugin.has_stage_specific_variables:
             self.variables.update(self.stage.variables)
             self.lists.update(self.stage.lists)
-            self.stage.variables = MediaDict()
-            self.stage.lists = MediaDict()
+            self.stage.variables = {}
+            self.stage.lists = {}
 
 
 
@@ -493,217 +415,6 @@ class UnknownFormat(Exception):
 
 
 
-#-- Collections --#
-
-class NamedObject(object):
-    """An object with a :attr:`name` attribute that can be added to a
-    :class:`MediaDict`.
-
-    """
-
-    def __init__(self):
-        self._media_dict = None
-        self._name = None
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, new_name):
-        if self._name != new_name:
-            old_name = self._name
-            self._name = unicode(new_name)
-            if self._media_dict:
-                self._media_dict._rename(old_name, new_name)
-
-    def _set_dict(self, new_dict):
-        if self._media_dict != new_dict:
-            if self._media_dict:
-                self._media_dict.remove(self)
-            self._media_dict = new_dict
-            self._onchange_parent()
-
-    @property
-    def parent(self):
-        """The :class:`Project` or :class:`Scriptable` this object belongs to.
-
-        """
-        if self._media_dict:
-            return self._media_dict.parent
-
-    def _onchange_parent(self):
-        pass
-
-    def __repr__(self):
-        return "<%s(%s)>" % (self.__class__.__name__, self.name)
-
-
-
-class MediaDict(object):
-    """A dictionary of :attr:`NamedObjects <NamedObject>` that uses
-    :attr:`obj.name` as the key.
-
-    >>> p = Project()
-    >>> p.sprites = MediaDict([  # init takes list of objects
-    ...     Sprite(p, name="coconut"),
-    ...     Sprite(p, name="apple")
-    ... ])
-    >>> p.sprites  # displaying sorts by name
-    MediaDict([<Sprite(apple)>, <Sprite(coconut)>])
-
-    >>> p.sprites['apple']  # access by name
-    <Sprite(apple)>
-
-    >>> third = Sprite(p)
-    >>> p.sprites['banana'] = third  # sets name when adding
-    >>> third.name
-    u'banana'
-    >>> p.sprites
-    MediaDict([<Sprite(apple)>, <Sprite(banana)>, <Sprite(coconut)>])
-
-    >>> for sprite in p.sprites:  # iterator returns each object
-    ...     print sprite
-    ... 
-    <Sprite(apple)>
-    <Sprite(banana)>
-    <Sprite(coconut)>
-
-    """
-
-    def __init__(self, objects=None):
-        objects = objects or []
-        objects = [(unicode(o.name), o) for o in objects]
-        self._objects = dict(objects)
-        self.parent = None
-        for o in self:
-            o._set_dict(self)
-
-    def __getattr__(self, name):
-        return getattr(self._objects, name)
-
-    def __repr__(self):
-        if not self._objects:
-            return '%s()' % (self.__class__.__name__,)
-        return '%s(%r)' % (self.__class__.__name__, list(self))
-
-    def __contains__(self, obj):
-        if hasattr(obj, "name"):
-            return obj in self.values()
-        else:
-            return unicode(obj) in self._objects
-
-    def __iter__(self):
-        return iter(sorted(self._objects.values(), key=lambda obj: obj.name))
-
-    def __getitem__(self, name):
-        return self._objects[unicode(name)]
-
-    def __setitem__(self, name, obj):
-        assert isinstance(obj, NamedObject)
-        obj._set_dict(self)
-
-        name = unicode(name)
-        obj.name = name
-        self._objects[name] = obj
-
-    def __delitem__(self, name):
-        del self._objects[unicode(name)]
-
-    def __len__(self):
-        return len(self._objects)
-
-    def add(self, obj):
-        """Adds obj to end of collection."""
-        name = getattr(obj, "name", obj)
-        if name in self:
-            del self[name]
-        self[obj.name] = obj
-
-    def remove(self, obj):
-        obj = getattr(obj, "name", obj)
-        del self[obj]
-
-    def index(self, obj):
-        name = getattr(obj, "name", obj)
-        return self.keys().index(name)
-
-    def _rename(self, old_name, new_name):
-        self[new_name] = self[old_name]
-        del self[old_name]
-
-
-class OrderedMediaDict(MediaDict):
-    """An :class:`OrderedDict` that uses :attr:`obj.name` as the key.
-
-    Also allows accessing by index.
-
-    >>> p = Project()
-    >>> p.sprites = OrderedMediaDict([  # init takes list of objects
-    ...     Sprite(p, name="coconut"),
-    ...     Sprite(p, name="apple")
-    ... ])
-
-    >>> p.sprites  # remembers insertion order
-    OrderedMediaDict([<Sprite(coconut)>, <Sprite(apple)>])
-
-    >>> p.sprites['banana'] = Sprite(p)  # sets name when adding
-    >>> p.sprites
-    OrderedMediaDict([<Sprite(coconut)>, <Sprite(apple)>, <Sprite(banana)>])
-
-    >>> for sprite in p.sprites:  # iterator returns each object
-    ...     print sprite
-    ... 
-    <Sprite(coconut)>
-    <Sprite(apple)>
-    <Sprite(banana)>
-
-    """
-
-    def __init__(self, objects=None):
-        objects = objects or []
-        objects = [(unicode(o.name), o) for o in objects]
-        self._objects = collections.OrderedDict(objects)
-        for o in self:
-            o._set_dict(self)
-
-    def __getitem__(self, item):
-        if isinstance(item, int): # by index
-            return self._objects.values()[item]
-        else: # by name
-            return self._objects[unicode(item)]
-
-    def __setitem__(self, item, obj):
-        if isinstance(item, int): # by index
-            old_key = self._objects.keys()[item]
-            new_key = unicode(obj.name)
-            self._objects = collections.OrderedDict(
-                (new_key, v) if k == old_key else (k, v)
-                for (k, v) in self._objects.items()
-            )
-        else: # by name
-            item = unicode(item)
-            obj.name = item # set name when adding
-            self._objects[item] = obj
-
-    def __delitem__(self, item):
-        if isinstance(item, int): # by index
-            item = self._objects.keys()[item]
-        else:
-            item = unicode(item)
-        del self._objects[item]
-
-    def __iter__(self):
-        return iter(self.values())
-
-    def _rename(self, old_name, new_name):
-        self._objects = collections.OrderedDict([
-            (new_name, v) if k == old_name else (k, v)
-            for k, v in self._objects.items()
-        ])
-
-
-
 #-- Actors & Scriptables --#
 
 class Actor(object):
@@ -713,12 +424,8 @@ class Actor(object):
 
     """
 
-    def __init__(self):
-        self.project = None
-        """The :class:`Project` this actor belongs to."""
 
-
-class Scriptable(TypedAttributes):
+class Scriptable(object):
     """Superclass for all scriptable objects.
 
     Subclasses are :class:`Stage` and :class:`Sprite`.
@@ -726,11 +433,6 @@ class Scriptable(TypedAttributes):
     """
 
     def __init__(self):
-        TypedAttributes.__init__(self)
-
-        self.project = None
-        """The :class:`project` this actor belongs to."""
-
         self.scripts = []
         """The contents of the scripting area.
 
@@ -741,17 +443,17 @@ class Scriptable(TypedAttributes):
 
         """
 
-        self.variables = MediaDict()
-        """:class:`MediaDict` of :class:`Variables <Variable>`."""
+        self.variables = {}
+        """:class:`dict` of :class:`Variables <Variable>` by name."""
 
-        self.lists = MediaDict()
-        """:class:`MediaDict` of :class:`Lists <List>`."""
+        self.lists = {}
+        """:class:`dict` of :class:`Lists <List>` by name."""
 
-        self.costumes = OrderedMediaDict()
-        """:class:`MediaDict` of :class:`Costumes <Costume>`."""
+        self.costumes = OrderedDict()
+        """:class:`OrderedDict` of :class:`Costumes <Costume>` by name."""
 
-        self.sounds = OrderedMediaDict()
-        """:class:`MediaDict` of :class:`Sounds <Sound>`."""
+        self.sounds = OrderedDict()
+        """:class:`OrderedDict` of :class:`Sounds <Sound>` by name."""
 
         self.costume = None
         """The currently selected :class:`Costume`.
@@ -765,14 +467,6 @@ class Scriptable(TypedAttributes):
         self.tempo = 60
 
     def _normalize(self):
-        for variable in self.variables:
-            if variable.watcher.visible:
-                self.project.actors.append(variable.watcher)
-
-        for list_ in self.lists:
-            if list_.watcher.visible:
-                self.project.actors.append(list_.watcher)
-
         if self.costume:
             # Make sure it's in costumes
             if self.costume not in self.costumes:
@@ -780,7 +474,7 @@ class Scriptable(TypedAttributes):
         else:
             # No costume!
             if self.costumes:
-                self.costume = self.costumes[0]
+                self.costume = self.costumes.values()[0]
 
 
 class Stage(Scriptable):
@@ -796,8 +490,6 @@ class Stage(Scriptable):
 
     """
 
-    name = "Stage"
-
     def __init__(self):
         Scriptable.__init__(self)
 
@@ -810,7 +502,7 @@ class Stage(Scriptable):
         return "<Stage>"
 
 
-class Sprite(Scriptable, Actor, NamedObject):
+class Sprite(Scriptable, Actor):
     """A scriptable object displayed on the project stage. Can be moved and
     rotated, unlike the :class:`Stage`.
 
@@ -819,13 +511,7 @@ class Sprite(Scriptable, Actor, NamedObject):
 
     """
 
-    def __init__(self, name=u"Sprite1"):
-        Scriptable.__init__(self)
-        NamedObject.__init__(self)
-
-        self.name = unicode(name)
-        """The sprite's name."""
-
+    def __init__(self):
         self.position = (0, 0)
         """The ``(x, y)`` position to the right and above of the centre of the
         stage in pixels.
@@ -856,20 +542,14 @@ class Sprite(Scriptable, Actor, NamedObject):
 
         """
 
-        # TODO make MediaDict auto-update key on name change
-        # so this isn't broken
-        #if project:
-        #    project.sprites.add(self)
-
     def _normalize(self):
         Scriptable._normalize(self)
         assert self.rotation_style in ("normal", "leftRight", "none")
-        self.position = _pos(self.position)
         if not self.costume:
             raise ValueError, "%r doesn't have a costume" % self
 
 
-class Watcher(Actor, TypedAttributes):
+class Watcher(Actor):
     """A monitor for displaying a data value (such as a variable) on the stage.
 
     Some formats won't save hidden watchers, and so their position won't be
@@ -878,7 +558,6 @@ class Watcher(Actor, TypedAttributes):
     """
 
     def __init__(self, value, style="normal", visible=True, pos=None):
-        TypedAttributes.__init__(self)
         Actor.__init__(self)
 
         self.value = value
@@ -925,13 +604,6 @@ class Watcher(Actor, TypedAttributes):
         if isinstance(self.value, Variable) or isinstance(self.value, List):
             self.value.watcher = self
 
-        if self.pos is not None:
-            self.pos = _pos(self.pos)
-
-        if self.project:
-            if self not in self.project.actors:
-                self.project.actors.append(self)
-
         assert self.style in ("normal", "large", "slider")
         if isinstance(self.value, List):
             assert self.style == "normal"
@@ -948,7 +620,7 @@ class Watcher(Actor, TypedAttributes):
 
 #-- Media / Scriptable attributes --#
 
-class Variable(NamedObject, TypedAttributes):
+class Variable(object):
     """A memory value used in scripts.
 
     There are both :attr`global variables <Project.variables> and
@@ -959,9 +631,6 @@ class Variable(NamedObject, TypedAttributes):
     """
 
     def __init__(self, name, value=0, is_cloud=False):
-        TypedAttributes.__init__(self)
-        NamedObject.__init__(self)
-
         self.name = unicode(name)
         """The name of the variable, as referred to in scripts."""
 
@@ -980,20 +649,7 @@ class Variable(NamedObject, TypedAttributes):
 
         """
 
-        self.watcher = Watcher(self, visible=False)
-        """The :class:`Watcher` displaying this variable."""
-
-        self.parent # NamedObject property
-        """The :class:`Scriptable` or :class:`Project` (for global variables)
-        this variable belongs to.
-
-        """
-
         self._normalize()
-
-    def _normalize(self):
-        if self.watcher.value != self:
-            self.watcher = Watcher(self, visible=False)
 
     def __repr__(self):
         r = "%s(%r" % (self.__class__.__name__, self.name)
@@ -1005,12 +661,8 @@ class Variable(NamedObject, TypedAttributes):
             r += ")"
         return r
 
-    def _onchange_parent(self):
-        if self.parent:
-            self.parent.actors.add(self.watcher)
 
-
-class List(NamedObject, TypedAttributes):
+class List(object):
     """A sequence of items used in scripts.
 
     Each item takes a :class:`Variable`-like value.
@@ -1020,9 +672,6 @@ class List(NamedObject, TypedAttributes):
 
     """
     def __init__(self, name, items=None, is_cloud=False):
-        TypedAttributes.__init__(self)
-        NamedObject.__init__(self)
-
         self.name = unicode(name)
         """The name of the list, as referred to in scripts."""
 
@@ -1036,21 +685,10 @@ class List(NamedObject, TypedAttributes):
 
         """
 
-        self.watcher = Watcher(self, visible=False)
-        """The :class:`Watcher` displaying this list."""
-
-        self.parent # NamedObject property
-        """The :class:`Scriptable` or :class:`Project` (for global lists)
-        this variable belongs to.
-
-        """
-
         self._normalize()
 
     def _normalize(self):
         self.items = map(unicode, self.items)
-        if self.watcher and self.watcher.value != self:
-            self.watcher = Watcher(self, visible=False, pos=(375, 10))
 
     def __repr__(self):
         r = "%s(%r" % (self.__class__.__name__, self.name)
@@ -1343,7 +981,7 @@ class Script(object):
         self.scriptable = None
         """The :class:`Scriptable` instance the script belongs to."""
 
-        self.pos = _pos(pos)
+        self.pos = pos
         """``(x, y)`` position from the top-left of the script area in
         pixels.
 
@@ -1353,7 +991,7 @@ class Script(object):
         """The list of :class:`Blocks <Block>`."""
 
     def _normalize(self):
-        self.pos = _pos(self.pos)
+        self.pos = self.pos
         self.blocks = list(self.blocks)
 
     def __eq__(self, other):
@@ -1407,7 +1045,7 @@ class Comment(object):
     """A free-floating comment in :attr:`Scriptable.scripts`."""
 
     def __init__(self, comment, pos):
-        self.pos = _pos(pos)
+        self.pos = pos
         """``(x, y)`` position from the top-left of the script area in
         pixels.
 
@@ -1417,43 +1055,11 @@ class Comment(object):
         """The text of the comment."""
 
     def _normalize(self):
-        self.pos = _pos(self.pos)
+        self.pos = self.pos
         self.text = unicode(self.text)
 
 
-class Media(NamedObject):
-    """Superclass for media files associated with a :class:`Scriptable`, such
-    as :class:`Costume` and :class:`Sound`."""
-
-    def __init__(self, name):
-        NamedObject.__init__(self)
-
-        self.name = name
-        """Name used by scripts to refer to this object."""
-
-
-#class MediaFromFile(Media):
-#    def __init__(self, name, f):
-#        assert isinstance(f, file)
-#        (name, extension) = os.path.splitext(filename)
-#        self.name = name
-#        self.extension = extension
-#        self.file = f
-#        self.image =
-#
-#
-#class MediaFromPath(MediaFromFile):
-#    def __init__(self, path):
-#        (folder, filename) = os.path.split(path)
-#        self.
-#
-#
-#class SoundFromPath(MediaFromPath):
-#    def __init__(self, path):
-#        MediaFromPath.
-
-
-class Costume(Media):
+class Costume(object):
     """Base class for Costumes, image files describing the look of a sprite.
 
     Don't use this class directly -- instead, use one of its subclasses:
@@ -1473,15 +1079,12 @@ class Costume(Media):
     lazy loading of image data -- in many cases, a PIL image will never need to
     be created.
 
-    :ivar name:         Name used by scripts to refer to this Costume.
     :ivar size:         ``(width, height)`` in pixels.
     :ivar image_format: Format of the image file. None if unknown.
 
     """
 
-    def __init__(self, name):
-        Media.__init__(self, name)
-
+    def __init__(self):
         self.rotation_center = (0, 0)
         """``(x, y)`` position of the center of the image from the top-left
         corner, about which the sprite rotates."""
@@ -1490,7 +1093,7 @@ class Costume(Media):
 
     def _normalize(self):
         Media._normalize(self)
-        self.rotation_center = _pos(self.rotation_center)
+        self.rotation_center = self.rotation_center
 
     def decode(self):
         if not self._decoded_costume:
@@ -1514,9 +1117,6 @@ class Costume(Media):
         If path has no extension, the costume's image format is used if
         known.
 
-        If the path ends in a folder instead of a file, the filename is based
-        on the costume's :attr:`name`.
-
         :returns: Path to the saved file.
 
         """
@@ -1539,9 +1139,7 @@ class Costume(Media):
                 pass
 
         if not name:
-            name = _clean_filename(self.name)
-            if not name:
-                raise ValueError, "name is required"
+            raise ValueError, "name is required"
 
         if image_format:
             extension = image_format.lower()
@@ -1594,7 +1192,6 @@ class CostumeFromFile(Costume):
     Do not pass a path to this constructor! Use
     :attr:`CostumeFromFile.from_path` instead.
 
-    :param name:         Name of the ``Costume`` as referred to from scripts.
     :param file_:           File-like object (must be opened in binary mode).
                          May also be a bytestring containing the raw file
                          contents.
@@ -1603,9 +1200,8 @@ class CostumeFromFile(Costume):
 
     """
 
-    def __init__(self, name, file_, image_format=None):
-        Costume.__init__(self, name)
-        self.name = name
+    def __init__(self, file_, image_format=None):
+        Costume.__init__(self)
         self.image_format = image_format
 
         if isinstance(file_, basestring):
@@ -1628,11 +1224,11 @@ class CostumeFromFile(Costume):
 
         fp = open(path, "rb")
 
-        return cls(name, fp, image_format)
+        return cls(fp, image_format)
 
     def _decode(self):
         self.file.seek(0)
-        return CostumeFromPIL(self.name, PIL.Image.open(self.file))
+        return CostumeFromPIL(PIL.Image.open(self.file))
 
     def _save(self, path, image_format):
         self.file.seek(0)
@@ -1645,8 +1241,8 @@ class CostumeFromPIL(Costume):
 
     """
 
-    def __init__(self, name, pil_image):
-        Costume.__init__(self, name)
+    def __init__(self, pil_image):
+        Costume.__init__(self)
 
         self.pil_image = pil_image
         self.size = pil_image.size
