@@ -171,21 +171,26 @@ def _pos(value):
 class TypedAttributes(object):
     """Magically cast attributes to the correct type when they're set.
 
-    The correct type is inferred from the first time the attribute is set.
+    The correct type is inferred from the first time the attribute is set on
+    any instance of the class.
+
     """
-    def __init__(self):
-        self._fields = {}
 
     def __setattr__(self, name, value):
+        try:
+            fields = self.__class__._fields
+        except AttributeError:
+            fields = self.__class__._fields = {}
+
         if not name.startswith("_") and name not in ("value", "parent"):
-            if name in self._fields:
-                c = self._fields[name]
-                value = c(value)
-            else:
-                if value is not None:
+            if value is not None:
+                if name in fields:
+                    c = fields[name]
+                    value = c(value)
+                else:
                     c = type(value)
-                    if c not in (Costume, Project, Watcher):
-                        self._fields[name] = c
+                    if c not in (Costume, Project, Watcher, Stage):
+                        fields[name] = c
 
             if isinstance(value, MediaDict):
                 value.parent = self
@@ -517,7 +522,7 @@ class NamedObject(object):
             if self._media_dict:
                 self._media_dict.remove(self)
             self._media_dict = new_dict
-        self._onchange_parent()
+            self._onchange_parent()
 
     @property
     def parent(self):
@@ -570,6 +575,7 @@ class MediaDict(object):
         objects = objects or []
         objects = [(unicode(o.name), o) for o in objects]
         self._objects = dict(objects)
+        self.parent = None
         for o in self:
             o._set_dict(self)
 
@@ -977,7 +983,7 @@ class Variable(NamedObject, TypedAttributes):
         self.watcher = Watcher(self, visible=False)
         """The :class:`Watcher` displaying this variable."""
 
-        self.parent
+        self.parent # NamedObject property
         """The :class:`Scriptable` or :class:`Project` (for global variables)
         this variable belongs to.
 
@@ -1033,7 +1039,7 @@ class List(NamedObject, TypedAttributes):
         self.watcher = Watcher(self, visible=False)
         """The :class:`Watcher` displaying this list."""
 
-        self.parent
+        self.parent # NamedObject property
         """The :class:`Scriptable` or :class:`Project` (for global lists)
         this variable belongs to.
 
