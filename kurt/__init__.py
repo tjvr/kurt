@@ -49,4 +49,4 @@ try:
 except ImportError:
     print "WARNING: parser not available, requires PLY"
 
-__version__ = '1.4.6'
+__version__ = '1.4.7'
