@@ -13,7 +13,7 @@ setup(name = 'kurt',
       author_email = 'blob8108@gmail.com',
       url = 'https://github.com/blob8108/kurt',
       description = 'Read/write MIT Scratch files, & de/compile them from text & images',
-      install_requires = ['construct', 'PIL', 'PLY'],
+      install_requires = ['construct<2.5', 'PIL', 'PLY'],
       keywords = ['scratch'],
       license = 'LGPL',
       packages = ['kurt', 'kurt.scratchblocks', 'htmlcolor'],
@@ -36,4 +36,4 @@ Python library for reading/writing Scratch (.sb & .sprite) files.
 Also includes a de/compiler for converting Scratch projects <---> folder structure structure with project contents.
 """
 )
- 
+
