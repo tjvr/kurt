@@ -205,8 +205,12 @@ class Project(object):
         self.stage = Stage()
         """The :class:`Stage`."""
 
-        self.sprites = OrderedDict()
-        """:class:`OrderedDict` of :class:`Sprites <Sprite>` by name."""
+        self.sprites = []
+        """List of :class:`Sprites <Sprite>`.
+
+        Use :attr:`get_sprite` to get a sprite by name.
+
+        """
 
         self.actors = []
         """List of each :class:`Actor` on the stage.
@@ -245,6 +249,16 @@ class Project(object):
 
     def __repr__(self):
         return "<Project(%r)>" % self.name
+
+    def get_sprite(self, name):
+        """Get a sprite from :attr:`sprites` by name.
+
+        Returns None if the sprite isn't found.
+
+        """
+        for sprite in self.sprites:
+            if sprite.name == name:
+                return sprite
 
     @property
     def format(self):
@@ -377,13 +391,17 @@ class Project(object):
 
         """
 
+        unique_sprite_names = set(sprite.name for sprite in self.sprites)
+        if len(unique_sprite_names) < len(self.sprites):
+            raise ValueError, "Sprite names must be unique"
+
         # sync self.sprites and self.actors
-        for sprite in self.sprites.values():
+        for sprite in self.sprites:
             if sprite not in self.actors:
                 self.actors.append(sprite)
         for actor in self.actors:
             if isinstance(actor, Sprite):
-                if actor not in self.sprites.values():
+                if actor not in self.sprites:
                     raise ValueError, \
                         "Can't have sprite on stage that isn't in sprites"
 
@@ -502,6 +520,9 @@ class Stage(Scriptable):
         """Alias for :attr:`costumes`."""
         return self.costumes
 
+    def __repr__(self):
+        return "<Stage()>"
+
 
 class Sprite(Scriptable, Actor):
     """A scriptable object displayed on the project stage. Can be moved and
@@ -512,7 +533,15 @@ class Sprite(Scriptable, Actor):
 
     """
 
-    def __init__(self):
+    def __init__(self, name):
+        Scriptable.__init__(self)
+
+        self.name = unicode(name)
+        """The name of the sprite, as referred to from scripts and displayed in
+        the Scratch interface.
+
+        """
+
         self.position = (0, 0)
         """The ``(x, y)`` position to the right and above of the centre of the
         stage in pixels.
@@ -548,6 +577,9 @@ class Sprite(Scriptable, Actor):
         assert self.rotation_style in ("normal", "leftRight", "none")
         if not self.costume:
             raise ValueError, "%r doesn't have a costume" % self
+
+    def __repr__(self):
+        return "<Sprite(%r)>" % self.name
 
 
 class Watcher(Actor):
@@ -898,27 +930,6 @@ class Block(object):
         if self.type:
             return self.type.command
         return ""
-
-
-    def _set_script(self, script):
-        """Set the :class:`Script` instance this sprite belongs to. Called when
-        the block is added to a script, so that the :attr:`script` attribute is
-        magically updated.
-
-        """
-
-        if self.script and self.script is not script:
-            if self in self.script:
-                self.script.remove(self)
-
-        for arg in self.args:
-            if isinstance(arg, Block):
-                arg.set_script(script)
-            elif isinstance(arg, list):
-                for block in arg:
-                    block.set_script(script)
-
-        self.script = script
 
     def __eq__(self, other):
         return (

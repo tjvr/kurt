@@ -260,10 +260,10 @@ class Scratch14Plugin(KurtPlugin):
 
         # sprites
         for v14_sprite in v14_project.sprites:
-            kurt_sprite = kurt.Sprite()
+            kurt_sprite = kurt.Sprite(v14_sprite.name)
             _load_scriptable(kurt_sprite, v14_sprite)
             kurt_sprite.lists = _load_lists(v14_sprite.lists, kurt_project)
-            kurt_project.sprites[kurt_sprite.name] = kurt_sprite
+            kurt_project.sprites.append(kurt_sprite)
 
         # variable watchers
         for v14_morph in v14_project.stage.submorphs:
@@ -276,7 +276,7 @@ class Scratch14Plugin(KurtPlugin):
                 if v14_sprite == v14_project.stage:
                     kurt_thing = kurt_project
                 else:
-                    kurt_thing = kurt_project.sprites[v14_sprite.name]
+                    kurt_thing = kurt_project.get_sprite(v14_sprite.name)
 
                 name = v14_watcher.readout.parameter
                 kurt_var = kurt_thing.variables[name]
@@ -316,7 +316,7 @@ class Scratch14Plugin(KurtPlugin):
             kurt_project.variables))
 
         # sprites
-        for (name, kurt_sprite) in kurt_project.sprites.items():
+        for kurt_sprite in kurt_project.sprites:
             v14_sprite = Sprite()
             _save_scriptable(kurt_sprite, v14_sprite)
             _save_lists(kurt_sprite.lists, v14_sprite, v14_project)
