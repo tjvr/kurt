@@ -66,7 +66,7 @@ Supported file formats:
     ``"scratch20"`` Scratch 2.0 ``.sb2``
     =============== =========== =========
 
-Use "Format name" for :attr:`Project.convert()`.
+Pass "Format name" as the argument to :attr:`Project.convert()`.
 
 
 ----
@@ -214,7 +214,8 @@ class Project(object):
         Includes :class:`Watchers <Watcher>` as well as :class:`Sprites
         <Sprite>`.
 
-        Synced with :attr:`sprites` on save.
+        Sprites in :attr:`sprites` but not in actors will be added to actors on
+        save.
 
         """
         # TODO specify stacking order
@@ -377,13 +378,14 @@ class Project(object):
         """
 
         # sync self.sprites and self.actors
-        for sprite in self.sprites:
+        for sprite in self.sprites.values():
             if sprite not in self.actors:
                 self.actors.append(sprite)
         for actor in self.actors:
             if isinstance(actor, Sprite):
-                if actor not in self.sprites:
-                    self.sprites.add(actor)
+                if actor not in self.sprites.values():
+                    raise ValueError, \
+                        "Can't have sprite on stage that isn't in sprites"
 
         # normalize actors
         self.stage._normalize()
@@ -469,8 +471,8 @@ class Scriptable(object):
     def _normalize(self):
         if self.costume:
             # Make sure it's in costumes
-            if self.costume not in self.costumes:
-                self.costumes.add(self.costume)
+            if self.costume not in self.costumes.values():
+                raise ValueError, "costume is not in self.costumes"
         else:
             # No costume!
             if self.costumes:
@@ -490,6 +492,8 @@ class Stage(Scriptable):
 
     """
 
+    name = "Stage"
+
     def __init__(self):
         Scriptable.__init__(self)
 
@@ -497,9 +501,6 @@ class Stage(Scriptable):
     def backgrounds(self):
         """Alias for :attr:`costumes`."""
         return self.costumes
-
-    def __repr__(self):
-        return "<Stage>"
 
 
 class Sprite(Scriptable, Actor):
@@ -550,7 +551,7 @@ class Sprite(Scriptable, Actor):
 
 
 class Watcher(Actor):
-    """A monitor for displaying a data value (such as a variable) on the stage.
+    """A monitor for displaying a data value on the stage.
 
     Some formats won't save hidden watchers, and so their position won't be
     remembered.
@@ -630,10 +631,7 @@ class Variable(object):
 
     """
 
-    def __init__(self, name, value=0, is_cloud=False):
-        self.name = unicode(name)
-        """The name of the variable, as referred to in scripts."""
-
+    def __init__(self, value=0, is_cloud=False):
         self.value = value
         """The value of the variable, usually a number or a string.
 
@@ -649,12 +647,10 @@ class Variable(object):
 
         """
 
-        self._normalize()
-
     def __repr__(self):
-        r = "%s(%r" % (self.__class__.__name__, self.name)
+        r = "%s(" % self.__class__.__name__
         if self.is_cloud:
-            r += ", %r, is_cloud=%r)" % (self.value, self.is_cloud)
+            r += "%r, is_cloud=%r)" % (self.value, self.is_cloud)
         elif self.value:
             r += ", %r)" % self.value
         else:
@@ -671,10 +667,7 @@ class List(object):
     list values, and this class is not used.
 
     """
-    def __init__(self, name, items=None, is_cloud=False):
-        self.name = unicode(name)
-        """The name of the list, as referred to in scripts."""
-
+    def __init__(self, items=None, is_cloud=False):
         self.items = list(items) if items else []
         """The items contained in the list. A Python list of unicode strings."""
 
@@ -691,7 +684,7 @@ class List(object):
         self.items = map(unicode, self.items)
 
     def __repr__(self):
-        r = "%s(%r" % (self.__class__.__name__, self.name)
+        r = "%s(" % self.__class__.__name__
         if self.is_cloud:
             r += ", %r, is_cloud=%r)" % (self.items, self.is_cloud)
         else:
@@ -864,8 +857,6 @@ class Block(object):
     """
 
     def __init__(self, block_type, *args):
-        self.script = None
-
         self.type = BlockType.get(block_type)
         """:class:`BlockType` instance. The command this block performs."""
         # TODO: accept command? or change repr.
@@ -973,22 +964,16 @@ class Script(object):
 
     """
 
-    # TODO: Magic block.script
-    #           - does using script.blocks mess up our magic?
-    # TODO: Magic script.scriptable
-
     def __init__(self, blocks=None, pos=(10,10)):
-        self.scriptable = None
-        """The :class:`Scriptable` instance the script belongs to."""
+        self.blocks = blocks or []
+        self.blocks = list(self.blocks)
+        """The list of :class:`Blocks <Block>`."""
 
         self.pos = pos
         """``(x, y)`` position from the top-left of the script area in
         pixels.
 
         """
-        self.blocks = blocks or []
-        self.blocks = list(self.blocks)
-        """The list of :class:`Blocks <Block>`."""
 
     def _normalize(self):
         self.pos = self.pos
@@ -1004,11 +989,11 @@ class Script(object):
         return not self == other
 
     def __repr__(self):
-        string = "Script(%s, [\n" % repr(self.pos)
+        string = "Script([\n"
         for block in self.blocks:
             string += "\t" + repr(block).replace("\n", "\n\t") + ",\n"
         string = string.rstrip().rstrip(",")
-        return string + "])"
+        return string + "], %r)" % self.pos
 
     # Pretend to be a list #
 
@@ -1029,16 +1014,6 @@ class Script(object):
 
     def __delitem__(self, index):
         del self.blocks[index]
-
-    # Make sure Block.script gets set correctly
-
-    def append(self, block):
-        self.blocks.append(block)
-        block.set_script(self)
-
-    def insert(self, index, block):
-        self.blocks.insert(index, block)
-        block.set_script(self)
 
 
 class Comment(object):

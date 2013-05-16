@@ -50,27 +50,28 @@ except ImportError:
 def _load_image(v14_image):
     if not v14_image:
         return
+    name = v14_image.name
 
     if v14_image.jpegBytes: # raw JPEG
-        kurt_image = kurt.CostumeFromFile(v14_image.name, v14_image.jpegBytes,
+        kurt_image = kurt.CostumeFromFile(v14_image.jpegBytes,
                 "JPEG")
         kurt_image.size = v14_image.size
         kurt_image.rotation_center = v14_image.rotationCenter
-        return kurt_image
+        return (name, kurt_image)
 
     # TODO: subclass Costume for lazy image parsing
 
     else: # use PIL
-        return kurt.CostumeFromPIL(v14_image.name, v14_image.get_image())
+        return (name, kurt.CostumeFromPIL(v14_image.get_image()))
 
-def _save_image(kurt_image):
+def _save_image((name, kurt_image)):
     if not kurt_image:
         return
 
     if isinstance(kurt_image, kurt.CostumeFromFile):
         if kurt_image.format == "JPEG": # raw JPEG
             v14_image = Image(
-                name = kurt_image.name,
+                name = name,
                 jpegBytes = ByteArray(kurt_image.read()),
             )
             v14_image.size = kurt_image.size
@@ -78,7 +79,7 @@ def _save_image(kurt_image):
             return v14_image
 
     # use PIL
-    return Image.from_image(kurt_image.name, kurt_image.pil_image)
+    return Image.from_image(name, kurt_image.pil_image)
 
 def _load_sound(v14_sound):
     pass
@@ -93,8 +94,7 @@ def _load_block(v14_block):
             arg = _load_block(arg)
         elif isinstance(arg, list):
             arg = map(_load_block, arg)
-        elif isinstance(arg, Symbol):
-            print arg
+        elif isinstance(arg, Symbol): # TODO: translate these
             arg = arg.value
         args.append(arg)
     return kurt.Block(v14_block.command, *args)
@@ -127,15 +127,15 @@ def _save_script(kurt_script):
     )
 
 def _load_variable((name, value)):
-    return kurt.Variable(name, value)
+    return (name, kurt.Variable(name, value))
 
-def _save_variable(kurt_variable):
-    return (kurt_variable.name, kurt_variable.value)
+def _save_variable((name, kurt_variable)):
+    return (name, kurt_variable.value)
 
 def _load_lists(v14_lists, kurt_project):
-    kurt_lists = []
+    kurt_lists = {}
     for v14_list in v14_lists.values():
-        kurt_list = kurt.List(v14_list.name, map(unicode, v14_list.items))
+        kurt_list = kurt.List(map(unicode, v14_list.items))
 
         kurt_watcher = kurt.Watcher(kurt_list)
         kurt_watcher.visible = bool(v14_list.owner)
@@ -147,14 +147,14 @@ def _load_lists(v14_lists, kurt_project):
         kurt_watcher.pos = (x, y)
         kurt_project.actors.append(kurt_watcher)
 
-        kurt_lists.append(kurt_list)
+        kurt_lists[v14_list.name] = kurt_list
 
     return kurt_lists
 
 def _save_lists(kurt_lists, v14_morph, v14_project):
-    for kurt_list in kurt_lists:
+    for (name, kurt_list) in kurt_lists.items():
         v14_list = ScratchListMorph(
-            name = kurt_list.name,
+            name = name,
             items = kurt_list.items,
         )
 
@@ -179,13 +179,13 @@ def _save_lists(kurt_lists, v14_morph, v14_project):
 
 def _load_scriptable(kurt_scriptable, v14_scriptable):
     kurt_scriptable.scripts = map(_load_script, v14_scriptable.scripts)
-    kurt_scriptable.variables = map(_load_variable,
-            v14_scriptable.variables.items())
-    kurt_scriptable.costumes = map(_load_image, v14_scriptable.images)
-    #kurt_scriptable.sounds = map(_load_sound, v14_scriptable.sounds) # TODO
+    kurt_scriptable.variables = dict(map(_load_variable,
+            v14_scriptable.variables.items()))
+    kurt_scriptable.costumes = dict(map(_load_image, v14_scriptable.images))
+    # kurt_scriptable.sounds = dict(map(_load_sound, v14_scriptable.sounds) # TODO
 
     costume_index = v14_scriptable.images.index(v14_scriptable.costume)
-    kurt_scriptable.costume = kurt_scriptable.costumes[costume_index]
+    kurt_scriptable.costume = kurt_scriptable.costumes.values()[costume_index]
 
     kurt_scriptable.volume = v14_scriptable.volume
     kurt_scriptable.tempo = v14_scriptable.tempoBPM
@@ -208,12 +208,12 @@ def _save_scriptable(kurt_scriptable, v14_scriptable):
     v14_scriptable.scripts = user_objects.ScriptCollection(
             map(_save_script, kurt_scriptable.scripts))
     v14_scriptable.variables = dict(map(_save_variable,
-        kurt_scriptable.variables))
-    v14_scriptable.images = map(_save_image, kurt_scriptable.costumes)
+        kurt_scriptable.variables.items()))
+    v14_scriptable.images = map(_save_image, kurt_scriptable.costumes.items())
     #v14_scriptable.sounds = map(_save_sound, kurt_scriptable.sounds) # TODO
 
     if kurt_scriptable.costume:
-        costume_index = kurt_scriptable.costumes.index(kurt_scriptable.costume)
+        costume_index = kurt_scriptable.costumes.values().index(kurt_scriptable.costume)
         v14_scriptable.costume = v14_scriptable.images[costume_index]
 
     v14_scriptable.volume = kurt_scriptable.volume
@@ -248,7 +248,7 @@ class Scratch14Plugin(KurtPlugin):
         # project info
         kurt_project.notes = v14_project.info['comment']
         kurt_project.author = v14_project.info['author']
-        kurt_project.thumbnail = _load_image(v14_project.info['thumbnail'])
+        (_, kurt_project.thumbnail) = _load_image(v14_project.info['thumbnail'])
 
         # stage
         _load_scriptable(kurt_project.stage, v14_project.stage)
@@ -263,7 +263,7 @@ class Scratch14Plugin(KurtPlugin):
             kurt_sprite = kurt.Sprite()
             _load_scriptable(kurt_sprite, v14_sprite)
             kurt_sprite.lists = _load_lists(v14_sprite.lists, kurt_project)
-            kurt_project.sprites.add(kurt_sprite)
+            kurt_project.sprites[kurt_sprite.name] = kurt_sprite
 
         # variable watchers
         for v14_morph in v14_project.stage.submorphs:
@@ -292,6 +292,8 @@ class Scratch14Plugin(KurtPlugin):
                     kurt_watcher.style = "slider"
 
                 kurt_project.actors.append(kurt_watcher)
+        
+        # TODO: stacking order of actors.
 
         kurt_project.original = v14_project # DEBUG
 
@@ -304,7 +306,8 @@ class Scratch14Plugin(KurtPlugin):
         # project info
         v14_project.info['comment'] = kurt_project.notes
         v14_project.info['author'] = kurt_project.author
-        v14_project.info['thumbnail'] = _save_image(kurt_project.thumbnail)
+        v14_project.info['thumbnail'] = _save_image(("thumbnail", 
+                kurt_project.thumbnail))
 
         # stage
         _save_scriptable(kurt_project.stage, v14_project.stage)
@@ -313,7 +316,7 @@ class Scratch14Plugin(KurtPlugin):
             kurt_project.variables))
 
         # sprites
-        for kurt_sprite in kurt_project.sprites:
+        for (name, kurt_sprite) in kurt_project.sprites.items():
             v14_sprite = Sprite()
             _save_scriptable(kurt_sprite, v14_sprite)
             _save_lists(kurt_sprite.lists, v14_sprite, v14_project)
