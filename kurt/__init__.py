@@ -472,11 +472,11 @@ class Scriptable(object):
         self.lists = {}
         """:class:`dict` of :class:`Lists <List>` by name."""
 
-        self.costumes = OrderedDict()
-        """:class:`OrderedDict` of :class:`Costumes <Costume>` by name."""
+        self.costumes = []
+        """List of :class:`Costumes <Costume>`."""
 
-        self.sounds = OrderedDict()
-        """:class:`OrderedDict` of :class:`Sounds <Sound>` by name."""
+        self.sounds = []
+        """List of :class:`Sounds <Sound>`."""
 
         self.costume = None
         """The currently selected :class:`Costume`.
@@ -490,12 +490,21 @@ class Scriptable(object):
     def _normalize(self):
         if self.costume:
             # Make sure it's in costumes
-            if self.costume not in self.costumes.values():
+            if self.costume not in self.costumes:
                 raise ValueError, "costume is not in self.costumes"
         else:
             # No costume!
             if self.costumes:
-                self.costume = self.costumes.values()[0]
+                self.costume = self.costumes[0]
+
+    @property
+    def costume_index(self):
+        if self.costume:
+            return self.costumes.index(self.costume)
+
+    @costume_index.setter
+    def costume_index(self, index):
+        self.costume = self.costumes[index]
 
 
 class Stage(Scriptable):
@@ -1139,7 +1148,10 @@ class Costume(object):
 
     """
 
-    def __init__(self):
+    def __init__(self, name):
+        self.name = unicode(name)
+        """Name used by scripts to refer to this Costume."""
+
         self.rotation_center = (0, 0)
         """``(x, y)`` position of the center of the image from the top-left
         corner, about which the sprite rotates."""
@@ -1194,6 +1206,8 @@ class Costume(object):
                 pass
 
         if not name:
+            if self.name:
+                name = self.name
             raise ValueError, "name is required"
 
         if image_format:
@@ -1215,6 +1229,9 @@ class Costume(object):
             self.pil_image.save(path, image_format)
         else:
             raise ValueError
+
+    def save_to_string(self, image_format):
+        return self._save_to_string(image_format)
 
     def _save_to_string(self, image_format):
         # Override in subclass.
@@ -1247,6 +1264,7 @@ class CostumeFromFile(Costume):
     Do not pass a path to this constructor! Use
     :attr:`CostumeFromFile.from_path` instead.
 
+    :param name:         Name of the ``Costume`` as referred to from scripts.
     :param file_:           File-like object (must be opened in binary mode).
                          May also be a bytestring containing the raw file
                          contents.
@@ -1255,8 +1273,8 @@ class CostumeFromFile(Costume):
 
     """
 
-    def __init__(self, file_, image_format=None):
-        Costume.__init__(self)
+    def __init__(self, name, file_, image_format=None):
+        Costume.__init__(self, name)
         self.image_format = image_format
 
         if isinstance(file_, basestring):
@@ -1279,11 +1297,11 @@ class CostumeFromFile(Costume):
 
         fp = open(path, "rb")
 
-        return cls(fp, image_format)
+        return cls(name, fp, image_format)
 
     def _decode(self):
         self.file.seek(0)
-        return CostumeFromPIL(PIL.Image.open(self.file))
+        return CostumeFromPIL(self.name, PIL.Image.open(self.file))
 
     def _save(self, path, image_format):
         self.file.seek(0)
@@ -1296,8 +1314,8 @@ class CostumeFromPIL(Costume):
 
     """
 
-    def __init__(self, pil_image):
-        Costume.__init__(self)
+    def __init__(self, name, pil_image):
+        Costume.__init__(self, name)
 
         self.pil_image = pil_image
         self.size = pil_image.size
