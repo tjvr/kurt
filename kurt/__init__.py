@@ -591,14 +591,14 @@ class Watcher(Actor):
 
     """
 
-    def __init__(self, value, style="normal", visible=True, pos=None):
+    def __init__(self, watching, style="normal", visible=True, pos=None):
         Actor.__init__(self)
 
-        self.value = value
+        self.watching = watching
         """The data the watcher displays.
 
-        Can be a :class:`Variable`, a :class:`List`, or a reporter
-        :class:`Block`.
+        Can be a :class:`VariableReference`, a :class:`ListReference`, or a
+        reporter :class:`Block`.
 
         """
 
@@ -635,20 +635,92 @@ class Watcher(Actor):
         self._normalize()
 
     def _normalize(self):
-        if isinstance(self.value, Variable) or isinstance(self.value, List):
-            self.value.watcher = self
-
         assert self.style in ("normal", "large", "slider")
-        if isinstance(self.value, List):
+        if isinstance(self.watching, ListReference):
             assert self.style == "normal"
-        elif isinstance(self.value, Block):
+        elif isinstance(self.watching, Block):
             assert self.style != "slider"
-        elif isinstance(self.value, Variable):
+        elif isinstance(self.watching, VariableReference):
             pass
 
     def __repr__(self):
-        name = getattr(self.value, "name", str(self.value))
-        return "<Watcher(%s, %s)>" % (name, self.style)
+        r = "Watcher(%r, %r" % (self.watching, self.style)
+        if not self.visible:
+            r += ", visible=False"
+        if self.pos:
+            r += ", pos=%s" % repr(self.pos)
+        r += ")"
+        return r
+
+
+class VariableReference(object):
+    """A reference to a :class:`Variable` owned by a :class:`Scriptable`."""
+
+    def __init__(self, scriptable, name):
+        self.scriptable = scriptable
+        """The :class:`Scriptable` or :class:`Project` instance the variable
+        belongs to.
+
+        """
+
+        self.name = name
+        """The name of the variable, as found in :attr:`Scriptable.variables`.
+
+        """
+
+    @property
+    def value(self):
+        """Return the :class:`Variable` instance the reference points to."""
+        return self.scriptable.variables[self.name]
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, VariableReference) and
+            self.scriptable == other.scriptable and
+            self.name == other.name
+        )
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __repr__(self):
+        return "%s(%r, %r)" % (self.__class__.__name__,
+                self.scriptable, self.name)
+
+
+class ListReference(object):
+    """A reference to a :class:`List` owned by a :class:`Scriptable`."""
+
+    def __init__(self, scriptable, name):
+        self.scriptable = scriptable
+        """The :class:`Scriptable` or :class:`Project` instance the list
+        belongs to.
+
+        """
+
+        self.name = name
+        """The name of the list, as found in :attr:`Scriptable.lists`.
+
+        """
+
+    @property
+    def value(self):
+        """Return the :class:`List` instance the reference points to."""
+        return self.scriptable.lists[self.name]
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ListReference) and
+            self.scriptable == other.scriptable and
+            self.name == other.name
+        )
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __repr__(self):
+        return "%s(%r, %r)" % (self.__class__.__name__,
+                self.scriptable, self.name)
 
 
 
@@ -660,7 +732,7 @@ class Variable(object):
     There are both :attr`global variables <Project.variables> and
     :attr:`sprite-specific variables <Sprite.variables>`.
 
-    Some formats also have :attr:`stage-specific variables <Stage.variables`.
+    Some formats also have :attr:`stage-specific variables <Stage.variables>`.
 
     """
 
@@ -681,13 +753,10 @@ class Variable(object):
         """
 
     def __repr__(self):
-        r = "%s(" % self.__class__.__name__
+        r = "%s(%r" % (self.__class__.__name__, self.value)
         if self.is_cloud:
-            r += "%r, is_cloud=%r)" % (self.value, self.is_cloud)
-        elif self.value:
-            r += ", %r)" % self.value
-        else:
-            r += ")"
+            r += ", is_cloud=%r" % self.is_cloud
+        r += ")"
         return r
 
 
@@ -717,11 +786,10 @@ class List(object):
         self.items = map(unicode, self.items)
 
     def __repr__(self):
-        r = "%s(" % self.__class__.__name__
+        r = "%s(%r" % (self.__class__.__name__, self.items)
         if self.is_cloud:
-            r += ", %r, is_cloud=%r)" % (self.items, self.is_cloud)
-        else:
-            r += ", %r)" % self.items
+            r += ", is_cloud=%r" % self.is_cloud
+        r += ")"
         return r
         # TODO: limit self.items length?
 

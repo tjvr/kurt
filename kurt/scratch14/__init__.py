@@ -132,12 +132,15 @@ def _load_variable((name, value)):
 def _save_variable((name, kurt_variable)):
     return (name, kurt_variable.value)
 
-def _load_lists(v14_lists, kurt_project):
+def _load_lists(v14_lists, kurt_project, kurt_owner):
     kurt_lists = {}
     for v14_list in v14_lists.values():
         kurt_list = kurt.List(map(unicode, v14_list.items))
+        kurt_lists[v14_list.name] = kurt_list
 
-        kurt_watcher = kurt.Watcher(kurt_list)
+        kurt_list_ref = kurt.ListReference(kurt_owner, v14_list.name)
+
+        kurt_watcher = kurt.Watcher(kurt_list_ref)
         kurt_watcher.visible = bool(v14_list.owner)
 
         (x, y, w, h) = v14_list.bounds.value
@@ -147,31 +150,39 @@ def _load_lists(v14_lists, kurt_project):
         kurt_watcher.pos = (x, y)
         kurt_project.actors.append(kurt_watcher)
 
-        kurt_lists[v14_list.name] = kurt_list
-
     return kurt_lists
 
-def _save_lists(kurt_lists, v14_morph, v14_project):
-    for (name, kurt_list) in kurt_lists.items():
+def _save_lists(kurt_thing, kurt_project, v14_morph, v14_project):
+    for (name, kurt_list) in kurt_thing.lists.items():
         v14_list = ScratchListMorph(
             name = name,
             items = kurt_list.items,
         )
 
-        pos = kurt_list.watcher.pos
+        kurt_list_ref = kurt.ListReference(kurt_thing, name)
+
+        for actor in kurt_project.actors:
+            if isinstance(actor, kurt.Watcher):
+                if actor.watching == kurt_list_ref:
+                    kurt_watcher = actor
+                    break
+        else:
+            kurt_watcher = kurt.Watcher(kurt_list_ref, visible=False)
+
+        pos = kurt_watcher.pos
         if pos:
             (x, y) = pos
         else:
             (x, y) = (375, 10)
             # TODO: stack them prettily!
 
-        if not kurt_list.watcher.visible:
+        if not kurt_watcher.visible:
             x += 534
             y += 71
         v14_list.bounds = Rectangle([x, y, x+95, y+115])
 
         v14_list.target = v14_morph
-        if kurt_list.watcher.visible:
+        if kurt_watcher.visible:
             v14_list.owner = v14_project.stage
             v14_project.stage.submorphs.append(v14_list)
 
@@ -252,7 +263,8 @@ class Scratch14Plugin(KurtPlugin):
 
         # stage
         _load_scriptable(kurt_project.stage, v14_project.stage)
-        kurt_project.lists = _load_lists(v14_project.stage.lists, kurt_project)
+        kurt_project.lists = _load_lists(v14_project.stage.lists, kurt_project,
+                kurt_project)
         
         # global vars
         kurt_project.variables = kurt_project.stage.variables
@@ -262,7 +274,8 @@ class Scratch14Plugin(KurtPlugin):
         for v14_sprite in v14_project.sprites:
             kurt_sprite = kurt.Sprite(v14_sprite.name)
             _load_scriptable(kurt_sprite, v14_sprite)
-            kurt_sprite.lists = _load_lists(v14_sprite.lists, kurt_project)
+            kurt_sprite.lists = _load_lists(v14_sprite.lists, kurt_project,
+                    kurt_sprite)
             kurt_project.sprites.append(kurt_sprite)
 
         # variable watchers
@@ -279,9 +292,9 @@ class Scratch14Plugin(KurtPlugin):
                     kurt_thing = kurt_project.get_sprite(v14_sprite.name)
 
                 name = v14_watcher.readout.parameter
-                kurt_var = kurt_thing.variables[name]
+                kurt_var_ref = kurt.VariableReference(kurt_thing, name)
 
-                kurt_watcher = kurt.Watcher(kurt_var)
+                kurt_watcher = kurt.Watcher(kurt_var_ref)
 
                 (x, y, right, bottom) = v14_watcher.bounds.value
                 kurt_watcher.pos = (x, y)
@@ -311,7 +324,7 @@ class Scratch14Plugin(KurtPlugin):
 
         # stage
         _save_scriptable(kurt_project.stage, v14_project.stage)
-        _save_lists(kurt_project.lists, v14_project.stage, v14_project)
+        _save_lists(kurt_project, kurt_project, v14_project.stage, v14_project)
         v14_project.stage.variables = dict(map(_save_variable,
             kurt_project.variables))
 
@@ -319,7 +332,7 @@ class Scratch14Plugin(KurtPlugin):
         for kurt_sprite in kurt_project.sprites:
             v14_sprite = Sprite()
             _save_scriptable(kurt_sprite, v14_sprite)
-            _save_lists(kurt_sprite.lists, v14_sprite, v14_project)
+            _save_lists(kurt_sprite, kurt_project, v14_sprite, v14_project)
             v14_project.sprites.append(v14_sprite)
 
         # variable watchers
@@ -332,7 +345,7 @@ class Scratch14Plugin(KurtPlugin):
 
             if isinstance(kurt_actor, kurt.Watcher):
                 kurt_watcher = kurt_actor
-                if isinstance(kurt_watcher.value, kurt.List):
+                if isinstance(kurt_watcher.watching, kurt.ListReference):
                     continue
 
                 if not kurt_watcher.visible:
@@ -345,7 +358,7 @@ class Scratch14Plugin(KurtPlugin):
                 else:
                     (x, y) = (10, 10)
 
-                kurt_parent = kurt_watcher.value.parent
+                kurt_parent = kurt_watcher.watching.parent
                 if kurt_parent == kurt_project:
                     v14_morph = v14_project.stage
                     v14_watcher.isSpriteSpecfic = False
