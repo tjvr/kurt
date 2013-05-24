@@ -53,33 +53,31 @@ def _load_image(v14_image):
     name = v14_image.name
 
     if v14_image.jpegBytes: # raw JPEG
-        kurt_image = kurt.CostumeFromFile(v14_image.jpegBytes,
-                "JPEG")
-        kurt_image.size = v14_image.size
-        kurt_image.rotation_center = v14_image.rotationCenter
-        return (name, kurt_image)
+        kurt_costume = kurt.CostumeFromFile(name, v14_image.jpegBytes, "JPEG")
+        kurt_costume.size = v14_image.size
+        kurt_costume.rotation_center = v14_image.rotationCenter
+        return kurt_costume
 
     # TODO: subclass Costume for lazy image parsing
 
     else: # use PIL
-        return (name, kurt.CostumeFromPIL(v14_image.get_image()))
+        return kurt.CostumeFromPIL(name, v14_image.get_image())
 
-def _save_image((name, kurt_image)):
-    if not kurt_image:
+def _save_image(kurt_costume):
+    if not kurt_costume:
         return
 
-    if isinstance(kurt_image, kurt.CostumeFromFile):
-        if kurt_image.format == "JPEG": # raw JPEG
-            v14_image = Image(
-                name = name,
-                jpegBytes = ByteArray(kurt_image.read()),
-            )
-            v14_image.size = kurt_image.size
-            v14_image.rotationCenter = kurt_image.rotation_center
-            return v14_image
+    if kurt_costume.image_format == "JPEG": # raw JPEG
+        v14_image = Image(
+            name = kurt_costume.name,
+            jpegBytes = ByteArray(kurt_costume.save_to_string()),
+        )
+        v14_image.size = kurt_costume.size
+        v14_image.rotationCenter = Point(kurt_costume.rotation_center)
+        return v14_image
 
     # use PIL
-    return Image.from_image(name, kurt_image.pil_image)
+    return Image.from_image(kurt_costume.name, kurt_costume.pil_image)
 
 def _load_sound(v14_sound):
     pass
@@ -192,11 +190,11 @@ def _load_scriptable(kurt_scriptable, v14_scriptable):
     kurt_scriptable.scripts = map(_load_script, v14_scriptable.scripts)
     kurt_scriptable.variables = dict(map(_load_variable,
             v14_scriptable.variables.items()))
-    kurt_scriptable.costumes = dict(map(_load_image, v14_scriptable.images))
+    kurt_scriptable.costumes = map(_load_image, v14_scriptable.images)
     # kurt_scriptable.sounds = dict(map(_load_sound, v14_scriptable.sounds) # TODO
 
     costume_index = v14_scriptable.images.index(v14_scriptable.costume)
-    kurt_scriptable.costume = kurt_scriptable.costumes.values()[costume_index]
+    kurt_scriptable.costume = kurt_scriptable.costumes[costume_index]
 
     kurt_scriptable.volume = v14_scriptable.volume
     kurt_scriptable.tempo = v14_scriptable.tempoBPM
@@ -220,15 +218,14 @@ def _save_scriptable(kurt_scriptable, v14_scriptable):
             map(_save_script, kurt_scriptable.scripts))
     v14_scriptable.variables = dict(map(_save_variable,
         kurt_scriptable.variables.items()))
-    v14_scriptable.images = map(_save_image, kurt_scriptable.costumes.items())
+    v14_scriptable.images = map(_save_image, kurt_scriptable.costumes)
     #v14_scriptable.sounds = map(_save_sound, kurt_scriptable.sounds) # TODO
 
     if kurt_scriptable.costume:
-        costume_index = kurt_scriptable.costumes.values().index(kurt_scriptable.costume)
+        costume_index = kurt_scriptable.costumes.index(kurt_scriptable.costume)
         v14_scriptable.costume = v14_scriptable.images[costume_index]
 
     v14_scriptable.volume = kurt_scriptable.volume
-    v14_scriptable.tempoBPM = kurt_scriptable.tempo
 
     # sprite
     if isinstance(kurt_scriptable, kurt.Sprite):
@@ -259,7 +256,7 @@ class Scratch14Plugin(KurtPlugin):
         # project info
         kurt_project.notes = v14_project.info['comment']
         kurt_project.author = v14_project.info['author']
-        (_, kurt_project.thumbnail) = _load_image(v14_project.info['thumbnail'])
+        kurt_project.thumbnail = _load_image(v14_project.info['thumbnail'])
 
         # stage
         _load_scriptable(kurt_project.stage, v14_project.stage)
@@ -319,14 +316,15 @@ class Scratch14Plugin(KurtPlugin):
         # project info
         v14_project.info['comment'] = kurt_project.notes
         v14_project.info['author'] = kurt_project.author
-        v14_project.info['thumbnail'] = _save_image(("thumbnail", 
-                kurt_project.thumbnail))
+        v14_project.info['thumbnail'] = _save_image(kurt_project.thumbnail)
 
         # stage
         _save_scriptable(kurt_project.stage, v14_project.stage)
         _save_lists(kurt_project, kurt_project, v14_project.stage, v14_project)
         v14_project.stage.variables = dict(map(_save_variable,
             kurt_project.variables))
+
+        v14_project.stage.tempoBPM = kurt_project.tempo
 
         # sprites
         for kurt_sprite in kurt_project.sprites:
@@ -358,7 +356,7 @@ class Scratch14Plugin(KurtPlugin):
                 else:
                     (x, y) = (10, 10)
 
-                kurt_parent = kurt_watcher.watching.parent
+                kurt_parent = kurt_project #kurt_watcher.watching.parent # TODO
                 if kurt_parent == kurt_project:
                     v14_morph = v14_project.stage
                     v14_watcher.isSpriteSpecfic = False
@@ -368,10 +366,10 @@ class Scratch14Plugin(KurtPlugin):
                 v14_watcher.readout.target = v14_morph
                 v14_watcher.owner = v14_project.stage
 
-                if isinstance(kurt_watcher.value, kurt.Variable):
-                    v14_watcher.readout.parameter = kurt_watcher.value.name
+                if isinstance(kurt_watcher.watching, kurt.VariableReference):
+                    v14_watcher.readout.parameter = kurt_watcher.watching.name
 
-                    v14_watcher.name = kurt_watcher.value.name
+                    v14_watcher.name = kurt_watcher.watching.name
 
                 (w, h) = (63, 21)
 
@@ -395,7 +393,7 @@ class Scratch14Plugin(KurtPlugin):
                         owner = v14_watcher,
                         properties = None,
                         setValueSelector = Symbol('setVar:to:'),
-                                                sliderColor = None,
+                        sliderColor = None,
                         sliderShadow = None,
                         sliderThickness = 0,
                         target = v14_project.stage,

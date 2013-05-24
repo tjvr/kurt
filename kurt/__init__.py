@@ -272,7 +272,8 @@ class Project(object):
         To convert to a different format, use :attr:`save()`.
 
         """
-        return self._format.name
+        if self._plugin:
+            return self._plugin.name
 
     @classmethod
     def load(cls, path, format=None):
@@ -491,20 +492,30 @@ class Scriptable(object):
         if self.costume:
             # Make sure it's in costumes
             if self.costume not in self.costumes:
-                raise ValueError, "costume is not in self.costumes"
+                self.costumes.append(self.costume)
         else:
             # No costume!
             if self.costumes:
                 self.costume = self.costumes[0]
+            else:
+                raise ValueError, "%r doesn't have a costume" % self
 
     @property
     def costume_index(self):
+        """The index of :attr:`costume` in :attr:`costumes`.
+
+        None if no costume is selected.
+
+        """
         if self.costume:
             return self.costumes.index(self.costume)
 
     @costume_index.setter
     def costume_index(self, index):
-        self.costume = self.costumes[index]
+        if index is None:
+            self.costume = None
+        else:
+            self.costume = self.costumes[index]
 
 
 class Stage(Scriptable):
@@ -522,6 +533,9 @@ class Stage(Scriptable):
 
     name = "Stage"
 
+    SIZE = (480, 360)
+    COLOR = (255, 255, 255)
+
     def __init__(self):
         Scriptable.__init__(self)
 
@@ -532,6 +546,12 @@ class Stage(Scriptable):
 
     def __repr__(self):
         return "<Stage()>"
+
+    def _normalize(self):
+        if not self.costume and not self.costumes:
+            self.costume = CostumeFromPIL("blank", PIL.Image.new("RGB", self.SIZE,
+                self.COLOR))
+        Scriptable._normalize(self)
 
 
 class Sprite(Scriptable, Actor):
@@ -1160,7 +1180,6 @@ class Costume(object):
 
     def _normalize(self):
         Media._normalize(self)
-        self.rotation_center = self.rotation_center
 
     def decode(self):
         if not self._decoded_costume:
@@ -1203,7 +1222,7 @@ class Costume(object):
             try:
                 image_format = self.__getattribute__("image_format")
             except AttributeError:
-                pass
+                pass # - raise error?
 
         if not name:
             if self.name:
@@ -1230,7 +1249,17 @@ class Costume(object):
         else:
             raise ValueError
 
-    def save_to_string(self, image_format):
+    def save_to_string(self, image_format=None):
+        if not image_format:
+            try:
+                image_format = self.__getattribute__("image_format")
+            except AttributeError:
+                pass
+
+        image_format = image_format.upper()
+        if image_format == "JPG":
+            image_format = "JPEG"
+
         return self._save_to_string(image_format)
 
     def _save_to_string(self, image_format):
@@ -1255,6 +1284,34 @@ class Costume(object):
         """Alias for ``size[1]``."""
         (width, height) = self.size
         return height
+
+    def resize(self, size):
+        """Resize -> new image"""
+        return CostumeFromPIL(self.name, self.pil_image.resize(size,
+            PIL.Image.ANTIALIAS))
+
+
+class CostumeFromPath(Costume):
+    def __init__(self, path):
+        (folder, filename) = os.path.split(path)
+        (name, extension) = os.path.splitext(filename)
+
+        Costume.__init__(self, name)
+        self.path = path
+
+        self.image_format = None
+        if extension:
+            self.image_format = extension.lstrip(".").upper()
+            if self.image_format == "JPG":
+                self.image_format = "JPEG"
+
+        self.size = (480, 360)
+
+    def save_to_string(self, image_format=None):
+        f = open(self.path)
+        contents = f.read()
+        f.close()
+        return contents
 
 
 class CostumeFromFile(Costume):
