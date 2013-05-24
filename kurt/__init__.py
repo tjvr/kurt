@@ -104,7 +104,7 @@ from kurt.scratch14 import ScratchProjectFile
 import kurt.scratch14.scripts as scripts
 
 
-# tempo is global!
+# separate Image from Costume
 
 # what if the path at Project.save(path) already exists?
 
@@ -229,6 +229,9 @@ class Project(object):
 
         self.lists = {}
         """:class:`dict` of global :class:`Lists <List>` by name."""
+
+        self.tempo = 60
+        """The tempo in BPM used for note blocks."""
 
         self.thumbnail = None
         """A screenshot of the project. May be displayed in project browser."""
@@ -483,8 +486,6 @@ class Scriptable(object):
         """
 
         self.volume = 100
-
-        self.tempo = 60
 
     def _normalize(self):
         if self.costume:
