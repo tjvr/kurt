@@ -1,18 +1,18 @@
 # Copyright (C) 2012 Tim Radvan
-# 
+#
 # This file is part of Kurt.
-# 
-# Kurt is free software: you can redistribute it and/or modify it under the 
-# terms of the GNU Lesser General Public License as published by the Free 
-# Software Foundation, either version 3 of the License, or (at your option) any 
+#
+# Kurt is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
 # later version.
-# 
-# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY 
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more 
+#
+# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
 # details.
-# 
-# You should have received a copy of the GNU Lesser General Public License along 
+#
+# You should have received a copy of the GNU Lesser General Public License along
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
 """Primitive fixed-format objects - eg String, Dictionary."""
@@ -80,37 +80,37 @@ class FixedObject(object):
         if isinstance(value, FixedObject):
             value = value.value
         self.value = value
-    
+
     def to_construct(self, context):
         return Container(
-            classID = self.__class__.__name__, 
+            classID = self.__class__.__name__,
             value = self.to_value(),
         )
-    
+
     @classmethod
     def from_construct(cls, obj, context):
         fixed_obj = cls.from_value(obj.value)
         return fixed_obj
-    
+
     def to_value(self):
         return self.value
-    
+
     @classmethod
     def from_value(cls, value):
         return cls(value)
-    
+
     def __eq__(self, other):
         return self.__class__ == other.__class__ and self.value == other.value
-    
+
     def __ne__(self, other):
         return not self == other
-    
+
     def __str__(self):
         return repr(self)
-    
+
     def __repr__(self):
         return "%s(%s)" % (self.__class__.__name__, self.value)
-    
+
     def copy(self):
         return self.__class__(self.value)
 
@@ -126,7 +126,7 @@ class FixedObjectWithRepeater(FixedObject):
     """
     def to_value(self):
         return Container(items = self.value, length = len(self.value))
-    
+
     @classmethod
     def from_value(cls, obj):
         assert len(obj.items) == obj.length, "File corrupt?"
@@ -160,12 +160,12 @@ class Symbol(FixedObjectByteArray):
 class ByteArray(FixedObjectByteArray):
     classID = 11
     _construct = PascalString("value", length_field=UBInt32("length"))
-    
+
     def __repr__(self):
         return '<%s(%i bytes)>' % (self.__class__.__name__, len(self.value))
 
 
-class SoundBuffer(FixedObjectByteArray, FixedObjectWithRepeater):    
+class SoundBuffer(FixedObjectByteArray, FixedObjectWithRepeater):
     classID = 12
     _construct = Struct("",
         UBInt32("length"),
@@ -176,7 +176,7 @@ class SoundBuffer(FixedObjectByteArray, FixedObjectWithRepeater):
 
 class UTF8(FixedObjectByteArray):
     classID = 14
-    _construct = PascalString("value", length_field=UBInt32("length"), 
+    _construct = PascalString("value", length_field=UBInt32("length"),
                               encoding="utf8")
 
 
@@ -189,32 +189,32 @@ class Collection(FixedObjectWithRepeater, ContainsRefs):
         UBInt32("length"),
         MetaRepeater(lambda ctx: ctx.length, Rename("items", Field)),
     )
-    
+
     def __init__(self, value=None):
         if value == None:
             value = []
         FixedObject.__init__(self, value)
-    
+
     def __iter__(self):
         return iter(self.value)
-    
+
     def __getattr__(self, name):
-        if name in ('append', 'count', 'extend', 'index', 'insert', 'pop', 
+        if name in ('append', 'count', 'extend', 'index', 'insert', 'pop',
                     'remove', 'reverse', 'sort'):
             return getattr(self.value, name)
-    
+
     def __getitem__(self, index):
         return self.value[index]
-    
+
     def __setitem__(self, index, value):
         self.value[index] = value
-    
+
     def __delitem__(self, index):
         del self.value[index]
-    
+
     def __len__(self):
         return len(self.value)
-    
+
     def copy(self):
         return self.__class__(list(self.value.copy))
 
@@ -240,24 +240,24 @@ class Dictionary(Collection):
             Rename("value", Field),
         )),
     )
-    
+
     def __init__(self, value=None):
         if value == None: value = {}
         Collection.__init__(self, value)
-    
+
     def to_value(self):
-        items = [Container(key=key, value=value) 
+        items = [Container(key=key, value=value)
                  for (key, value) in dict(self.value).items()]
         return Container(items=items, length=len(items))
-    
+
     @classmethod
     def from_value(cls, obj):
         value = dict([(item.key, item.value) for item in obj.items])
         return cls(value)
-    
+
     def __getattr__(self, name):
         return getattr(self.value, name)
-    
+
     def copy(self):
         return self.__class__(self.value.copy())
 
@@ -271,7 +271,7 @@ class IdentityDictionary(Dictionary):
 class Color(FixedObject):
     """A 32-bit RGB color value.
     Each component r, g, b has a value between 0 and 1023.
-    
+
     However, Colors are considered equal if they have the same 8-bit value.
     """
     classID = 30
@@ -281,66 +281,66 @@ class Color(FixedObject):
         Bits("g", 10),
         Bits("b", 10),
     )
-    
+
     _construct_32_rgba = Struct("",
         UBInt8("r"),
         UBInt8("g"),
         UBInt8("b"),
         UBInt8("alpha"),
     )
-    
+
     def __init__(self, r, g, b):
         self.r = r
         self.g = g
         self.b = b
-    
+
     def __eq__(self, other):
         return (
             isinstance(other, Color) and
             self.to_8bit() == other.to_8bit()
         )
-    
+
     def __ne__(self, other):
         return not self == other
-    
+
     def to_value(self):
         return Container(r=self.r, g=self.g, b=self.b)
-    
+
     @classmethod
     def from_value(cls, value):
         return cls(value.r, value.g, value.b)
-    
+
     @classmethod
     def from_8bit(self, r, g=None, b=None):
         if g is None and b is None:
             rgb = r
         else:
             rgb = (r, g, b)
-        
+
         return Color(*(x << 2 for x in rgb))
-        
+
 
     @property
     def value(self):
         return (self.r, self.g, self.b)
-    
+
     def copy(self):
         return Color(self.r, self.g, self.b)
-    
+
     def __repr__(self):
         return "%s(%s)" % (
             self.__class__.__name__,
             repr(self.value).strip("()"),
         )
-    
+
     def to_8bit(self):
         """Returns value with components between 0-255."""
         return tuple(x >> 2 for x in self.value)
-    
+
     def to_rgba_array(self):
         (r, g, b) = self.to_8bit()
         return array('B', (r, g, b, 255))
-    
+
     def hexcode(self):
         """Returns the color value in hex/HTML format.
         eg "ff1056".
@@ -371,17 +371,17 @@ class TranslucentColor(Color):
         self.g = g
         self.b = b
         self.alpha = alpha
-    
+
     def to_value(self):
         return Container(r=self.r, g=self.g, b=self.b, alpha=self.alpha)
-    
+
     @classmethod
     def from_value(cls, value):
         return cls(value.r, value.g, value.b, value.alpha)
-    
+
     def copy(self):
         return TranslucentColor(self.r, self.g, self.b, self.alpha)
-    
+
     @classmethod
     def from_32bit_raw_argb(cls, raw):
         container = cls._construct_32.parse(raw)
@@ -390,10 +390,10 @@ class TranslucentColor(Color):
         if color.alpha == 0 and (color.r > 0 or color.g > 0 or color.b > 0):
             color.alpha = 1023
         return color
-    
+
     def to_rgba_array(self):
         return array('B', self.to_8bit())
-    
+
     @property
     def value(self):
         return (self.r, self.g, self.b, self.alpha)
@@ -411,38 +411,38 @@ class TranslucentColor(Color):
 
 # Dimensions
 
-class Point(FixedObject):  
+class Point(FixedObject):
     classID = 32
     _construct = Struct("",
         Rename("x", Field),
         Rename("y", Field),
     )
-    
+
     def __init__(self, x, y=None):
         if y is None: (x, y) = x
         self.x = x
         self.y = y
-    
+
     @property
     def value(self):
         return (self.x, self.y)
-    
+
     def __iter__(self):
         return iter(self.value)
-    
+
     def __repr__(self):
         return 'Point(%r, %r)' % self.value
-    
+
     def to_value(self):
         return Container(x = self.x, y = self.y)
-    
+
     @classmethod
     def from_value(cls, value):
         return cls(value.x, value.y)
-    
+
     def copy(self):
         return Point(self.x, self.y)
-    
+
     @classmethod
     def from_string(cls, string):
         (x, y) = string.lstrip("(").rstrip(")").split(",")
@@ -451,7 +451,7 @@ class Point(FixedObject):
 class Rectangle(FixedObject):
     classID = 33
     _construct = StrictRepeater(4, Field)
-    
+
     @classmethod
     def from_value(cls, value):
         value = list(value)
@@ -475,7 +475,7 @@ class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
         construct.String("items", lambda ctx: ctx.length * 4),
         # Identically named "String" class -_-
     )
-        
+
     @classmethod
     def from_value(cls, obj):
         return cls(obj.items)
@@ -485,24 +485,24 @@ class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
         length = (len(value) + 3) / 4
         value += "\x00" *  (length * 4  -  len(value)) # padding
         return Container(items = value, length = length)
-    
+
     _int = Struct("int",
         UBInt8("_value"),
         If(lambda ctx: ctx._value > 223,
             IfThenElse("", lambda ctx: ctx._value <= 254, Embed(Struct("",
                 UBInt8("_second_byte"),
-                Value("_value", 
+                Value("_value",
                     lambda ctx: (ctx._value - 224) * 256 + ctx._second_byte),
             )), Embed(Struct("",
                 UBInt32("_value"),
             )))
         ),
     )
-    
+
     _length_run_coding = Struct("",
         Embed(_int), #ERROR?
         Value("length", lambda ctx: ctx._value),
-        
+
         OptionalGreedyRepeater(
             Struct("data",
                 Embed(_int),
@@ -536,7 +536,7 @@ class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
             )
         )
     )
-    
+
     @classmethod
     def from_byte_array(cls, bytes):
         """Decodes a run-length encoded ByteArray and returns a Bitmap.
@@ -544,13 +544,13 @@ class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
         stored as a byte string. (The specific encoding depends on Form.depth.)
         """
         runs = cls._length_run_coding.parse(bytes)
-        data = "" 
+        data = ""
         for run in runs.data:
             for pixel in run.pixels:
                 data += pixel
         return cls(data)
-    
-    
+
+
     def compress(self):
         """Compress to a ByteArray"""
         raise NotImplementedError
@@ -564,10 +564,10 @@ class Form(FixedObject, ContainsRefs):
         depth - how many bits are used to specify the color at each pixel.
         bits - a Bitmap with varying internal structure, depending on depth.
         privateOffset - ?
-    
+
     Note: do not modify the dict returned from the .value property.
     """
-    
+
     classID = 34
     _construct = Struct("form",
         Rename("width", Field),
@@ -576,7 +576,7 @@ class Form(FixedObject, ContainsRefs):
         Rename("privateOffset", Field),
         Rename("bits", Field), # Bitmap
     )
-    
+
     def __init__(self, **fields):
         self.width = 0
         self.height = 0
@@ -584,35 +584,35 @@ class Form(FixedObject, ContainsRefs):
         self.privateOffset = None
         self.bits = Bitmap("")
         self.colors = None
-        
+
         self.__dict__.update(fields)
-    
+
     @property
     def value(self):
-        return dict((k, getattr(self, k)) for k in self.__dict__ 
+        return dict((k, getattr(self, k)) for k in self.__dict__
                     if not k.startswith("_"))
-    
+
     def to_value(self):
         return Container(**self.value)
-    
+
     @classmethod
     def from_value(cls, value):
         return cls(**dict(value))
-    
+
     def copy(self):
         return self.__class__.from_value(self.to_value())
-    
+
     def __repr__(self):
         return "<%s(%ix%i)>" % (
             self.__class__.__name__,
             self.width, self.height,
         )
-    
+
     def built(self):
         if isinstance(self.bits, ByteArray):
             self.bits = Bitmap.from_byte_array(self.bits.value)
         assert isinstance(self.bits, Bitmap)
-    
+
     def _to_pixels(self):
         pixel_bytes = self.bits.value
         if self.depth == 32:
@@ -621,10 +621,10 @@ class Form(FixedObject, ContainsRefs):
                 if a == 0 and (r > 0 or g > 0 or b > 0):
                     a = 255
                 yield array("B", (r, g, b, a))
-        
+
         elif self.depth == 16:
             raise NotImplementedError # TODO: depth 16
-        
+
         elif self.depth <= 8:
             if self.colors:
                 colors = [color.to_rgba_array() for color in self.colors]
@@ -635,7 +635,7 @@ class Form(FixedObject, ContainsRefs):
             pixels_construct = BitStruct("", repeater)
             for pixel in pixels_construct.parse(pixel_bytes).pixels:
                 yield colors[pixel]
-    
+
     def to_array(self):
         rgba = array('B') #unsigned byte
         pixel_count = 0
@@ -649,7 +649,7 @@ class Form(FixedObject, ContainsRefs):
             pixels_per_word = 32 / self.depth
             pixels_in_last_word = self.width % pixels_per_word
             skip = (pixels_per_word - pixels_in_last_word) % pixels_per_word
-        
+
         x = 0
         pixels = self._to_pixels()
         while 1:
@@ -657,23 +657,23 @@ class Form(FixedObject, ContainsRefs):
                 color = pixels.next()
             except StopIteration:
                 break
-            
+
             rgba.extend(color)
-            
+
             pixel_count += 1
-            x += 1            
+            x += 1
             if x >= self.width:
                 for i in xrange(skip):
                     pixel = pixels.next()
                 x = 0
-        
+
         length = self.width * self.height * 4
         blank = array("B", (0, 0, 0, 0))
-        while len(rgba) < length: 
+        while len(rgba) < length:
             rgba.extend(blank)
-        
+
         assert len(rgba) == length
-        
+
         return (self.width, self.height, rgba)
 
     @classmethod
@@ -686,9 +686,9 @@ class Form(FixedObject, ContainsRefs):
         for i in range(0, len(rgba_string), 4):
             raw += rgba_string[i+3]   # alpha
             raw += rgba_string[i:i+3] # rgb
-        
+
         assert len(rgba_string) == width * height * 4
-        
+
         return Form(
             width = width,
             height = height,
@@ -699,7 +699,7 @@ class Form(FixedObject, ContainsRefs):
     @classmethod
     def from_array(cls, width, height, rgba_array):
         """Returns a Form with 32-bit RGBA pixels
-        Accepts sequence of flattened r, g, b, a, r, g, b, a ... values for 
+        Accepts sequence of flattened r, g, b, a, r, g, b, a ... values for
         each pixel
         """
         # Unused now
@@ -731,7 +731,7 @@ class ColorForm(Form):
     )
 
 
-        
+
 
 
 

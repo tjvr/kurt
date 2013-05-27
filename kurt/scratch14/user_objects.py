@@ -452,7 +452,7 @@ class SpriteCollection(OrderedCollection):
             if sprite.name == item:
                 return True
         return False
-        
+
 
 
 class Stage(ScriptableScratchMorph):

@@ -1,18 +1,18 @@
 # Copyright (C) 2012 Tim Radvan
-# 
+#
 # This file is part of Kurt.
-# 
-# Kurt is free software: you can redistribute it and/or modify it under the 
-# terms of the GNU Lesser General Public License as published by the Free 
-# Software Foundation, either version 3 of the License, or (at your option) any 
+#
+# Kurt is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
 # later version.
-# 
-# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY 
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more 
+#
+# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
 # details.
-# 
-# You should have received a copy of the GNU Lesser General Public License along 
+#
+# You should have received a copy of the GNU Lesser General Public License along
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
 from ply import lex
@@ -83,12 +83,12 @@ def t_STRING(t):
                 escaped = 1
             else:
                 new_str += c
-    
+
     is_dropdown = False
     if new_str.endswith(" v"):
         new_str = new_str[:-2]
         is_dropdown = True
-    
+
     t.value = (new_str, is_dropdown)
     return t
 
@@ -113,7 +113,7 @@ def t_NEWLINE(t):
 # what constitutes a symbol.
 def t_SYMBOL(t):
     r'[^0-9()<>\[\]][^()<>\[\]\ \t\n\/]*'
-    t.type = reserved.get(t.value, 'SYMBOL') 
+    t.type = reserved.get(t.value, 'SYMBOL')
     return t
 
 t_ignore = ' \t'
@@ -127,21 +127,21 @@ t_ignore = ' \t'
 # Handle errors.
 def pretty_error(token, err_msg):
     input = token.lexer.lexdata
-    
+
     lineno = input[:token.lexpos].replace('\r\n', '\n').replace('\r', '\n').count('\n')
     lines = input.replace('\r\n', '\n').replace('\r', '\n').split('\n')
     err_msg += "on line %i\n" % (lineno + 1)
-    
+
     err_msg += "  " + lines[lineno].strip()
-    
+
     error = SyntaxError(err_msg)
     error.line = lines[lineno]
     raise error
-    
-    
+
+
 def t_error(t):
     pretty_error(t, "tokenize error ")
-    
+
 
 
 # Build the lexer.

@@ -1,18 +1,18 @@
 # Copyright (C) 2012 Tim Radvan
-# 
+#
 # This file is part of Kurt.
-# 
-# Kurt is free software: you can redistribute it and/or modify it under the 
-# terms of the GNU Lesser General Public License as published by the Free 
-# Software Foundation, either version 3 of the License, or (at your option) any 
+#
+# Kurt is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
 # later version.
-# 
-# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY 
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more 
+#
+# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
 # details.
-# 
-# You should have received a copy of the GNU Lesser General Public License along 
+#
+# You should have received a copy of the GNU Lesser General Public License along
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
 """Provides information about block types.
@@ -24,10 +24,10 @@ Values:
     blocks_by_cmd - dict of BlockType objects indexed by their `command`.
 
 Other values:
-    block_plugin_inserts - format strings for insert types, used in 
+    block_plugin_inserts - format strings for insert types, used in
                            Block.to_block_plugin()
 
-The blocks list is compiled by parsing blockspecs copied directly from Scratch's 
+The blocks list is compiled by parsing blockspecs copied directly from Scratch's
 Squeak source code.
 """
 from construct import *
@@ -41,7 +41,7 @@ from fixed_objects import Symbol
 string = QuotedString("string", start_quote="'", end_quote="'", esc_char="\\")
 
 symbol = Struct("symbol",
-    Literal("#"),    
+    Literal("#"),
     StringAdapter(GreedyRange(CharOf("value", set("+*/\<>=&|~:-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"))))
     # _=@%?!`^$
 )
@@ -63,7 +63,7 @@ value = Select("value",
         DecNumber("number"),
         Value("value", lambda ctx: -ctx['number']),
     ),
-        
+
 )
 
 blockspec = Struct("blockspec",
@@ -82,7 +82,7 @@ blockspec = Struct("blockspec",
     Whitespace(),
     Literal(")"),
     Whitespace(),
-    
+
     Value("is_block", lambda c: True)
 )
 
@@ -123,7 +123,7 @@ class BlockType:
     """Information about a single type of block.
     Attributes:
         command - the command used in Squeak to run the block. (see Block.name)
-        text - text that appears on the block. 
+        text - text that appears on the block.
                Contains inserts starting with % signs.
         parts - text, split up into text segments and inserts.
         flag - a single char describing the kind of block.
@@ -131,7 +131,7 @@ class BlockType:
         defaults - list of default values for block inserts. (see Block.args)
     """
     INSERT_RE = re.compile(r'(%.)')
-    
+
     def __init__(self, command, text, flag='-', category='', defaults=None):
         self.command = command
         self.text = text
@@ -139,23 +139,23 @@ class BlockType:
         self.category = category
         if defaults is None: defaults = []
         self.defaults = defaults
-    
+
     def copy(self):
         return BlockType(
             self.command, self.text, self.flag, self.category, self.defaults[:]
         )
-    
+
     @property
     def parts(self):
         return self.INSERT_RE.split(self.text)
-    
+
     @property
     def inserts(self):
         return filter(lambda p: p and len(p) == 2 and p[0] == "%", self.parts)
-    
+
     def __repr__(self):
         return '<BlockType(%s)>' % self.command
-    
+
     def make_default(self, script=None):
         """Returns a new Block object of this type with default arguments."""
         return Block(self.command, *self.defaults[:])
@@ -164,50 +164,50 @@ class BlockType:
 def parse_blockspec(squeak_code):
     parsed = blockspecs.parse(squeak_code)
     categories = parsed.categories
-    
+
     blocks = []
     for category in categories:
         for block in category.blocks:
             if not block.is_block:
                 continue
-            
+
             defaults = []
             for default in block.defaults:
                 default = default.value
                 if isinstance(default, Container):
                     default = default.value
-                defaults.append(default)                        
-            
+                defaults.append(default)
+
             block = BlockType(
                 block.command.value,
                 block.text,
                 block.flag.value,
-                category.name, 
+                category.name,
                 defaults,
             )
             blocks.append(block)
-    
+
     return blocks
 
 
 
-blocks = (list(parse_blockspec(squeak_blockspecs)) + 
-    list(parse_blockspec(squeak_stage_blockspecs)) + 
-    list(parse_blockspec(squeak_sprite_blockspecs)) + 
+blocks = (list(parse_blockspec(squeak_blockspecs)) +
+    list(parse_blockspec(squeak_stage_blockspecs)) +
+    list(parse_blockspec(squeak_sprite_blockspecs)) +
     list(parse_blockspec(squeak_obsolete_blockspecs)))
 
 blocks += [
     BlockType("readVariable", "%v", "r", category="variables"),
-    BlockType("changeVariable", "change %v by %n", category="variables", 
+    BlockType("changeVariable", "change %v by %n", category="variables",
         defaults = [None, Symbol("changeVar:by:"), None]),
     BlockType("changeVariable", "set %v to %s", category="variables",
         defaults = [None, Symbol("setVar:to:"), None]),
-    
+
     BlockType("contentsOfList:", "%l", "r", "variables"),
-    
+
     BlockType("EventHatMorph", "when gf clicked", "S",  # alternate spelling
         defaults = ["Scratch-StartClicked"]),
-    
+
     BlockType("", "obsolete!"),
 ]
 
@@ -250,7 +250,7 @@ def strip_block_text(parts):
 blocks_by_text = {}
 for block in blocks:
     text = strip_block_text(block.parts)
-    
+
     # Some blocks have same text
     if text not in blocks_by_text:
         blocks_by_text[text] = []
@@ -273,27 +273,27 @@ block_plugin_inserts = {
     "%s": "[%s]",
     "%c": "[#%s]",
     "%C": "[#%s]",
-        
+
     "%m": "[%s v]",
     "%a": "[%s v]",
     "%e": "[%s v]",
     "%k": "[%s v]",
-        
+
     "%v": "[%s v]",
     "%L": "[%s v]",
     "%i": "(%s v)",
     "%y": "(%s v)",
-        
+
     "%f": "[%s v]",
-        
+
     "%l": "[%s v]",
     "%g": "[%s v]",
-        
+
     "%S": "[%s v]",
     "%D": "(%s v)",
     "%N": "(%s v)",
     "%I": "(%s v)",
-    
+
     "%h": "[%s v]",
     "%H": "[%s v]",
     "%W": "[%s v]",

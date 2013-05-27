@@ -1,18 +1,18 @@
 # Copyright (C) 2012 Tim Radvan
-# 
+#
 # This file is part of Kurt.
-# 
-# Kurt is free software: you can redistribute it and/or modify it under the 
-# terms of the GNU Lesser General Public License as published by the Free 
-# Software Foundation, either version 3 of the License, or (at your option) any 
+#
+# Kurt is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
 # later version.
-# 
-# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY 
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more 
+#
+# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
 # details.
-# 
-# You should have received a copy of the GNU Lesser General Public License along 
+#
+# You should have received a copy of the GNU Lesser General Public License along
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
 from ply import yacc
@@ -37,19 +37,19 @@ class Insert(object):
     VARIABLE = "VARIABLE"
     REPORTER = "REPORTER"
     SPECIAL = "SPECIAL"
-       
+
     STRING = "STRING"                    # [ ]
     STRING_DROPDOWN = "STRING_DROPDOWN"  # [ v]
-    
+
     BOOL = "BOOL"  # < >
-    
+
     COLOR = "COLOR" # [#fff]
     # COLOR is only used in `insert_kind`
 
     def __init__(self, kind, value):
         self.kind = kind
         self.value = value
-    
+
     def __repr__(self):
         return "Insert(%r, %r)" % (self.kind, self.value)
 
@@ -58,7 +58,7 @@ class BlockError(Exception):
     pass
 
 
-  
+
 special_variables = {
     'all': Symbol('all'),
     'any': Symbol('any'),
@@ -69,7 +69,7 @@ special_strings = {
     'mouse-pointer': Symbol('mouse'),
 }
 
-math_functions = ['sqrt', 'abs', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 
+math_functions = ['sqrt', 'abs', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan',
                   'ln', 'log', 'e ^', '10 ^']
 
 insert_kind = {
@@ -77,33 +77,33 @@ insert_kind = {
     "%n": [Insert.NUMBER, Insert.VARIABLE],
     "%d": [Insert.NUMBER, Insert.VARIABLE],
     "%s": [Insert.STRING, Insert.VARIABLE],
-    
+
     "%c": [Insert.COLOR], # Color
     "%C": [Insert.COLOR],
-    
+
     "%m": [Insert.STRING_DROPDOWN, Insert.VARIABLE, Insert.SPECIAL], # Sprite
                                                     # Symbol('mouse')
     "%a": [Insert.STRING_DROPDOWN], # attribute of sprite
     "%e": [Insert.STRING_DROPDOWN, Insert.VARIABLE], # broadcast message
     "%k": [Insert.STRING_DROPDOWN], # key
-    
+
     "%v": [Insert.STRING_DROPDOWN], # var doesn't *accept* VARIABLE Insert!
     "%L": [Insert.STRING_DROPDOWN], # List name
     "%i": [Insert.NUMBER, Insert.SPECIAL, Insert.VARIABLE], # Item
                                    # Symbol('last'), Symbol('any')
     "%y": [Insert.NUMBER, Insert.SPECIAL, Insert.VARIABLE], # Item (for delete)
                                    # Symbol('last'), Symbol('all')
-    
+
     "%f": [Insert.STRING_DROPDOWN], # Math function
            # one of `math_functions`
     "%l": [Insert.STRING_DROPDOWN, Insert.VARIABLE], # Costume name
     "%g": [Insert.STRING_DROPDOWN], # graphic effect
-    
+
     "%S": [Insert.STRING_DROPDOWN, Insert.VARIABLE], # sound
     "%D": [Insert.NUMBER, Insert.VARIABLE], # drum
     "%N": [Insert.NUMBER, Insert.VARIABLE], # note
     "%I": [Insert.NUMBER, Insert.VARIABLE], # instrument
-    
+
     "%h": [Insert.STRING_DROPDOWN], # sensor (value)
     "%H": [Insert.STRING_DROPDOWN], # sensor (bool)
     "%W": [Insert.STRING_DROPDOWN, Insert.VARIABLE], # motor direction # TODO
@@ -137,15 +137,15 @@ def block_from_parts(parts, flag=None):
             arguments.append(part)
         else:
             text += part
-    
+
     script = None
     block = None
     poss_types = find_block(text)
-    
+
     if poss_types:
         if len(poss_types) == 1:
             type = poss_types[0]
-        else:            
+        else:
             # verify insert types against block.inserts
             for type in poss_types:
                 for (insert, need_type) in zip(arguments, type.inserts):
@@ -155,7 +155,7 @@ def block_from_parts(parts, flag=None):
                     else:
                         need_kinds = insert_kind[need_type]
                         if insert.kind not in need_kinds:
-                            if insert.kind in (Insert.STRING, 
+                            if insert.kind in (Insert.STRING,
                                                Insert.STRING_DROPDOWN):
                                 if Insert.NUMBER in need_kinds:
                                     # cast DROPDOWN / STRING to NUMBER
@@ -163,18 +163,18 @@ def block_from_parts(parts, flag=None):
                                         continue # int
                                     elif value.strip().replace('.', '').isdigit():
                                         continue # float
-                            
+
                                 elif Insert.COLOR in need_kinds:
                                     # COLORs are STRINGs at this point
                                     continue
-                            
-                            elif (insert.kind == Insert.NUMBER and 
+
+                            elif (insert.kind == Insert.NUMBER and
                                   Insert.STRING in need_kinds):
                                 # cast NUMBER to STRING
                                 continue
-                            
-                            
-                            
+
+
+
                             break # Not this type.
                 else:
                     break # Type is ok!
@@ -187,50 +187,50 @@ def block_from_parts(parts, flag=None):
             arguments.insert(1, None)
             # This gets replaced by a symbol from the blocks arguments:
             # either <#setVar:to:> or <#changeVar:by:>
-        
+
         has_args = not type.command == "MouseClickEventHatMorph"
         allow_vars = not type.command in ("EventHatMorph", "KeyEventHatMorph")
-        
+
         block_args = list(type.defaults)
         if has_args:
             for i in range(len(arguments)):
                 insert = arguments[i]
                 if insert is None:
                     continue
-                
+
                 kind = insert.kind
                 if kind == Insert.VARIABLE and allow_vars:
                     arg = Block("readVariable", insert.value)
                 else:
                     arg = insert.value
-                
+
                 if i < len(type.inserts):
                     insert_type = type.inserts[i]
                     need_kinds = insert_kind[insert_type]
-                    
-                    if kind in (Insert.STRING, 
+
+                    if kind in (Insert.STRING,
                                 Insert.STRING_DROPDOWN):
                         if insert_type == "%m":
                             arg = SpriteRef(arg)
-                        
+
                         elif insert_type in ("%f", "%g", "%k"):
                             arg = str(arg) # Will not accept unicode!
-                        
+
                         elif Insert.COLOR in need_kinds:
                                 arg = parse_color(arg)
-                    
+
                         elif Insert.NUMBER in need_kinds:
-                            # cast DROPDOWN / STRING to NUMBER 
+                            # cast DROPDOWN / STRING to NUMBER
                             if arg.strip().isdigit():
                                 arg = int(arg)
                             elif arg.strip().replace('.', '').isdigit():
                                 arg = float(arg)
-                    
+
                     elif ( Insert.STRING in need_kinds and
                            insert.kind == Insert.NUMBER ):
                         # cast NUMBER to STRING
                         arg = unicode(arg)
-                
+
                 if i >= len(block_args):
                     block_args.append(arg)
                 else:
@@ -248,9 +248,9 @@ def block_from_parts(parts, flag=None):
 def variable_named(variable_name):
     if variable_name.endswith(' v'):
         variable_name = variable_name[:-2]
-    
+
     # make sure this is a reporter!
-    
+
     if variable_name.lower() in special_variables:
         value = special_variables[variable_name].copy()
         return Insert(Insert.SPECIAL, value)
@@ -330,7 +330,7 @@ def p_c_block(t):
     if len(t) > 2:
         block.add_comment(t[2])
     t[0] = block
-    
+
 def p_c_block_def(t):
     """c_block_def : FOREVER
                    | FOREVER IF insert
@@ -377,7 +377,7 @@ def p_part(t):
 def p_insert_part(t):
     """part : insert"""
     t[0] = t[1]
-    
+
 def p_symbol_part(t):
     """part : SYMBOL"""
     t[0] = t[1]
@@ -412,13 +412,13 @@ def p_reporter_insert(t):
     try: # Reporter block.
         block = block_from_parts(parts, "r")
         t[0] = Insert(Insert.REPORTER, block)
-    
+
     except BlockError, e:
         # Maybe it's a variable? Check there are no args.
         for part in parts:
             if isinstance(part, Insert):
                 raise e # Give up: not a block or a variable.
-        
+
         # Variable!
         t[0] = variable_named(' '.join(parts))
         # TODO: allow multiple spaces in var names
@@ -426,13 +426,13 @@ def p_reporter_insert(t):
 def p_empty_reporter_insert(t):
     """insert : LPAREN RPAREN"""
     t[0] = Insert(Insert.REPORTER, None)
-    
+
 def p_number_insert(t):
     """insert : LPAREN number RPAREN
               | LPAREN number DROPDOWN
     """
     t[0] = Insert(Insert.NUMBER, t[2])
-    
+
 def p_variable_insert(t):
     """insert : LPAREN SYMBOL RPAREN
               | LPAREN SYMBOL DROPDOWN
@@ -441,10 +441,10 @@ def p_variable_insert(t):
     try: # Might be a reporter like 'costume #'
         block = block_from_parts(t[2], "r")
         t[0] = Insert(Insert.REPORTER, block)
-    
+
     except BlockError:
         t[0] = variable_named(variable_name)
-    
+
 def p_number_int(t):
     """number : INT"""
     t[0] = t[1]
@@ -466,7 +466,7 @@ def p_boolean_expr(t):
     """
     t[0] = [ t[1], t[2], t[3] ]
 
-    
+
 # Keywords sometimes used in block text
 
 def p_keyword_part(t):
@@ -492,7 +492,7 @@ def p_error(p):
 path_to_file = os.path.join(os.getcwd(), __file__)
 path_to_folder = os.path.split(path_to_file)[0]
 
-block_plugin_parser = yacc.yacc(debug=DEBUG, write_tables=0) 
+block_plugin_parser = yacc.yacc(debug=DEBUG, write_tables=0)
                                #outputdir=path_to_folder,
 
 # TODO: figure out how to make pip/setup.py be nice to PLY

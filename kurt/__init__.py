@@ -286,9 +286,10 @@ class Project(object):
 
         Use ``format`` to specify the file format to use.
 
-        :param path:        Path or URL.
+        :param path:   Path or URL.
         :param format: :attr:`KurtFileFormat.name` eg. ``"scratch14"``.
-                            Overrides the extension.
+                       Overrides the extension.
+
         :raises: :class:`UnknownFormat` if the extension is unrecognised.
         :raises: :py:class:`ValueError` if the format doesn't exist.
 
@@ -305,8 +306,6 @@ class Project(object):
             plugin = kurt.plugin.Kurt.get_plugin(name=format)
             if not plugin:
                 raise ValueError, "Unknown format %r" % format
-            if extension == plugin.extension:
-                name = name + extension
 
         project = plugin.load(path)
 
@@ -318,6 +317,27 @@ class Project(object):
         project._normalize()
 
         return project
+
+    def convert(self, format):
+        """Convert the project in-place to a different file format.
+
+        Returns self.
+
+        :param format: :attr:`KurtFileFormat.name` eg. ``"scratch14"``.
+
+        :raises: :class:`ValueError` if the format doesn't exist.
+
+        """
+
+        plugin = kurt.plugin.Kurt.get_plugin(name=format)
+
+        self._normalize()
+
+        # TODO: convert
+
+        self._plugin = plugin
+
+        return self
 
     def save(self, path=None, debug=False):
         """Save project to file.
@@ -370,29 +390,6 @@ class Project(object):
             return result
         else:
             return path
-
-    def convert(self, format):
-        """Convert the project to a different file format.
-
-        The converstion happens in-place. Returns self.
-
-        :param format: :attr:`KurtFileFormat.name` eg. ``"scratch14"``.
-
-        :raises: :class:`ValueError` if the format doesn't exist.
-
-        """
-
-        plugin = kurt.plugin.Kurt.get_plugin(name=format)
-        if not plugin:
-            raise ValueError, "Unknown format %r" % format
-
-        self._normalize()
-
-        # TODO: convert
-
-        self._plugin = plugin
-
-        return self
 
     def _normalize(self):
         """Convert the project to a standardised form.
@@ -1171,7 +1168,7 @@ class Costume(object):
 
         if not rotation_center:
             rotation_center = (int(image.width / 2), int(image.height / 2))
-        self.rotation_center = rotation_center
+        self.rotation_center = tuple(rotation_center)
         """``(x, y)`` position of the center of the image from the top-left
         corner, about which the sprite rotates.
 
@@ -1203,7 +1200,7 @@ class Costume(object):
         """
         (folder, filename) = os.path.split(path)
         if not filename:
-            filename = self.name
+            filename = _clean_filename(self.name)
             path = os.path.join(folder, filename)
 
         return self.image.save(path)
@@ -1229,7 +1226,7 @@ class Image(object):
     Make from :class:`PIL.Image.Image` instance::
 
         pil_image = PIL.Image.new("RGBA", (480, 360))
-        Image(pil_iamge)
+        Image(pil_image)
 
     Load from file::
 
@@ -1263,32 +1260,23 @@ class Image(object):
     def pil_image(self):
         """A :class:`PIL.Image.Image` instance containing the image data."""
         if not self._pil_image:
-            try:
-                self._pil_image = PIL.Image.open(StringIO(self.contents))
-            except IOError, e:
-                if (self._contents and not self._path and
-                        len(self._contents) < 200 and "/" in self._contents):
-                    print "Whoops"
-                    e.message += "\nDid you pass a path to Image()? " \
-                            "Use Image.load instead."
-                    e.args = (e.message,)
-                raise e
+            self._pil_image = PIL.Image.open(StringIO(self.contents))
         return self._pil_image
 
     @property
     def contents(self):
         """The raw file contents as a string."""
         if not self._contents:
-            if self._pil_image:
-                # Write PIL image to string
-                f = StringIO()
-                self._pil_image.save(f, self.format)
-                self._contents = f.getvalue()
-            elif self._path:
+            if self._path:
                 # Read file into memory so we don't run out of file descriptors
                 f = open(self._path, "rb")
                 self._contents = f.read()
                 f.close()
+            elif self._pil_image:
+                # Write PIL image to string
+                f = StringIO()
+                self._pil_image.save(f, self.format)
+                self._contents = f.getvalue()
         return self._contents
 
     @property
@@ -1352,18 +1340,19 @@ class Image(object):
         For each format in ``*args``: If the image's :attr:`format` attribute
         is the same as the format, return self, otherwise try the next format.
 
-        If none of the formats match, the image is converted to the last
-        format.
+        If none of the formats match, return a new Image instance with the
+        last format.
 
         """
         for format in formats:
+            format = Image._image_format(format)
             if self.format == format:
                 return self
         else:
             return self._convert(format)
 
     def _convert(self, format):
-        """Return an Image instance with the given format.
+        """Return a new Image instance with the given format.
 
         Returns self if the format is already the same.
 
@@ -1376,10 +1365,10 @@ class Image(object):
             return image
 
     def save(self, path):
-        """Save the image to a file path.
+        """Save image to file path.
 
-        The image format is guessed from the extension.  If path has no
-        extension, the image's format is used.
+        The image format is guessed from the extension. If path has no
+        extension, the image's :attr:`format` is used.
 
         :returns: Path to the saved file.
 
@@ -1394,7 +1383,6 @@ class Image(object):
             format = Image._image_format(extension)
         else:
             format = self.format
-
             filename = name + self.extension
             path = os.path.join(folder, filename)
 

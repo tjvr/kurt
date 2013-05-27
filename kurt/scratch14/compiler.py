@@ -236,10 +236,10 @@ def import_sprite(project_dir, sprite_name):
             if line:
                 parts = line.split(" = ")
                 var_name = parts[0]
-                
+
                 if find_block(var_name):
                     log("WARNING: invalid variable name: %s" % var_name)
-                
+
                 value = " = ".join(parts[1:])
                 sprite.variables[var_name] = value
 
@@ -401,7 +401,7 @@ def compile(project_dir, debug=True): # DEBUG: set to false
 
     if os.path.exists(project.path):
         raise FileExistsException(project.path)
-    
+
     # Sprites
     log("Importing sprites...")
 
@@ -409,7 +409,7 @@ def compile(project_dir, debug=True): # DEBUG: set to false
     for name in os.listdir(project_dir):
         if os.path.isdir(os.path.join(project_dir, name)):
             sprite_names.append(name)
-    
+
     if "00 Stage" in sprite_names:
         stage_name = "00 Stage"
     elif "Stage" in sprite_names:
@@ -431,7 +431,7 @@ def compile(project_dir, debug=True): # DEBUG: set to false
     sprites.sort(key=lambda (n, s): n is None) # sort new sprites to end
     for (number, sprite) in sprites:
         project.sprites.append(sprite)
-    
+
     # Check variables
     undefined_vars = set()
     for sprite in project.sprites:
@@ -444,14 +444,14 @@ def compile(project_dir, debug=True): # DEBUG: set to false
     log("")
     for var in undefined_vars:
          log("WARNING: variable not found: %s" % var)
-    
+
     # Thumbnail
     thumb_path = os.path.join(project_dir, "thumbnail.png")
     if os.path.exists(thumb_path):
         log("")
         log("Importing thumbnail...")
         project.info["thumbnail"] = Image.load(thumb_path)
-    
+
     # Notes
     notes_path = os.path.join(project_dir, "notes.txt")
     if os.path.exists(notes_path):
@@ -461,7 +461,7 @@ def compile(project_dir, debug=True): # DEBUG: set to false
             notes += "\n\n---\n\n"
             notes += ScratchProjectFile.DEFAULT_COMMENT
         project.info["comment"] = notes
-    
+
     # Done!
     compile_time = time.time() - start_time
     log("Compiled! %f" % compile_time)
@@ -472,9 +472,9 @@ def compile(project_dir, debug=True): # DEBUG: set to false
 
 def cmd_compile(path):
     """Usage: compile.py "path/to/project files/" 
-    
+
     folder structure -> scratch project"""
-    
+
     if path.endswith(".sb"):
         path = path[:-3]
     if path.endswith(" files"):

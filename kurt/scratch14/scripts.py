@@ -622,7 +622,7 @@ class Comment(Script):
 
 class SpriteRef(object):
     """DEPRECATED
-    
+
     Used by `kurt.scratchblocks.parser` so that compile() doesn't have to
     build all the sprites before parsing all the scripts."""
     def __init__(self, name):

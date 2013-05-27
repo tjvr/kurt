@@ -1,18 +1,18 @@
 # Copyright (C) 2012 Tim Radvan
-# 
+#
 # This file is part of Kurt.
-# 
-# Kurt is free software: you can redistribute it and/or modify it under the 
-# terms of the GNU Lesser General Public License as published by the Free 
-# Software Foundation, either version 3 of the License, or (at your option) any 
+#
+# Kurt is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
 # later version.
-# 
-# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY 
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more 
+#
+# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
 # details.
-# 
-# You should have received a copy of the GNU Lesser General Public License along 
+#
+# You should have received a copy of the GNU Lesser General Public License along
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
 """A Kurt plugin for Scratch 1.4."""
@@ -258,7 +258,7 @@ class Scratch14Plugin(KurtPlugin):
         _load_scriptable(kurt_project.stage, v14_project.stage)
         kurt_project.lists = _load_lists(v14_project.stage.lists, kurt_project,
                 kurt_project)
-        
+
         # global vars
         kurt_project.variables = kurt_project.stage.variables
         kurt_project.stage.variables = {}
@@ -301,7 +301,7 @@ class Scratch14Plugin(KurtPlugin):
                 kurt_watcher.slider_max = v14_watcher.sliderMax
 
                 kurt_project.actors.append(kurt_watcher)
-        
+
         # TODO: stacking order of actors.
 
         kurt_project._original = v14_project # DEBUG
