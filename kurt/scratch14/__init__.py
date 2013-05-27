@@ -121,7 +121,7 @@ def _save_script(kurt_script):
     )
 
 def _load_variable((name, value)):
-    return (name, kurt.Variable(name, value))
+    return (name, kurt.Variable(value))
 
 def _save_variable((name, kurt_variable)):
     return (name, kurt_variable.value)
@@ -168,7 +168,7 @@ def _save_lists(kurt_thing, kurt_project, v14_morph, v14_project):
             (x, y) = pos
         else:
             (x, y) = (375, 10)
-            # TODO: stack them prettily!
+            # TODO: stack them properly
 
         if not kurt_watcher.visible:
             x += 534
@@ -297,11 +297,14 @@ class Scratch14Plugin(KurtPlugin):
                 elif v14_watcher.scratchSlider:
                     kurt_watcher.style = "slider"
 
+                kurt_watcher.slider_min = v14_watcher.sliderMin
+                kurt_watcher.slider_max = v14_watcher.sliderMax
+
                 kurt_project.actors.append(kurt_watcher)
         
         # TODO: stacking order of actors.
 
-        kurt_project.original = v14_project # DEBUG
+        kurt_project._original = v14_project # DEBUG
 
         return kurt_project
 
@@ -318,7 +321,7 @@ class Scratch14Plugin(KurtPlugin):
         _save_scriptable(kurt_project.stage, v14_project.stage)
         _save_lists(kurt_project, kurt_project, v14_project.stage, v14_project)
         v14_project.stage.variables = dict(map(_save_variable,
-            kurt_project.variables))
+            kurt_project.variables.items()))
 
         v14_project.stage.tempoBPM = kurt_project.tempo
 
@@ -375,50 +378,16 @@ class Scratch14Plugin(KurtPlugin):
                     (w, h) = (52, 26)
 
                 elif kurt_watcher.style == "slider":
-                    v14_watcher.scratchSlider = slider = WatcherSliderMorph(
-                        arguments = [u'slider'],
-                        borderColor = Symbol('inset'),
-                        borderWidth = 0,
-                        bounds = Rectangle([59, 273, 134, 283]),
-                        color = Color(512, 512, 512),
-                        descending = False,
-                        flags = 0,
-                        maxVal = 100,
-                        minVal = 0,
-                        model = None,
-                        owner = v14_watcher,
-                        properties = None,
-                        setValueSelector = Symbol('setVar:to:'),
-                        sliderColor = None,
-                        sliderShadow = None,
-                        sliderThickness = 0,
-                        target = v14_project.stage,
-                        truncate = True,
-                        value = 0.0,
-                    )
+                    v14_watcher.make_slider(v14_project.stage)
 
-                    slider.slider = ImageMorph(
-                        bounds = Rectangle([59, 273, 69, 283]),
-                        color = Color(0, 0, 1023),
-                        flags = 0,
-                        owner = slider,
-                        properties = None,
-                        submorphs = [],
-                        transparency = 1.0,
-                    )
-
-                    slider.submorphs = [slider.slider]
-
-                    v14_watcher.submorphs.append(v14_watcher.scratchSlider)
+                v14_watcher.sliderMin = kurt_watcher.slider_min
+                v14_watcher.sliderMax = kurt_watcher.slider_max
 
                 v14_watcher.bounds = Rectangle([x, y, x+w, x+h])
 
                 v14_project.stage.submorphs.append(v14_watcher)
 
         v14_project.save(path)
-        #v14_project.path = path
-
-        # TODO: stacking order
 
         return v14_project
 

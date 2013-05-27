@@ -68,6 +68,8 @@ Supported file formats:
 
 Pass "Format name" as the argument to :attr:`Project.convert()`.
 
+Kurt provides a superset of the information in each individual format, but will
+only convert features between a subset of formats.
 
 ----
 
@@ -241,7 +243,7 @@ class Project(object):
 
         Displayed on the website next to the project.
 
-        Line endings will be converted to ``\n``.
+        Line endings will be converted to ``\\n``.
 
         """
 
@@ -251,7 +253,8 @@ class Project(object):
         self._normalize()
 
     def __repr__(self):
-        return "<Project(%r)>" % self.name
+        return "<%s.%s(%r)>" % (self.__class__.__module__,
+                self.__class__.__name__, self.name)
 
     def get_sprite(self, name):
         """Get a sprite from :attr:`sprites` by name.
@@ -316,7 +319,7 @@ class Project(object):
 
         return project
 
-    def save(self, path=None):
+    def save(self, path=None, debug=False):
         """Save project to file.
 
         :param path: Path or URL. If path is not given, the original path given
@@ -327,6 +330,9 @@ class Project(object):
 
                      If the path ends in a folder instead of a file, the
                      filename is based on the project's :attr:`name`.
+
+        :param debug: If true, return debugging information from the format
+                      instead.
 
         :raises: :py:class:`ValueError` if there's no path or name, or you forgot
                  to :attr:`convert()` before saving.
@@ -360,7 +366,7 @@ class Project(object):
         self._normalize()
         result = self._plugin.save(path, self)
 
-        if result is not None: # Allow returning result as a debugging aid
+        if debug:
             return result
         else:
             return path
@@ -545,7 +551,7 @@ class Stage(Scriptable):
         return self.costumes
 
     def __repr__(self):
-        return "<Stage()>"
+        return "<%s.%s()>" % (self.__class__.__module__, self.__class__.__name__)
 
     def _normalize(self):
         if not self.costume and not self.costumes:
@@ -609,7 +615,8 @@ class Sprite(Scriptable, Actor):
             raise ValueError, "%r doesn't have a costume" % self
 
     def __repr__(self):
-        return "<Sprite(%r)>" % self.name
+        return "<%s.%s(%r)>" % (self.__class__.__module__,
+                self.__class__.__name__, self.name)
 
 
 class Watcher(Actor):
@@ -661,6 +668,12 @@ class Watcher(Actor):
 
         """
 
+        self.slider_min = 0
+        """Minimum value for slider. Only applies to ``"slider"`` style."""
+
+        self.slider_max = 100
+        """Maximum value for slider. Only applies to ``"slider"`` style."""
+
         self._normalize()
 
     def _normalize(self):
@@ -673,7 +686,8 @@ class Watcher(Actor):
             pass
 
     def __repr__(self):
-        r = "Watcher(%r, %r" % (self.watching, self.style)
+        r = "%s.%s(%r, %r" % (self.__class__.__module__,
+                self.__class__.__name__, self.watching, self.style)
         if not self.visible:
             r += ", visible=False"
         if self.pos:
@@ -693,12 +707,10 @@ class VariableReference(object):
         """
 
         self.name = name
-        """The name of the variable, as found in :attr:`Scriptable.variables`.
-
-        """
+        """The name of the variable in :attr:`Scriptable.variables`."""
 
     @property
-    def value(self):
+    def variable(self):
         """Return the :class:`Variable` instance the reference points to."""
         return self.scriptable.variables[self.name]
 
@@ -713,8 +725,8 @@ class VariableReference(object):
         return not self == other
 
     def __repr__(self):
-        return "%s(%r, %r)" % (self.__class__.__name__,
-                self.scriptable, self.name)
+        return "%s.%s(%r, %r)" % (self.__class__.__module__,
+                self.__class__.__name__, self.scriptable, self.name)
 
 
 class ListReference(object):
@@ -733,7 +745,7 @@ class ListReference(object):
         """
 
     @property
-    def value(self):
+    def list(self):
         """Return the :class:`List` instance the reference points to."""
         return self.scriptable.lists[self.name]
 
@@ -748,7 +760,7 @@ class ListReference(object):
         return not self == other
 
     def __repr__(self):
-        return "%s(%r, %r)" % (self.__class__.__name__,
+        return "%s.%s(%r, %r)" % (self.__class__.__module__, self.__class__.__name__,
                 self.scriptable, self.name)
 
 
@@ -782,7 +794,7 @@ class Variable(object):
         """
 
     def __repr__(self):
-        r = "%s(%r" % (self.__class__.__name__, self.value)
+        r = "%s.%s(%r" % (self.__class__.__module__, self.__class__.__name__, self.value)
         if self.is_cloud:
             r += ", is_cloud=%r" % self.is_cloud
         r += ")"
@@ -815,7 +827,7 @@ class List(object):
         self.items = map(unicode, self.items)
 
     def __repr__(self):
-        r = "%s(%r" % (self.__class__.__name__, self.items)
+        r = "%s.%s(%r" % (self.__class__.__module__, self.__class__.__name__, self.items)
         if self.is_cloud:
             r += ", is_cloud=%r" % self.is_cloud
         r += ")"
@@ -953,7 +965,8 @@ class BlockType(object):
         return [p for p in self.parts if p[0] == "%"]
 
     def __repr__(self):
-        r = "BlockType(%s," % self.command
+        r = "%s(%s," % (self.__class__.__module__, self.__class__.__name__,
+                self.command)
         r += "\n\t" + self.text
         for name in ("shape", "category", "defaults"):
             r += "\n\t%s=%s" % (name, getattr(self, name))
@@ -1040,7 +1053,8 @@ class Block(object):
         return not self == other
 
     def __repr__(self):
-        string = "Block(%s, " % repr(self.command)
+        string = "%s(%s, " % (self.__class__.__module__,
+                self.__class__.__name__, repr(self.command))
         for arg in self.args:
             if isinstance(arg, Block):
                 string = string.rstrip("\n")
@@ -1098,7 +1112,8 @@ class Script(object):
         return not self == other
 
     def __repr__(self):
-        string = "Script([\n"
+        string = "%s.%s([\n" % (self.__class__.__module__,
+                self.__class__.__name__)
         for block in self.blocks:
             string += "\t" + repr(block).replace("\n", "\n\t") + ",\n"
         string = string.rstrip().rstrip(",")
@@ -1198,7 +1213,7 @@ class Costume(object):
         self.image = self.image.resize(size)
 
     def __repr__(self):
-        return "<%s.%s name=%r rotation_center=%dx%d at 0x%X>" % (
+        return "<%s.%s name=%r rotation_center=%d,%d at 0x%X>" % (
             self.__class__.__module__, self.__class__.__name__, self.name,
             self.rotation_center[0], self.rotation_center[1], id(self)
         )

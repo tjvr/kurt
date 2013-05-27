@@ -739,6 +739,44 @@ class WatcherMorph(AlignmentMorph):
     def name(self, value):
         self.titleMorph.contents = value
 
+    def make_slider(self, target):
+        self.scratchSlider = slider = WatcherSliderMorph(
+            arguments = [u'slider'],
+            borderColor = Symbol('inset'),
+            borderWidth = 0,
+            bounds = Rectangle([59, 273, 134, 283]),
+            color = Color(512, 512, 512),
+            descending = False,
+            flags = 0,
+            maxVal = 100,
+            minVal = 0,
+            model = None,
+            owner = self,
+            properties = None,
+            setValueSelector = Symbol('setVar:to:'),
+            sliderColor = None,
+            sliderShadow = None,
+            sliderThickness = 0,
+            target = target,
+            truncate = True,
+            value = 0.0,
+        )
+
+        slider.slider = ImageMorph(
+            bounds = Rectangle([59, 273, 69, 283]),
+            color = Color(0, 0, 1023),
+            flags = 0,
+            owner = slider,
+            properties = None,
+            submorphs = [],
+            transparency = 1.0,
+        )
+
+        slider.submorphs = [slider.slider]
+
+        self.submorphs.append(self.scratchSlider)
+
+
 class SetterBlockMorph(BaseMorph):
     """unused?"""
     classID = 157
