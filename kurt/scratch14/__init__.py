@@ -48,36 +48,32 @@ except ImportError:
 # v14_*  -- objects from this module, kurt.scratch14
 
 def _load_image(v14_image):
-    if not v14_image:
-        return
-    name = v14_image.name
+    if v14_image:
+        if v14_image.jpegBytes:
+            image = kurt.Image(v14_image.jpegBytes.value, "JPEG")
+            image._size = v14_image.size
 
-    if v14_image.jpegBytes: # raw JPEG
-        kurt_costume = kurt.CostumeFromFile(name, v14_image.jpegBytes, "JPEG")
-        kurt_costume.size = v14_image.size
-        kurt_costume.rotation_center = v14_image.rotationCenter
-        return kurt_costume
+            # TODO: subclass Costume for lazy image parsing
 
-    # TODO: subclass Costume for lazy image parsing
+        else:
+            image = kurt.Image(v14_image.get_image())
 
-    else: # use PIL
-        return kurt.CostumeFromPIL(name, v14_image.get_image())
+        return kurt.Costume(v14_image.name, image, v14_image.rotationCenter)
 
 def _save_image(kurt_costume):
-    if not kurt_costume:
-        return
+    if kurt_costume:
+        image = kurt_costume.image.convert("JPEG", "bitmap")
 
-    if kurt_costume.image_format == "JPEG": # raw JPEG
-        v14_image = Image(
-            name = kurt_costume.name,
-            jpegBytes = ByteArray(kurt_costume.save_to_string()),
-        )
-        v14_image.size = kurt_costume.size
-        v14_image.rotationCenter = Point(kurt_costume.rotation_center)
-        return v14_image
+        if image.format == "JPEG":
+            v14_image = Image(
+                name = kurt_costume.name,
+                jpegBytes = ByteArray(kurt_costume.image.contents),
+            )
+            v14_image.size = kurt_costume.image.size
+            v14_image.rotationCenter = Point(kurt_costume.rotation_center)
+            return v14_image
 
-    # use PIL
-    return Image.from_image(kurt_costume.name, kurt_costume.pil_image)
+        return Image.from_image(kurt_costume.name, kurt_costume.image.pil_image)
 
 def _load_sound(v14_sound):
     pass
@@ -239,7 +235,7 @@ def _save_scriptable(kurt_scriptable, v14_scriptable):
         (rx, ry) = kurt_scriptable.costume.rotation_center
         x = x + 240 - rx
         y = 180 - y - ry
-        (w, h) = kurt_scriptable.costume.size
+        (w, h) = kurt_scriptable.costume.image.size
         v14_scriptable.bounds = Rectangle([x, y, x+w, y+h])
 
 

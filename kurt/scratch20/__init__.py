@@ -34,8 +34,8 @@ class _ZipBuilder(object):
             "videoAlpha": 0.5,
         }
 
-        self.costume_dicts = {}
-        self.highest_costume_id = 0
+        self.image_dicts = {}
+        self.highest_image_id = 0
 
         stage_dict = self.save_scriptable(kurt_project.stage)
         project_dict.update(stage_dict)
@@ -57,26 +57,24 @@ class _ZipBuilder(object):
         zi.external_attr = 0777 << 16L
         self.zip_file.writestr(zi, contents)
 
-    def write_image(self, costume):
-        if costume in self.costume_dicts:
-            costume_dict = self.costume_dicts[costume]
+    def write_image(self, image):
+        if image in self.image_dicts:
+            image_dict = self.image_dicts[image]
         else:
-            costume_id = self.highest_costume_id
-            self.highest_costume_id += 1
+            image_id = self.highest_image_id
+            self.highest_image_id += 1
 
-            image_format = costume.image_format or "png"
-            if image_format == "JPEG": image_format = "jpg"
-            filename = str(costume_id) + "." + image_format.lower()
-            contents = costume.save_to_string(image_format)
-            self.write_file(filename, contents)
+            image = image.convert("SVG", "JPG", "PNG")
+            filename = str(image_id) + (image.extension or ".png")
+            self.write_file(filename, image.contents)
 
-            costume_dict = {
-                "baseLayerID": costume_id, #-1 for download
+            image_dict = {
+                "baseLayerID": image_id, #-1 for download
                 "bitmapResolution": 1,
                 #"baseLayerMD5": hashlib.md5(contents).hexdigest(),
             }
-            self.costume_dicts[costume] = costume_dict
-        return costume_dict
+            self.image_dicts[image] = image_dict
+        return image_dict
 
 
     def save_scriptable(self, kurt_scriptable):
@@ -109,7 +107,7 @@ class _ZipBuilder(object):
         return scriptable_dict
 
     def save_costume(self, kurt_costume):
-        costume_dict = self.write_image(kurt_costume)
+        costume_dict = self.write_image(kurt_costume.image)
         (rx, ry) = kurt_costume.rotation_center
         costume_dict.update({
             "costumeName": kurt_costume.name,

@@ -48,11 +48,11 @@ Scripts use the following classes:
 * :class:`Comment`
 * :class:`BlockType`
 
-There are two :class:`Costume` subclasses, so kurt can implement lazy loading
-of image data:
+Media files use the following classes:
 
-* :class:`CostumeFromFile`
-* :class:`CostumeFromPIL`
+* :class:`Costume`
+* :class:`Image`
+* :class:`Sound`
 
 File Formats
 ------------
@@ -549,8 +549,8 @@ class Stage(Scriptable):
 
     def _normalize(self):
         if not self.costume and not self.costumes:
-            self.costume = CostumeFromPIL("blank", PIL.Image.new("RGB", self.SIZE,
-                self.COLOR))
+            self.costume = Costume("blank", Image(PIL.Image.new("RGB",
+                self.SIZE, self.COLOR)))
         Scriptable._normalize(self)
 
 
@@ -1144,245 +1144,275 @@ class Comment(object):
 
 
 class Costume(object):
-    """Base class for Costumes, image files describing the look of a sprite.
+    """Describes the look of a sprite.
 
-    Don't use this class directly -- instead, use one of its subclasses:
+    The raw image data is stored in :attr:`image`.
 
-    * :class:`CostumeFromFile`: make costume from raw image file contents
-    * :class:`CostumeFromPIL`: make costume from a :class:`PIL.Image.Image`
-      object.
+    """
 
-    To load an image file by path, use :attr:`CostumeFromFile.from_path`.
+    def __init__(self, name, image, rotation_center=None):
+        self.name = unicode(name)
+        """Name used by scripts to refer to this Costume."""
 
-    **Image formats:** :attr:`image_format` is an uppercase string
-    corresponding to the :attr:`PIL ImageFile.format
-    <PIL.ImageFile.ImageFile.format>` attribute.  Valid values include
-    ``"JPEG"`` and ``"PNG"``.
+        if not rotation_center:
+            rotation_center = (int(image.width / 2), int(image.height / 2))
+        self.rotation_center = rotation_center
+        """``(x, y)`` position of the center of the image from the top-left
+        corner, about which the sprite rotates.
+
+        Defaults to the center of the image.
+        """
+
+        self.image = image
+        """An :class:`Image` instance containing the raw image data."""
+
+
+    @classmethod
+    def load(self, path):
+        """Load costume from image file."""
+        (folder, filename) = os.path.split(path)
+        (name, extension) = os.path.splitext(filename)
+        return Costume(name, Image.load(path))
+
+    def save(self, path):
+        """Save the costume to an image file at the given path.
+
+        The image format is guessed from the extension.  If path has no
+        extension, the costume's image format is used if known.
+
+        If the path ends in a folder instead of a file, the
+        filename is based on the project's :attr:`name`.
+
+        :returns: Path to the saved file.
+
+        """
+        (folder, filename) = os.path.split(path)
+        if not filename:
+            filename = self.name
+            path = os.path.join(folder, filename)
+
+        return self.image.save(path)
+
+    def resize(self, size):
+        """Resize :attr:`image` in-place."""
+        self.image = self.image.resize(size)
+
+    def __repr__(self):
+        return "<%s.%s name=%r rotation_center=%dx%d at 0x%X>" % (
+            self.__class__.__module__, self.__class__.__name__, self.name,
+            self.rotation_center[0], self.rotation_center[1], id(self)
+        )
+
+
+class Image(object):
+    """The contents of an image file.
+
+    Make from raw file contents::
+
+        Image(file_contents, "JPEG")
+
+    Make from :class:`PIL.Image.Image` instance::
+
+        pil_image = PIL.Image.new("RGBA", (480, 360))
+        Image(pil_iamge)
+
+    Load from file::
+
+        Image.load("path/to/image.jpg")
+
+    Images should be considered to be immutable. If you want to modify an
+    image, get a :class:`PIL.Image.Image` instance from :attr:`pil_image` and
+    modify that. Modifying images in-place may break things.
 
     The reason for having multiple constructors is so that kurt can implement
     lazy loading of image data -- in many cases, a PIL image will never need to
     be created.
 
-    :ivar size:         ``(width, height)`` in pixels.
-    :ivar image_format: Format of the image file. None if unknown.
-
     """
 
-    def __init__(self, name):
-        self.name = unicode(name)
-        """Name used by scripts to refer to this Costume."""
+    def __init__(self, contents, format=None):
+        self._path = None
+        self._pil_image = None
+        self._contents = None
+        self._format = None
+        self._size = None
+        if isinstance(contents, PIL.Image.Image):
+            self._pil_image = contents
+        else:
+            self._contents = contents
+            self._format = Image._image_format(format)
 
-        self.rotation_center = (0, 0)
-        """``(x, y)`` position of the center of the image from the top-left
-        corner, about which the sprite rotates."""
+    # Properties
 
-        self._decoded_costume = None
+    @property
+    def pil_image(self):
+        """A :class:`PIL.Image.Image` instance containing the image data."""
+        if not self._pil_image:
+            try:
+                self._pil_image = PIL.Image.open(StringIO(self.contents))
+            except IOError, e:
+                if (self._contents and not self._path and
+                        len(self._contents) < 200 and "/" in self._contents):
+                    print "Whoops"
+                    e.message += "\nDid you pass a path to Image()? " \
+                            "Use Image.load instead."
+                    e.args = (e.message,)
+                raise e
+        return self._pil_image
 
-    def _normalize(self):
-        Media._normalize(self)
+    @property
+    def contents(self):
+        """The raw file contents as a string."""
+        if not self._contents:
+            if self._pil_image:
+                # Write PIL image to string
+                f = StringIO()
+                self._pil_image.save(f, self.format)
+                self._contents = f.getvalue()
+            elif self._path:
+                # Read file into memory so we don't run out of file descriptors
+                f = open(self._path, "rb")
+                self._contents = f.read()
+                f.close()
+        return self._contents
 
-    def decode(self):
-        if not self._decoded_costume:
-            self._decoded_costume = self._decode()
-        return self._decoded_costume
+    @property
+    def format(self):
+        """The format of the image file.
 
-    def _decode(self):
-        """Return a PIL.Image.Image instance containing decoded pixel data."""
-        raise NotImplementedError # Override in subclass
+        An uppercase string corresponding to the
+        :attr:`PIL.ImageFile.ImageFile.format` attribute.  Valid values include
+        ``"JPEG"`` and ``"PNG"``.
 
-    def __getattr__(self, name):
-        if name in ("size", "image_format", "pil_image"):
-            return getattr(self.decode(), name)
-        raise AttributeError, "'%s' object has no attribute '%s'" % (
-                self.__class__.__name__, name)
+        """
+        if self._format:
+            return self._format
+        elif self.pil_image:
+            return self.pil_image.format
 
-    def save(self, path, image_format=None):
+    @property
+    def extension(self):
+        """The extension of the image's :attr:`format` when written to file.
+
+        eg ``".png"``
+
+        """
+        return Image._image_extension(self.format)
+
+    @property
+    def size(self):
+        """``(width, height)`` in pixels."""
+        if self._size and not self._pil_image:
+            return self._size
+        else:
+            return self.pil_image.size
+
+    @property
+    def width(self):
+        return self.size[0]
+
+    @property
+    def height(self):
+        return self.size[1]
+
+    # Methods
+
+    @classmethod
+    def load(cls, path):
+        """Load image from file."""
+        assert os.path.exists(path), "No such file: %r" % path
+
+        (folder, filename) = os.path.split(path)
+        (name, extension) = os.path.splitext(filename)
+
+        image = Image(None)
+        image._path = path
+        image._format = Image._image_format(extension)
+
+        return image
+
+    def convert(self, *formats):
+        """Return an Image instance with the first matching format.
+
+        For each format in ``*args``: If the image's :attr:`format` attribute
+        is the same as the format, return self, otherwise try the next format.
+
+        If none of the formats match, the image is converted to the last
+        format.
+
+        """
+        for format in formats:
+            if self.format == format:
+                return self
+        else:
+            return self._convert(format)
+
+    def _convert(self, format):
+        """Return an Image instance with the given format.
+
+        Returns self if the format is already the same.
+
+        """
+        if self.format == format:
+            return self
+        else:
+            image = Image(self.pil_image)
+            image._format = format
+            return image
+
+    def save(self, path):
         """Save the image to a file path.
 
-        If no image format is given, the format is guessed from the extension.
-        If path has no extension, the costume's image format is used if
-        known.
+        The image format is guessed from the extension.  If path has no
+        extension, the image's format is used.
 
         :returns: Path to the saved file.
 
         """
-
         (folder, filename) = os.path.split(path)
-        if image_format:
-            name = filename
-            extension = ""
-        else:
-            (name, extension) = os.path.splitext(filename)
-            if extension:
-                image_format = extension.lstrip(".").upper()
-                if image_format == "JPG":
-                    image_format = "JPEG"
-
-        if not image_format:
-            try:
-                image_format = self.__getattribute__("image_format")
-            except AttributeError:
-                pass # - raise error?
+        (name, extension) = os.path.splitext(filename)
 
         if not name:
-            if self.name:
-                name = self.name
             raise ValueError, "name is required"
 
-        if image_format:
-            extension = image_format.lower()
-            if extension == "jpeg":
-                extension = "jpg"
-            filename = name + "." + extension
+        if extension:
+            format = Image._image_format(extension)
         else:
-            filename = name
+            format = self.format
 
-        path = os.path.join(folder, filename)
-        self._save(path, image_format)
+            filename = name + self.extension
+            path = os.path.join(folder, filename)
+
+        image = self.convert(format)
+        if image._contents:
+            f = open(path, "wb")
+            f.write(image._contents)
+            f.close()
+        else:
+            image.pil_image.save(path, format)
+
         return path
 
-    def _save(self, path, image_format):
-        # Override in subclass.
-        # Make sure to also override _save_to_string
-        if self.pil_image:
-            self.pil_image.save(path, image_format)
-        else:
-            raise ValueError
-
-    def save_to_string(self, image_format=None):
-        if not image_format:
-            try:
-                image_format = self.__getattribute__("image_format")
-            except AttributeError:
-                pass
-
-        image_format = image_format.upper()
-        if image_format == "JPG":
-            image_format = "JPEG"
-
-        return self._save_to_string(image_format)
-
-    def _save_to_string(self, image_format):
-        # Override in subclass.
-        if self.pil_image:
-            output = StringIO()
-            self.pil_image.save(output, image_format)
-            contents = output.getvalue()
-            output.close()
-            return contents
-        else:
-            raise ValueError
-
-    @property
-    def width(self):
-        """Alias for ``size[0]``."""
-        (width, height) = self.size
-        return width
-
-    @property
-    def height(self):
-        """Alias for ``size[1]``."""
-        (width, height) = self.size
-        return height
-
     def resize(self, size):
-        """Resize -> new image"""
-        return CostumeFromPIL(self.name, self.pil_image.resize(size,
-            PIL.Image.ANTIALIAS))
+        """Return a new image instance with the given size."""
+        return Image(self.pil_image.resize(size, PIL.Image.ANTIALIAS))
+
+    # Static methods
+
+    @staticmethod
+    def _image_format(format_or_extension):
+        if format_or_extension:
+            format = format_or_extension.lstrip(".").upper()
+            if format == "JPG":
+                format = "JPEG"
+            return format
+
+    @staticmethod
+    def _image_extension(format_or_extension):
+        if format_or_extension:
+            extension = format_or_extension.lstrip(".").lower()
+            if extension == "jpeg":
+                extension = "jpg"
+            return "." + extension
 
 
-class CostumeFromPath(Costume):
-    def __init__(self, path):
-        (folder, filename) = os.path.split(path)
-        (name, extension) = os.path.splitext(filename)
-
-        Costume.__init__(self, name)
-        self.path = path
-
-        self.image_format = None
-        if extension:
-            self.image_format = extension.lstrip(".").upper()
-            if self.image_format == "JPG":
-                self.image_format = "JPEG"
-
-        self.size = (480, 360)
-
-    def save_to_string(self, image_format=None):
-        f = open(self.path)
-        contents = f.read()
-        f.close()
-        return contents
-
-
-class CostumeFromFile(Costume):
-    """A costume loaded from a file pointer or a stirng containing the raw file
-    bytes.
-
-    Do not pass a path to this constructor! Use
-    :attr:`CostumeFromFile.from_path` instead.
-
-    :param name:         Name of the ``Costume`` as referred to from scripts.
-    :param file_:           File-like object (must be opened in binary mode).
-                         May also be a bytestring containing the raw file
-                         contents.
-    :param image_format: Format of the image file. Leave as None if it's
-                         unknown.
-
-    """
-
-    def __init__(self, name, file_, image_format=None):
-        Costume.__init__(self, name)
-        self.image_format = image_format
-
-        if isinstance(file_, basestring):
-            self.file = StringIO(file_)
-        else:
-            self.file = file_
-
-    @classmethod
-    def from_path(cls, path):
-        """Load a costume from the image file with the given path."""
-
-        (folder, filename) = os.path.split(path)
-        (name, extension) = os.path.splitext(filename)
-
-        image_format = None
-        if extension:
-            image_format = extension.lstrip(".").upper()
-            if image_format == "JPG":
-                image_format = "JPEG"
-
-        fp = open(path, "rb")
-
-        return cls(name, fp, image_format)
-
-    def _decode(self):
-        self.file.seek(0)
-        return CostumeFromPIL(self.name, PIL.Image.open(self.file))
-
-    def _save(self, path, image_format):
-        self.file.seek(0)
-        open(path, "wb").write(self.file.read())
-
-
-class CostumeFromPIL(Costume):
-    """A costume based on a :class:`PIL Image <PIL.Image.Image>`. The image has
-    already been loaded from a file into memory.
-
-    """
-
-    def __init__(self, name, pil_image):
-        Costume.__init__(self, name)
-
-        self.pil_image = pil_image
-        self.size = pil_image.size
-        self.image_format = pil_image.format
-
-        # set rotation center to center
-        self.rotation_center = (int(self.width / 2), int(self.height / 2))
-
-    def decode(self):
-        return self
-
-    def _save(self, path, image_format):
-        self.pil_image.save(path, image_format)
