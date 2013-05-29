@@ -66,7 +66,7 @@ Supported file formats:
     ``"scratch20"`` Scratch 2.0 ``.sb2``
     =============== =========== =========
 
-Pass "Format name" as the argument to :attr:`Project.convert()`.
+Pass "Format name" as the argument to :attr:`Project.convert`.
 
 Kurt provides a superset of the information in each individual format, but will
 only convert features between a subset of formats.
@@ -352,7 +352,7 @@ class Project(object):
                      filename is based on the project's :attr:`name`.
 
         :param debug: If true, return debugging information from the format
-                      instead.
+                      plugin instead of the path.
 
         :raises: :py:class:`ValueError` if there's no path or name, or you forgot
                  to :attr:`convert()` before saving.
@@ -1181,7 +1181,12 @@ class Costume(object):
 
     @classmethod
     def load(self, path):
-        """Load costume from image file."""
+        """Load costume from image file.
+
+        Uses :attr:`Image.load`, but will set the Costume's name based on the
+        image filename.
+
+        """
         (folder, filename) = os.path.split(path)
         (name, extension) = os.path.splitext(filename)
         return Costume(name, Image.load(path))
@@ -1189,11 +1194,11 @@ class Costume(object):
     def save(self, path):
         """Save the costume to an image file at the given path.
 
-        The image format is guessed from the extension.  If path has no
-        extension, the costume's image format is used if known.
+        Uses :attr:`Image.save`, but if the path ends in a folder instead of a
+        file, the filename is based on the project's :attr:`name`.
 
-        If the path ends in a folder instead of a file, the
-        filename is based on the project's :attr:`name`.
+        The image format is guessed from the extension. If path has no
+        extension, the image's :attr:`format` is used.
 
         :returns: Path to the saved file.
 
@@ -1219,22 +1224,23 @@ class Costume(object):
 class Image(object):
     """The contents of an image file.
 
-    Make from raw file contents::
+    Constructing from raw file contents::
 
         Image(file_contents, "JPEG")
 
-    Make from :class:`PIL.Image.Image` instance::
+    Constructing from a :class:`PIL.Image.Image` instance::
 
         pil_image = PIL.Image.new("RGBA", (480, 360))
         Image(pil_image)
 
-    Load from file::
+    Loading from file::
 
         Image.load("path/to/image.jpg")
 
     Images should be considered to be immutable. If you want to modify an
-    image, get a :class:`PIL.Image.Image` instance from :attr:`pil_image` and
-    modify that. Modifying images in-place may break things.
+    image, get a :class:`PIL.Image.Image` instance from :attr:`pil_image`,
+    modify that, and use it to construct a new Image. Modifying images in-place
+    may break things.
 
     The reason for having multiple constructors is so that kurt can implement
     lazy loading of image data -- in many cases, a PIL image will never need to
@@ -1397,7 +1403,7 @@ class Image(object):
         return path
 
     def resize(self, size):
-        """Return a new image instance with the given size."""
+        """Return a new Image instance with the given size."""
         return Image(self.pil_image.resize(size, PIL.Image.ANTIALIAS))
 
     # Static methods
