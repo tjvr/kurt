@@ -15,12 +15,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
-try:
-	import ply
-except ImportError, e:
-	print "Missing dependency: PLY needed for kurt.scratchblocks module"
-	raise e
-
+import ply
 
 from lexer import lex, tokens
 from parser import block_plugin_parser

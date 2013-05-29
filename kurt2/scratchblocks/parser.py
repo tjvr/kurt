@@ -19,9 +19,9 @@ from ply import yacc
 import os
 from lexer import tokens, pretty_error
 
-from kurt.scratch14.blockspecs import find_block, blocks_by_cmd
-from kurt.scratch14.scripts import Block, Script, SpriteRef
-from kurt.scratch14 import Symbol, Color
+from kurt2.scratch14.blockspecs import find_block, blocks_by_cmd
+from kurt2.scratch14.scripts import Block, Script, SpriteRef
+from kurt2.scratch14 import Symbol, Color
 
 
 import htmlcolor

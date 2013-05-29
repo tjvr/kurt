@@ -85,25 +85,12 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-try:
-    import PIL.Image
-except ImportError:
-    print "WARNING: dependency PIL not installed"
-    PIL = None
+import PIL.Image
 
-def _require_pil():
-    if PIL is None:
-        raise ValueError, "Missing dependency: PIL library needed" \
-                          "for image support"
-
-import kurt.plugin
-import kurt.scratch14
-import kurt.scratch20
-import kurt.scratchblocks
-
-# Support old interface
-from kurt.scratch14 import ScratchProjectFile
-import kurt.scratch14.scripts as scripts
+import kurt2.plugin
+import kurt2.scratch14
+import kurt2.scratch20
+import kurt2.scratchblocks
 
 
 # separate Image from Costume
@@ -130,12 +117,11 @@ import kurt.scratch14.scripts as scripts
 # Comment/Script superclass?
 # -> meh.
 
-# Names I can't change:
+# Names I probably shouldn't change:
 #   kurt.scripts.Block
 #   the Script, Block interfaces
 
 # scratchblocks Block constructors
-# -> Leave for now. Can always add later...
 
 
 
@@ -162,7 +148,7 @@ class Project(object):
 
     Loading a project::
 
-        p = kurt.Project.load("tests/game.sb")
+        p = kurt2.Project.load("tests/game.sb")
 
     Getting all the scripts::
 
@@ -172,11 +158,11 @@ class Project(object):
 
     Creating a new project::
 
-        p = kurt.Project()
+        p = kurt2.Project()
 
     Converting between formats::
 
-        p = kurt.Project.load("tests/game.sb")
+        p = kurt2.Project.load("tests/game.sb")
         p.convert("scratch20")
         p.save()
         # 'tests/game.sb2'
@@ -253,7 +239,7 @@ class Project(object):
         self._normalize()
 
     def __repr__(self):
-        return "<%s.%s(%r)>" % (self.__class__.__module__,
+        return "<%s.%s name=%r>" % (self.__class__.__module__,
                 self.__class__.__name__, self.name)
 
     def get_sprite(self, name):
@@ -299,11 +285,11 @@ class Project(object):
         (name, extension) = os.path.splitext(filename)
 
         if format is None:
-            plugin = kurt.plugin.Kurt.get_plugin(extension=extension)
+            plugin = kurt2.plugin.Kurt.get_plugin(extension=extension)
             if not plugin:
                 raise UnknownFormat(extension)
         else:
-            plugin = kurt.plugin.Kurt.get_plugin(name=format)
+            plugin = kurt2.plugin.Kurt.get_plugin(name=format)
             if not plugin:
                 raise ValueError, "Unknown format %r" % format
 
@@ -329,7 +315,7 @@ class Project(object):
 
         """
 
-        plugin = kurt.plugin.Kurt.get_plugin(name=format)
+        plugin = kurt2.plugin.Kurt.get_plugin(name=format)
 
         self._normalize()
 
@@ -962,7 +948,7 @@ class BlockType(object):
         return [p for p in self.parts if p[0] == "%"]
 
     def __repr__(self):
-        r = "%s(%s," % (self.__class__.__module__, self.__class__.__name__,
+        r = "%s.%s(%s," % (self.__class__.__module__, self.__class__.__name__,
                 self.command)
         r += "\n\t" + self.text
         for name in ("shape", "category", "defaults"):
@@ -988,7 +974,7 @@ class Block(object):
                       command the block performs.
     :param ``*args``: List of the block's arguments.
 
-    >>> block = kurt.Block('say:duration:elapsed:from:', 'Hello!', 2)
+    >>> block = kurt2.Block('say:duration:elapsed:from:', 'Hello!', 2)
     >>> block.command
     'say:duration:elapsed:from:'
     >>> block.args
@@ -1050,7 +1036,7 @@ class Block(object):
         return not self == other
 
     def __repr__(self):
-        string = "%s(%s, " % (self.__class__.__module__,
+        string = "%s.%s(%s, " % (self.__class__.__module__,
                 self.__class__.__name__, repr(self.command))
         for arg in self.args:
             if isinstance(arg, Block):

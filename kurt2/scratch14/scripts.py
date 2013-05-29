@@ -20,15 +20,15 @@
 You should use the classes provided
 """
 
-from kurt.scratch14.fixed_objects import Symbol, Color, Point
-from kurt.scratch14.user_objects import BaseMorph, Sprite
+from kurt2.scratch14.fixed_objects import Symbol, Color, Point
+from kurt2.scratch14.user_objects import BaseMorph, Sprite
 
 from pprint import pformat
 
 
 
 class Block(object):
-    """This class is DEPRECATED! Use kurt.Block instead.
+    """This class is DEPRECATED! Use kurt2.Block instead.
 
     A single block.
     Arguments:
@@ -412,7 +412,7 @@ class Block(object):
 
 
 class Script(object):
-    """This class is DEPRECATED! Use kurt.Script instead.
+    """This class is DEPRECATED! Use kurt2.Script instead.
 
     A single stack of blocks.
 
@@ -550,7 +550,7 @@ from blockspecs import find_block
 
 
 class Comment(Script):
-    """This class is DEPRECATED! Use kurt.Comment instead."""
+    """This class is DEPRECATED! Use kurt2.Comment instead."""
 
     type = BlockType("scratchComment", "// %s", defaults = ["", True, 112])
 

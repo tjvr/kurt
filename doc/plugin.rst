@@ -1,5 +1,5 @@
-``kurt.plugin``
-===============
+``kurt2.plugin``
+================
 
 .. include:: warning.rst
 
@@ -7,7 +7,7 @@
 Writing plugins
 ---------------
 
-.. automodule:: kurt.plugin
+.. automodule:: kurt2.plugin
     :no-members:
 
 
@@ -18,10 +18,10 @@ Writing plugins
 ``KurtPlugin``
 --------------
 
-.. autoclass:: kurt.plugin.KurtPlugin
+.. autoclass:: kurt2.plugin.KurtPlugin
 
 
 ``Kurt``
 --------
 
-.. autoclass:: kurt.plugin.Kurt
+.. autoclass:: kurt2.plugin.Kurt

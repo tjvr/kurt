@@ -17,6 +17,8 @@
 # You should have received a copy of the GNU Lesser General Public License along 
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
+"""For kurt2.scratch14 -- currently broken. TODO: fix"""
+
 try:
     import kurt
 except ImportError: # try and find kurt directory

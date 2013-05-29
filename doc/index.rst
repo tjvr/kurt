@@ -14,7 +14,7 @@ Contents:
    :maxdepth: 4
 
    changes
-   kurt
+   kurt2
    plugin
 
 

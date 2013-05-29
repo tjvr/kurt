@@ -17,17 +17,12 @@
 
 """A Kurt plugin for Scratch 1.4."""
 
-import kurt
-from kurt.plugin import Kurt, KurtPlugin
+import kurt2
+from kurt2.plugin import Kurt, KurtPlugin
 
-from kurt.scratch14.objtable import *
-from kurt.scratch14.files import *
-from kurt.scratch14.scripts import *
-
-try:
-    from kurt.scratchblocks import parse_block_plugin
-except ImportError:
-    pass
+from kurt2.scratch14.objtable import *
+from kurt2.scratch14.files import *
+from kurt2.scratch14.scripts import *
 
 
 
@@ -45,20 +40,20 @@ except ImportError:
 
 
 # kurt_* -- objects from kurt 2.0 api from kurt/__init__.py
-# v14_*  -- objects from this module, kurt.scratch14
+# v14_*  -- objects from this module, kurt2.scratch14
 
 def _load_image(v14_image):
     if v14_image:
         if v14_image.jpegBytes:
-            image = kurt.Image(v14_image.jpegBytes.value, "JPEG")
+            image = kurt2.Image(v14_image.jpegBytes.value, "JPEG")
             image._size = v14_image.size
 
             # TODO: subclass Costume for lazy image parsing
 
         else:
-            image = kurt.Image(v14_image.get_image())
+            image = kurt2.Image(v14_image.get_image())
 
-        return kurt.Costume(v14_image.name, image, v14_image.rotationCenter)
+        return kurt2.Costume(v14_image.name, image, v14_image.rotationCenter)
 
 def _save_image(kurt_costume):
     if kurt_costume:
@@ -91,10 +86,10 @@ def _load_block(v14_block):
         elif isinstance(arg, Symbol): # TODO: translate these
             arg = arg.value
         args.append(arg)
-    return kurt.Block(v14_block.command, *args)
+    return kurt2.Block(v14_block.command, *args)
 
 def _load_script(v14_script):
-    return kurt.Script(
+    return kurt2.Script(
         map(_load_block, v14_script.blocks),
         pos = v14_script.pos,
     )
@@ -102,7 +97,7 @@ def _load_script(v14_script):
 def _save_block(kurt_block):
     args = []
     for arg in kurt_block.args:
-        if isinstance(arg, kurt.Block):
+        if isinstance(arg, kurt2.Block):
             arg = _save_block(arg)
         elif isinstance(arg, list):
             arg = map(_save_block, arg)
@@ -121,7 +116,7 @@ def _save_script(kurt_script):
     )
 
 def _load_variable((name, value)):
-    return (name, kurt.Variable(value))
+    return (name, kurt2.Variable(value))
 
 def _save_variable((name, kurt_variable)):
     return (name, kurt_variable.value)
@@ -129,12 +124,12 @@ def _save_variable((name, kurt_variable)):
 def _load_lists(v14_lists, kurt_project, kurt_owner):
     kurt_lists = {}
     for v14_list in v14_lists.values():
-        kurt_list = kurt.List(map(unicode, v14_list.items))
+        kurt_list = kurt2.List(map(unicode, v14_list.items))
         kurt_lists[v14_list.name] = kurt_list
 
-        kurt_list_ref = kurt.ListReference(kurt_owner, v14_list.name)
+        kurt_list_ref = kurt2.ListReference(kurt_owner, v14_list.name)
 
-        kurt_watcher = kurt.Watcher(kurt_list_ref)
+        kurt_watcher = kurt2.Watcher(kurt_list_ref)
         kurt_watcher.visible = bool(v14_list.owner)
 
         (x, y, w, h) = v14_list.bounds.value
@@ -153,15 +148,15 @@ def _save_lists(kurt_thing, kurt_project, v14_morph, v14_project):
             items = kurt_list.items,
         )
 
-        kurt_list_ref = kurt.ListReference(kurt_thing, name)
+        kurt_list_ref = kurt2.ListReference(kurt_thing, name)
 
         for actor in kurt_project.actors:
-            if isinstance(actor, kurt.Watcher):
+            if isinstance(actor, kurt2.Watcher):
                 if actor.watching == kurt_list_ref:
                     kurt_watcher = actor
                     break
         else:
-            kurt_watcher = kurt.Watcher(kurt_list_ref, visible=False)
+            kurt_watcher = kurt2.Watcher(kurt_list_ref, visible=False)
 
         pos = kurt_watcher.pos
         if pos:
@@ -196,7 +191,7 @@ def _load_scriptable(kurt_scriptable, v14_scriptable):
     kurt_scriptable.tempo = v14_scriptable.tempoBPM
 
     # sprite
-    if isinstance(kurt_scriptable, kurt.Sprite):
+    if isinstance(kurt_scriptable, kurt2.Sprite):
         kurt_scriptable.name = v14_scriptable.name
         kurt_scriptable.direction = v14_scriptable.rotationDegrees
         kurt_scriptable.rotation_style = v14_scriptable.rotationStyle.value
@@ -224,7 +219,7 @@ def _save_scriptable(kurt_scriptable, v14_scriptable):
     v14_scriptable.volume = kurt_scriptable.volume
 
     # sprite
-    if isinstance(kurt_scriptable, kurt.Sprite):
+    if isinstance(kurt_scriptable, kurt2.Sprite):
         v14_scriptable.name = kurt_scriptable.name
         v14_scriptable.rotationDegrees = kurt_scriptable.direction
         v14_scriptable.rotationStyle = Symbol(kurt_scriptable.rotation_style)
@@ -247,7 +242,7 @@ class Scratch14Plugin(KurtPlugin):
 
     def load(self, path):
         v14_project = ScratchProjectFile(path)
-        kurt_project = kurt.Project()
+        kurt_project = kurt2.Project()
 
         # project info
         kurt_project.notes = v14_project.info['comment']
@@ -265,7 +260,7 @@ class Scratch14Plugin(KurtPlugin):
 
         # sprites
         for v14_sprite in v14_project.sprites:
-            kurt_sprite = kurt.Sprite(v14_sprite.name)
+            kurt_sprite = kurt2.Sprite(v14_sprite.name)
             _load_scriptable(kurt_sprite, v14_sprite)
             kurt_sprite.lists = _load_lists(v14_sprite.lists, kurt_project,
                     kurt_sprite)
@@ -285,9 +280,9 @@ class Scratch14Plugin(KurtPlugin):
                     kurt_thing = kurt_project.get_sprite(v14_sprite.name)
 
                 name = v14_watcher.readout.parameter
-                kurt_var_ref = kurt.VariableReference(kurt_thing, name)
+                kurt_var_ref = kurt2.VariableReference(kurt_thing, name)
 
-                kurt_watcher = kurt.Watcher(kurt_var_ref)
+                kurt_watcher = kurt2.Watcher(kurt_var_ref)
 
                 (x, y, right, bottom) = v14_watcher.bounds.value
                 kurt_watcher.pos = (x, y)
@@ -340,9 +335,9 @@ class Scratch14Plugin(KurtPlugin):
                 )
                 continue
 
-            if isinstance(kurt_actor, kurt.Watcher):
+            if isinstance(kurt_actor, kurt2.Watcher):
                 kurt_watcher = kurt_actor
-                if isinstance(kurt_watcher.watching, kurt.ListReference):
+                if isinstance(kurt_watcher.watching, kurt2.ListReference):
                     continue
 
                 if not kurt_watcher.visible:
@@ -365,7 +360,7 @@ class Scratch14Plugin(KurtPlugin):
                 v14_watcher.readout.target = v14_morph
                 v14_watcher.owner = v14_project.stage
 
-                if isinstance(kurt_watcher.watching, kurt.VariableReference):
+                if isinstance(kurt_watcher.watching, kurt2.VariableReference):
                     v14_watcher.readout.parameter = kurt_watcher.watching.name
 
                     v14_watcher.name = kurt_watcher.watching.name

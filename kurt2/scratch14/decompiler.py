@@ -15,7 +15,9 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
-"""Decompiles a Scratch project to folders containing its contents.
+"""Currently broken. TODO: fix
+
+Decompiles a Scratch project to folders containing its contents.
 Exports images to PNG or JPG format files.
 Exports scripts to .txt files with block plugin (scratchblocks) syntax.
 
