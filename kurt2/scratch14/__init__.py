@@ -47,9 +47,6 @@ def _load_image(v14_image):
         if v14_image.jpegBytes:
             image = kurt2.Image(v14_image.jpegBytes.value, "JPEG")
             image._size = v14_image.size
-
-            # TODO: subclass Costume for lazy image parsing
-
         else:
             image = kurt2.Image(v14_image.get_image())
 

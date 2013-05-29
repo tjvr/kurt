@@ -60,7 +60,6 @@ Some things to keep in mind:
 
 """
 
-# Format dict: (wth?) TODO
 
 
 class KurtPlugin(object):

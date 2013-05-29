@@ -93,37 +93,6 @@ import kurt2.scratch20
 import kurt2.scratchblocks
 
 
-# separate Image from Costume
-
-# what if the path at Project.save(path) already exists?
-
-# float positions?
-
-# normalize update hooks on setattr
-
-# Lists vs. Variables
-
-# Block definitions
-
-# Does json need open("rb")?
-
-# Block inserts
-# ``eblock`` -- >2 C-slots?
-
-# Script x/y < 0
-
-# Script.pos vs Sprite.position
-
-# Comment/Script superclass?
-# -> meh.
-
-# Names I probably shouldn't change:
-#   kurt.scripts.Block
-#   the Script, Block interfaces
-
-# scratchblocks Block constructors
-
-
 
 #-- Utils --#
 
@@ -168,7 +137,6 @@ class Project(object):
         # 'tests/game.sb2'
 
     """
-    # TODO doc
 
     def __init__(self):
         self.name = u""
@@ -210,7 +178,6 @@ class Project(object):
         save.
 
         """
-        # TODO specify stacking order
 
         self.variables = {}
         """:class:`dict` of global :class:`Variables <Variable>` by name."""
@@ -319,7 +286,7 @@ class Project(object):
 
         self._normalize()
 
-        # TODO: convert
+        # TODO
 
         self._plugin = plugin
 
@@ -810,12 +777,12 @@ class List(object):
         self.items = map(unicode, self.items)
 
     def __repr__(self):
-        r = "%s.%s(%r" % (self.__class__.__module__, self.__class__.__name__, self.items)
+        r = "<%s.%s(%i items)>" % (self.__class__.__module__,
+                self.__class__.__name__, len(self.items))
         if self.is_cloud:
             r += ", is_cloud=%r" % self.is_cloud
         r += ")"
         return r
-        # TODO: limit self.items length?
 
 
 class BlockType(object):
@@ -849,7 +816,6 @@ class BlockType(object):
         eg. ``'say %s for %n secs'``
 
         """
-        # TODO: specify insert types?
 
         self.shape = shape
         """The shape of the block. Valid values:
@@ -888,7 +854,7 @@ class BlockType(object):
         # In Scratch 1.4: one of '-', 'b', 'c', 'r', 'E', 'K', 'M', 'S', 's', 't'
         # In Scratch 2.0: one of ' ', 'b', 'c', 'r', 'e', 'cf', 'f', 'h'
 
-        self.category = category # TODO: default category?
+        self.category = category
         """Where the block is found in the interface."""
         # In Scratch 1.4, one of:
         # 'motion', 'looks', 'sound', 'pen', 'control', 'sensing', 'operators',

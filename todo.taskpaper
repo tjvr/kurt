@@ -1,0 +1,20 @@
+- Block inserts
+- specify insert types?
+- ``eblock`` -- >2 C-slots?
+- scratchblocks Block constructors
+- Block definitions
+- convert scripts
+
+- stacking order of actors
+- don't convert kurt.scratch14 images to pil
+- sounds
+
+- what if the path at Project.save(path) already exists?
+- Does json need open("rb")?
+- Script x/y < 0
+- Script.pos vs Sprite.position
+- Comment/Script superclass?
+
+Names I probably shouldn't change:
+	kurt.scripts.Block
+	the Script, Block interfaces
