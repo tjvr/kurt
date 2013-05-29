@@ -350,7 +350,10 @@ class Scratch14Plugin(KurtPlugin):
                 else:
                     (x, y) = (10, 10)
 
-                kurt_parent = kurt_project #kurt_watcher.watching.parent # TODO
+                if isinstance(kurt_watcher.watching, kurt2.VariableReference):
+                    kurt_parent = kurt_watcher.watching.scriptable
+                else:
+                    kurt_parent = kurt_project
                 if kurt_parent == kurt_project:
                     v14_morph = v14_project.stage
                     v14_watcher.isSpriteSpecfic = False
