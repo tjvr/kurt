@@ -87,10 +87,10 @@ except ImportError:
 
 import PIL.Image
 
-import kurt2.plugin
-import kurt2.scratch14
-import kurt2.scratch20
-import kurt2.scratchblocks
+import kurt.plugin
+import kurt.scratch14
+import kurt.scratch20
+import kurt.scratchblocks
 
 
 
@@ -117,7 +117,7 @@ class Project(object):
 
     Loading a project::
 
-        p = kurt2.Project.load("tests/game.sb")
+        p = kurt.Project.load("tests/game.sb")
 
     Getting all the scripts::
 
@@ -127,11 +127,11 @@ class Project(object):
 
     Creating a new project::
 
-        p = kurt2.Project()
+        p = kurt.Project()
 
     Converting between formats::
 
-        p = kurt2.Project.load("tests/game.sb")
+        p = kurt.Project.load("tests/game.sb")
         p.convert("scratch20")
         p.save()
         # 'tests/game.sb2'
@@ -252,11 +252,11 @@ class Project(object):
         (name, extension) = os.path.splitext(filename)
 
         if format is None:
-            plugin = kurt2.plugin.Kurt.get_plugin(extension=extension)
+            plugin = kurt.plugin.Kurt.get_plugin(extension=extension)
             if not plugin:
                 raise UnknownFormat(extension)
         else:
-            plugin = kurt2.plugin.Kurt.get_plugin(name=format)
+            plugin = kurt.plugin.Kurt.get_plugin(name=format)
             if not plugin:
                 raise ValueError, "Unknown format %r" % format
 
@@ -282,7 +282,7 @@ class Project(object):
 
         """
 
-        plugin = kurt2.plugin.Kurt.get_plugin(name=format)
+        plugin = kurt.plugin.Kurt.get_plugin(name=format)
 
         self._normalize()
 
@@ -940,7 +940,7 @@ class Block(object):
                       command the block performs.
     :param ``*args``: List of the block's arguments.
 
-    >>> block = kurt2.Block('say:duration:elapsed:from:', 'Hello!', 2)
+    >>> block = kurt.Block('say:duration:elapsed:from:', 'Hello!', 2)
     >>> block.command
     'say:duration:elapsed:from:'
     >>> block.args

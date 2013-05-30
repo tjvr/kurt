@@ -1,9 +1,9 @@
-``kurt2``
-=========
+``kurt``
+========
 
 .. include:: warning.rst
 
-.. automodule:: kurt2
+.. automodule:: kurt
     :undoc-members:
     :member-order: bysource
 

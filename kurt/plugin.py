@@ -18,13 +18,13 @@
 """
 To add support for a new file format, write a new :class:`KurtPlugin` subclass::
 
-    import kurt2
-    from kurt2.plugin import Kurt, KurtPlugin
+    import kurt
+    from kurt.plugin import Kurt, KurtPlugin
 
     class MyScratchModPlugin(KurtPlugin):
         def load(self, path):
             f = open(path)
-            kurt_project = kurt2.Project()
+            kurt_project = kurt.Project()
             # ... set kurt_project attributes ... #
             return kurt_project
 
@@ -34,7 +34,7 @@ To add support for a new file format, write a new :class:`KurtPlugin` subclass::
 
     Kurt.register(MyScratchModPlugin())
 
-Take a look at :mod:`kurt2.scratch20` for a more detailed example.
+Take a look at :mod:`kurt.scratch20` for a more detailed example.
 
 
 List available plugins
@@ -42,7 +42,7 @@ List available plugins
 
 To get a list of the plugins registered with :class:`Kurt`:
 
-    >>> kurt2.plugin.Kurt.plugins
+    >>> kurt.plugin.Kurt.plugins
     {'scratch14': kurt.scratch14.Scratch14Plugin()}
 
 You should see your plugin in the output, unless you forgot to :attr:`register

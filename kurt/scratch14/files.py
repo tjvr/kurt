@@ -112,7 +112,7 @@ class BinaryFile(object):
 
 
 class ScratchProjectFile(BinaryFile):
-    """Using this interface directly is DEPRECATED -- use kurt2.Project instead,
+    """Using this interface directly is DEPRECATED -- use kurt.Project instead,
     which provides conversion between multiple formats.
 
     Attributes:

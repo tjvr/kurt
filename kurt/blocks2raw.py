@@ -104,7 +104,7 @@ plugin_inserts20 = {
     '%c': '[#ff00ff]',
 }
 
-from kurt2.scratch20.scratch2_as import blocks as blocks20
+from kurt.scratch20.scratch2_as import blocks as blocks20
 
 def blockify(blockspec):
     if len(blockspec) > 1:

@@ -23,8 +23,8 @@ import time
 import os
 import hashlib
 
-import kurt2
-from kurt2.plugin import Kurt, KurtPlugin
+import kurt
+from kurt.plugin import Kurt, KurtPlugin
 
 
 class _ZipBuilder(object):
@@ -92,7 +92,7 @@ class _ZipBuilder(object):
 
 
     def save_scriptable(self, kurt_scriptable):
-        is_stage = isinstance(kurt_scriptable, kurt2.Stage)
+        is_stage = isinstance(kurt_scriptable, kurt.Stage)
 
         scriptable_dict = {
             "objName": kurt_scriptable.name,
@@ -105,7 +105,7 @@ class _ZipBuilder(object):
             costume_dict = self.save_costume(kurt_costume)
             scriptable_dict["costumes"].append(costume_dict)
 
-        if isinstance(kurt_scriptable, kurt2.Sprite):
+        if isinstance(kurt_scriptable, kurt.Sprite):
             scriptable_dict.update({
                 "scratchX": 0,
                 "scratchY": 0,
@@ -141,7 +141,7 @@ class Scratch20Plugin(KurtPlugin):
 
         project_dict = json.load(project_zip.open("project.json"))
 
-        kurt_project = kurt2.Project()
+        kurt_project = kurt.Project()
 
         kurt_project._original = project_dict
 

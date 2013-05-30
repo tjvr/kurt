@@ -13,8 +13,8 @@ Contents:
 .. toctree::
    :maxdepth: 4
 
-   changes
-   kurt2
+   changes-1.4
+   kurt
    plugin
 
 
