@@ -4,6 +4,9 @@
 - scratchblocks Block constructors
 - Block definitions
 - convert scripts
+- remove kurt.scratch14.scripts
+
+- rename `scratchblocks` -> `text`
 
 - stacking order of actors
 - don't convert kurt.scratch14 images to pil
@@ -14,6 +17,8 @@
 - Script x/y < 0
 - Script.pos vs Sprite.position
 - Comment/Script superclass?
+
+- fix compiler/decompiler
 
 Names I probably shouldn't change:
 	kurt.scripts.Block
