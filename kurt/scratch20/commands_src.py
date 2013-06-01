@@ -1,4 +1,6 @@
-# `commands:Array` from Scratch SWF source
+# Generated from Scratch SWF source by src/extract_blocks.py
+
+# commands:Array
 commands = [
  ['move %n steps', ' ', 1, 'forward:', 10],
  ['turn @turnRight %n degrees', ' ', 1, 'turnRight:', 15],
@@ -55,9 +57,6 @@ commands = [
  ['change %m.effect effect by %n', ' ', 102, 'changeGraphicEffect:by:', 'color', 25],
  ['set %m.effect effect to %n', ' ', 102, 'setGraphicEffect:to:', 'color', 0],
  ['clear graphic effects', ' ', 102, 'filterReset'],
- ['-'],
- ['turn video %m.videoState', ' ', 102, 'setVideoState', 'off'],
- ['set video transparency to %n%', ' ', 102, 'setVideoTransparency', 50],
  ['-'],
  ['backdrop name', 'r', 102, 'sceneName'],
  ['backdrop #', 'r', 102, 'backgroundIndex'],
@@ -149,7 +148,10 @@ commands = [
  ['mouse y', 'r', 7, 'mouseY'],
  ['-'],
  ['loudness', 'r', 7, 'soundLevel'],
- ['video %m.videoMotionType on %m.stageOrThis', 'r', 7, 'senseVideoMotion', 'motion', '_stage_'],
+ ['-'],
+ ['video %m.videoMotionType on %m.stageOrThis', 'r', 7, 'senseVideoMotion', 'motion'],
+ ['turn video %m.videoState', ' ', 7, 'setVideoState', 'on'],
+ ['set video transparency to %n%', ' ', 7, 'setVideoTransparency', 50],
  ['-'],
  ['timer', 'r', 7, 'timer'],
  ['reset timer', ' ', 7, 'timerReset'],
@@ -168,7 +170,10 @@ commands = [
  ['mouse y', 'r', 107, 'mouseY'],
  ['-'],
  ['loudness', 'r', 107, 'soundLevel'],
+ ['-'],
  ['video %m.videoMotionType on %m.stageOrThis', 'r', 107, 'senseVideoMotion', 'motion', 'Stage'],
+ ['turn video %m.videoState', ' ', 107, 'setVideoState', 'on'],
+ ['set video transparency to %n%', ' ', 107, 'setVideoTransparency', 50],
  ['-'],
  ['timer', 'r', 107, 'timer'],
  ['reset timer', ' ', 107, 'timerReset'],
@@ -217,21 +222,6 @@ commands = [
  ['-'],
  ['show list %m.list', ' ', 12, 'showList:'],
  ['hide list %m.list', ' ', 12, 'hideList:'],
- ['when %m.booleanSensor', 'h', 20, 'whenSensorConnected', 'button pressed'],
- ['-'],
- ['sensor %m.booleanSensor?', 'b', 20, 'sensorPressed:', 'button pressed'],
- ['%m.sensor sensor value', 'r', 20, 'sensor:', 'slider'],
- ['turn motor on for %n secs', ' ', 20, 'motorOnFor:elapsed:from:', 1],
- ['turn motor on', ' ', 20, 'allMotorsOn'],
- ['turn motor off', ' ', 20, 'allMotorsOff'],
- ['set motor power %n', ' ', 20, 'startMotorPower:', 100],
- ['set motor direction %m.motorDirection', ' ', 20, 'setMotorDirection:', 'this way'],
- ['--'],
- ['when distance < %n', 'h', 20, 'whenDistanceLessThan', 20],
- ['when tilt = %n', 'h', 20, 'whenTiltIs', 1],
- ['-'],
- ['distance', 'r', 20, 'wedoDistance'],
- ['tilt', 'r', 20, 'wedoTilt'],
  ['play drum %n for %n beats', ' ', 98, 'drum:duration:elapsed:from:', 1, 0.2],
  ['set instrument to %n', ' ', 98, 'midiInstrument:', 1],
  ['loud?', 'b', 98, 'isLoud'],
@@ -256,4 +246,39 @@ commands = [
  ['y scroll', 'r', 99, 'yScroll'],
  ['hide all sprites', ' ', 99, 'hideAll'],
  ['user id', 'r', 99, 'getUserId'],
+]
+
+# SensorBoard():ScratchExtension
+extras = [
+ ['h', 'when %m.booleanSensor', 'whenSensorConnected', 'button pressed'],
+ ['-'],
+ ['b', 'sensor %m.booleanSensor?', 'sensorPressed:', 'button pressed'],
+ ['r', '%m.sensor sensor value', 'sensor:', 'slider'],
+]
+
+# WeDo():ScratchExtension
+extras += [
+ [' ', 'turn motor on for %n secs', 'motorOnFor:elapsed:from:', 1],
+ [' ', 'turn motor on', 'allMotorsOn'],
+ [' ', 'turn motor off', 'allMotorsOff'],
+ [' ', 'set motor power %n', 'startMotorPower:', 100],
+ [' ', 'set motor direction %m.motorDirection', 'setMotorDirection:', 'this way'],
+ ['--'],
+ ['h', 'when distance < %n', 'whenDistanceLessThan', 20],
+ ['h', 'when tilt = %n', 'whenTiltIs', 1],
+ ['-'],
+ ['r', 'distance', 'wedoDistance'],
+ ['r', 'tilt', 'wedoTilt'],
+]
+
+# MIDI():ScratchExtension
+extras += [
+ [' ', 'note on %d.note vel %n chan %n', 'noteOn', 60, 80, 0],
+ [' ', 'note off %d.note chan %n', 'noteOff', 60, 0],
+ [' ', 'pitch bend %n chan %n', 'pitchBend', 8192, 0],
+ [' ', 'set controller %n to %n chan %n', 'controller', 10, 127, 0],
+ [' ', 'set instrument to %n chan %n', 'program', 0, 0],
+ [' ', 'turn all notes off', 'midiReset'],
+ [' ', 'use java synthesizer %b', 'useJavaSynth'],
+ ['r', 'midi time', 'v.time'],
 ]
