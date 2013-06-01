@@ -1,5 +1,5 @@
 # `commands:Array` from Scratch SWF source
-blocks = [
+commands = [
  ['move %n steps', ' ', 1, 'forward:', 10],
  ['turn @turnRight %n degrees', ' ', 1, 'turnRight:', 15],
  ['turn @turnLeft %n degrees', ' ', 1, 'turnLeft:', 15],
@@ -255,4 +255,5 @@ blocks = [
  ['x scroll', 'r', 99, 'xScroll'],
  ['y scroll', 'r', 99, 'yScroll'],
  ['hide all sprites', ' ', 99, 'hideAll'],
- ['user id', 'r', 99, 'getUserId']]
+ ['user id', 'r', 99, 'getUserId'],
+]
