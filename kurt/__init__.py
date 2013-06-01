@@ -785,11 +785,72 @@ class List(object):
         return r
 
 
-class BlockType(object):
-    """The specification for a type of block. See :class:`Block`.
+class Insert(object):
+    """The specification for an argument to a :class:`BlockType`."""
 
-    To quickly find a BlockType by its text, use :func:`find_block` (from the
-    `blockspecs` module).
+    def __init__(self, shape, default=None):
+        self.shape = shape
+        """What kind of values this argument accepts.
+
+        Shapes that accept a simple data value or a reporter block:
+
+        ``'number'``
+            An integer or float number.
+
+        ``'string'``
+            A unicode text value.
+
+        ``'readonly-menu'``
+            A choice of string value from a menu.
+
+            Some readonly inserts do not accept reporter blocks.
+
+        ``'number-menu'``
+            Either a number value, or a choice of special value from a menu.
+
+        ``'color'``
+            A :class:`Color` value.
+
+        Shapes that only accept blocks with the corresponding :attr:`shape`:
+
+        ``'boolean'``
+            Accepts a boolean block.
+
+        ``'stack'``
+            Accepts a list of stack blocks. Defaults to ``[]``.
+
+            The block is rendered with a "mouth" into which blocks can be
+            inserted.
+
+        """
+
+        # TODO self.kind -- Valid values for a ``menu`` insert.
+
+        self.default = default
+        """The default value for the insert."""
+
+    def __repr__(self):
+        r = "%s.%s(%r" % (self.__class__.__module__,
+                self.__class__.__name__, self.shape)
+        if self.default is not None:
+            r += ", default=%r" % self.default
+        r += ")"
+        return r
+
+    def __eq__(self, other):
+        if isinstance(other, Insert):
+            for name in ("shape", "default"):
+                if getattr(self, name) != getattr(other, name):
+                    return False
+            else:
+                return True
+
+    def __ne__(self, other):
+        return not self == other
+
+
+class BlockType(object):
+    """The specification for a type of :class:`Block`.
 
     >>> BlockType('say:duration:elapsed:from:', 'say %s for %n secs',
     ...           shape='stack', category='looks', defaults=['Hello!', 2])
@@ -797,10 +858,7 @@ class BlockType(object):
 
     """
 
-    _INSERT_RE = re.compile(r'(%.(?:\.[A-z]+)?)')
-
-    def __init__(self, command, text, shape='stack', category='',
-                 defaults=None):
+    def __init__(self, command, parts, shape='stack', category=None):
         self.command = command
         """The method name from the source code, used to identify the block.
         Corresponds to :attr:`Block.command`.
@@ -809,11 +867,11 @@ class BlockType(object):
 
         """
 
-        self.text = text
-        """The text displayed on the block.  Block inserts are represented as
-        ``%x`` or ``%m.menuName``.
+        self.parts = parts
+        """A list describing the text and arguments of the block.
 
-        eg. ``'say %s for %n secs'``
+        Contains strings, which are part of the text displayed on the block,
+        and :class:`Insert` instances, which are arguments to the block.
 
         """
 
@@ -827,16 +885,6 @@ class BlockType(object):
         ``'cap'``
             Stops the script executing after this block. No blocks can be
             connected below them.
-
-        ``'cblock'``
-            Like stack blocks, but have a "mouth" into which blocks can be
-            inserted.
-
-            The contents of the mouth are the last argument to the
-            :class:`Block`.
-
-        ``'eblock'``
-            Like C blocks, but with two mouths (eg. the if/else block).
 
         ``'hat'``
             A block that starts a script, such as by responding to an event.
@@ -868,10 +916,6 @@ class BlockType(object):
         # 'obsolete', 'pen', 'obsolete', 'sensor', 'wedo', 'midi', 'looks',
         # 'midi'
 
-        if defaults is None: defaults = []
-        self.defaults = defaults
-        """Default values for block inserts. (see :attr:`Block.args`)"""
-
     def __eq__(self, other):
         if isinstance(other, BlockType):
             for name in ("command", "text", "shape", "category", "defaults"):
@@ -895,15 +939,6 @@ class BlockType(object):
         return bt
 
     @property
-    def parts(self):
-        """The text split up into text segments and inserts.
-
-        eg. ``['say ', '%s', ' for ', '%n', ' secs']``
-
-        """
-        return filter(None, self._INSERT_RE.split(self.text))
-
-    @property
     def inserts(self):
         """The type of each of the block's inserts. Found by filtering
         :attr:`parts`.
@@ -913,12 +948,16 @@ class BlockType(object):
         """
         return [p for p in self.parts if p[0] == "%"]
 
+    @property
+    def defaults(self):
+        """Default values for block inserts. (see :attr:`Block.args`)"""
+        return [part for part in self.parts if isinstance(part, Insert)]
+
     def __repr__(self):
-        r = "%s.%s(%s," % (self.__class__.__module__, self.__class__.__name__,
-                self.command)
-        r += "\n\t" + self.text
-        for name in ("shape", "category", "defaults"):
-            r += "\n\t%s=%s" % (name, getattr(self, name))
+        r = "%s.%s(%r, %r" % (self.__class__.__module__, self.__class__.__name__,
+                self.command, self.parts)
+        for name in ("shape", "category"):
+            r += ", %s=%s" % (name, getattr(self, name))
         return r + ")"
 
         return 'BlockType(%s)' % self.command
