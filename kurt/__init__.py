@@ -885,8 +885,7 @@ class BlockType(object):
     """
 
     def __init__(self, plugin, command, parts, shape='stack', category=None,
-            equal_commands={}):
-
+            match=None):
         self.inserts = [p for p in parts if isinstance(p, Insert)]
         """The type of each argument to the block.
 
@@ -928,10 +927,17 @@ class BlockType(object):
         self._translations = OrderedDict()
         """Stores :class:`TranslatedBlockType` objects for each plugin name."""
 
+        self._match = match
+        """``(plugin, command)`` -- equivalent command from other plugin.
+
+        The plugin to match against must have been registered first.
+
+        """
+
         t_parts = [("%s" if isinstance(x, Insert) else x.strip()) for x in parts]
         t_parts = [("%%" if x == "%" else x) for x in t_parts] # escape percent
         text = " ".join(t_parts)
-        t = TranslatedBlockType(category, command, text, equal_commands)
+        t = TranslatedBlockType(plugin, category, command, text)
         self._translations[plugin] = t
 
     def merge(self, other):
@@ -939,6 +945,20 @@ class BlockType(object):
         assert self.shape == other.shape
 
         self._translations.update(other._translations)
+        other._translations = self._translations.copy()
+
+    def get_command(self, plugin=None):
+        """Return the method name from the source code of the given plugin,
+        used to identify the block.
+
+        If plugin is ``None``, return the :attr:`command` of the first
+        registered plugin.
+
+        """
+        if plugin:
+            return self._translations[plugin].command
+        else:
+            return self._translations.values()[0].command
 
     @property
     def text(self):
@@ -951,6 +971,8 @@ class BlockType(object):
         Contains strings, which are part of the text displayed on the block,
         and :class:`Insert` instances, which are arguments to the block.
 
+        Uses the :attr:`text` from the first registered plugin.
+
         """
         inserts = list(self.inserts)
         parts = re.split("(%s)", self.text)
@@ -960,15 +982,16 @@ class BlockType(object):
     def get(cls, block_type):
         if isinstance(block_type, BlockType):
             return block_type
-        return kurt.plugin.Kurt.get_block_type(block_type)
+        blocks = kurt.plugin.Kurt.block_by_command(block_type)
+        if blocks:
+            return blocks[0]
 
     def __eq__(self, other):
         if isinstance(other, BlockType):
-            for name in ("command", "text", "shape", "category", "defaults"):
-                if getattr(self, name) != getattr(other, name):
-                    return False
-            else:
-                return True
+            if self.shape == other.shape and self.inserts == other.inserts:
+                for t in self._translations:
+                    if t in other._translations:
+                        return True
 
     def __ne__(self, other):
         return not self == other
@@ -998,7 +1021,6 @@ class BlockType(object):
 class TranslatedBlockType(object):
     """Holds plugin-specific :class:`BlockType` attributes.
 
-
     ``BlockType`` also accepts keyword arguments of the form
     ``command_<plugin>``. For example, to specify a Scratch 1.4 command called
     "foo" with an equivalent Scratch 2.0 command called "bar"::
@@ -1011,7 +1033,10 @@ class TranslatedBlockType(object):
 
     """
 
-    def __init__(self, category, command, text, equal_commands={}):
+    def __init__(self, plugin, category, command, text, equal_commands={}):
+        self._plugin = plugin
+        """The format plugin the block belongs to."""
+
         self.category = category
         """Where the block is found in the interface."""
         # In Scratch 1.4, one of:
@@ -1042,12 +1067,13 @@ class TranslatedBlockType(object):
 
         """
 
-        self._command_translations = {}
-        """Equivalent commands from other format plugins.
+    def __eq__(self, other):
+        if isinstance(other, TranslatedBlockType):
+            if self.plugin == other.plugin and self.command == other.command:
+                return True
 
-        Stored as ``(plugin, command)``. Used internally by :class:`Kurt`.
-
-        """
+    def __ne__(self, other):
+        return not self == other
 
 
 class Block(object):
@@ -1118,7 +1144,7 @@ class Block(object):
 
     def __repr__(self):
         string = "%s.%s(%s, " % (self.__class__.__module__,
-                self.__class__.__name__, repr(self.command))
+                self.__class__.__name__, repr(self.type.get_command()))
         for arg in self.args:
             if isinstance(arg, Block):
                 string = string.rstrip("\n")

@@ -24,6 +24,8 @@
 
 - fix compiler/decompiler
 
+- URL regexes?
+
 Names I probably shouldn't change:
 	kurt.scripts.Block
 	the Script, Block interfaces

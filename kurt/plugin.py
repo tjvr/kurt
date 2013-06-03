@@ -60,7 +60,7 @@ Some things to keep in mind:
 
 """
 
-import collections
+from collections import OrderedDict
 
 
 
@@ -113,6 +113,18 @@ class KurtPlugin(object):
             self._blocks = self.make_blocks()
         return self._blocks
 
+    @property
+    def blocks_by_command(self):
+        if not hasattr(self, "_blocks_by_command"):
+            self._blocks_by_command = {}
+            for b in self.blocks:
+                if b:
+                    self._blocks_by_command[b.get_command(self.name)] = b
+        return self._blocks_by_command
+
+
+    # Override the following methods in subclass
+
     def make_blocks(self):
         """Return a list of :class:`BlockType` objects, which will be the value
         of the :attr:`blocks` property.
@@ -156,11 +168,11 @@ class Kurt(object):
     :class:`Project`.
     """
 
-    plugins = collections.OrderedDict()
+    plugins = OrderedDict()
 
     blocks = []
 
-    _loaded_blocks = False
+    _load_plugin_blocks = []
 
     @classmethod
     def register(cls, plugin):
@@ -174,6 +186,7 @@ class Kurt(object):
 
         """
         cls.plugins[plugin.name] = plugin
+        cls._load_plugin_blocks.append(plugin)
 
     @classmethod
     def get_plugin(cls, name=None, **kwargs):
@@ -194,7 +207,6 @@ class Kurt(object):
         :returns: :class:`KurtPlugin`
 
         """
-
         if 'extension' in kwargs:
             kwargs['extension'] = kwargs['extension'].lower()
         kwargs["name"] = name
@@ -209,19 +221,29 @@ class Kurt(object):
         raise ValueError, "Unknown format %r" % format
 
     @classmethod
-    def get_block_type(cls, command):
-        if not cls._loaded_blocks:
-            for plugin in cls.plugins.values():
-                cls.blocks += filter(None, plugin.blocks)
-            cls._loaded_blocks = True
-        for block in cls.blocks:
-            if block.command == command:
-                return block
+    def _load_blocks(cls):
+        while cls._load_plugin_blocks:
+            plugin = cls._load_plugin_blocks.pop(0)
+            plugin_blocks = filter(None, plugin.blocks)
+            for b in plugin_blocks:
+                if b._match:
+                    (plugin, command) = block._match
+                    other = cls.get_plugin(plugin).blocks_by_command[command]
+                    other.merge(block)
+                else:
+                    other = cls.block_by_command(b.get_command())
+                    if other:
+                        other[0].merge(b)
 
 
-
-
-# - URL regexes
-# - options?
+    @classmethod
+    def block_by_command(cls, command):
+        """Return a list of blocks with the given :attr:`command`."""
+        cls._load_blocks()
+        blocks = []
+        for plugin in cls.plugins.values():
+            if command in plugin.blocks_by_command:
+                blocks.append(plugin.blocks_by_command[command])
+        return blocks
 
 
