@@ -879,21 +879,45 @@ class Insert(object):
 class BlockType(object):
     """The specification for a type of :class:`Block`.
 
-    These are initialiased by individual format plugins and then combined by
-    :class:`Kurt` to create a single :class:`BlockType` for each command.
+    These are initialiased by :class:`Kurt` by combining
+    :class:`TranslatedBlockType` objects from individual format plugins to
+    create a single :class:`BlockType` for each command.
 
     """
 
-    def __init__(self, plugin, command, parts, shape='stack', category=None,
-            match=None):
-        self.inserts = [p for p in parts if isinstance(p, Insert)]
-        """The type of each argument to the block.
+    def __init__(self, translations):
+        self._translations = OrderedDict(translations)
+        """Stores :class:`TranslatedBlockType` objects for each plugin name."""
 
-        List of :class:`Insert` instances.
+    def _merge(self, other):
+        """Add the translations of the given BlockType to this object."""
+        assert self.shape == other.shape
+        assert self.inserts == other.inserts
+        self._translations.update(other._translations)
+
+    def translate(self, plugin=None):
+        """Return a :class:`TranslatedBlockType` for the given plugin name.
+
+        If plugin is ``None``, return the first registered plugin.
 
         """
+        if plugin:
+            return self._translations[plugin]
+        else:
+            return self._translations.values()[0]
 
-        self.shape = shape
+    def get_command(self, plugin=None):
+        """Return the method name from the source code of the given plugin,
+        used to identify the block.
+
+        If plugin is ``None``, return the :attr:`command` of the first
+        registered plugin.
+
+        """
+        return self.translate(plugin).command
+
+    @property
+    def shape(self):
         """The shape of the block. Valid values:
 
         ``'stack'``
@@ -923,46 +947,7 @@ class BlockType(object):
         """
         # In Scratch 1.4: one of '-', 'b', 'c', 'r', 'E', 'K', 'M', 'S', 's', 't'
         # In Scratch 2.0: one of ' ', 'b', 'c', 'r', 'e', 'cf', 'f', 'h'
-
-        self._translations = OrderedDict()
-        """Stores :class:`TranslatedBlockType` objects for each plugin name."""
-
-        self._match = match
-        """``(plugin, command)`` -- equivalent command from other plugin.
-
-        The plugin to match against must have been registered first.
-
-        """
-
-        t_parts = [("%s" if isinstance(x, Insert) else x.strip()) for x in parts]
-        t_parts = [("%%" if x == "%" else x) for x in t_parts] # escape percent
-        text = " ".join(t_parts)
-        t = TranslatedBlockType(plugin, category, command, text)
-        self._translations[plugin] = t
-
-    def merge(self, other):
-        assert self.inserts == other.inserts
-        assert self.shape == other.shape
-
-        self._translations.update(other._translations)
-        other._translations = self._translations.copy()
-
-    def get_command(self, plugin=None):
-        """Return the method name from the source code of the given plugin,
-        used to identify the block.
-
-        If plugin is ``None``, return the :attr:`command` of the first
-        registered plugin.
-
-        """
-        if plugin:
-            return self._translations[plugin].command
-        else:
-            return self._translations.values()[0].command
-
-    @property
-    def text(self):
-        return self._translations.values()[0].text
+        return self.translate().shape
 
     @property
     def parts(self):
@@ -974,9 +959,34 @@ class BlockType(object):
         Uses the :attr:`text` from the first registered plugin.
 
         """
-        inserts = list(self.inserts)
-        parts = re.split("(%s)", self.text)
-        return [(inserts.pop(0) if p == "%s" else p) for p in parts]
+        return self.translate().parts
+
+    @property
+    def inserts(self):
+        """The type of each argument to the block.
+
+        List of :class:`Insert` instances.
+
+        """
+        return [p for p in self.parts if isinstance(p, Insert)]
+
+    @property
+    def text(self):
+        """The text displayed on the block.
+
+        Contains ``"%s"`` in place of inserts.
+
+        eg. ``'say %s for %s secs'``
+
+        """
+        parts = [("%s" if isinstance(p, Insert) else p.strip()) for p in self.parts]
+        parts = [("%%" if p == "%" else p) for p in parts] # escape percent
+        return " ".join(parts)
+
+    @property
+    def defaults(self):
+        """Default values for block inserts. (See :attr:`Block.args`.)"""
+        return [i.default for i in self.inserts]
 
     @classmethod
     def get(cls, block_type):
@@ -996,22 +1006,17 @@ class BlockType(object):
     def __ne__(self, other):
         return not self == other
 
-    def copy(self):
-        """Return a new BlockType instance with the same attributes."""
-        return BlockType(self.command, self.text, self.flag, self.category,
-                list(self.defaults))
-
-    @property
-    def defaults(self):
-        """Default values for block inserts. (see :attr:`Block.args`)"""
-        return [part.default for part in self.parts
-                             if isinstance(part, Insert)]
 
     def __repr__(self):
         return "<%s.%s(%r, %r)>" % (self.__class__.__module__,
                 self.__class__.__name__,
                 self.text % tuple(i.stringify(None) for i in self.inserts),
                 self.shape)
+
+    def copy(self):
+        """Return a new BlockType instance with the same attributes."""
+        return BlockType(self.command, self.text, self.flag, self.category,
+                list(self.defaults))
 
     def make_default(self):
         """Return a Block instance of this type with the default arguments."""
@@ -1021,19 +1026,15 @@ class BlockType(object):
 class TranslatedBlockType(object):
     """Holds plugin-specific :class:`BlockType` attributes.
 
-    ``BlockType`` also accepts keyword arguments of the form
-    ``command_<plugin>``. For example, to specify a Scratch 1.4 command called
-    "foo" with an equivalent Scratch 2.0 command called "bar"::
+    For each block concept, :class:`Kurt` builds a single BlockType that
+    references a corresponding TranslatedBlockType for each plugin that
+    supports that block.
 
-        BlockType('scratch14', 'foo', ['do foo'], command_scratch20='bar')
-
-    :class:`Kurt` will then merge the second BlockType with the first one to
-    create a single BlockType object that can be translated for either plugin.
     Note that whichever plugin is loaded first takes precedence.
 
     """
 
-    def __init__(self, plugin, category, command, text, equal_commands={}):
+    def __init__(self, plugin, category, shape, command, parts, match=None):
         self._plugin = plugin
         """The format plugin the block belongs to."""
 
@@ -1051,6 +1052,9 @@ class TranslatedBlockType(object):
         # 'obsolete', 'pen', 'obsolete', 'sensor', 'wedo', 'midi', 'looks',
         # 'midi'
 
+        self.shape = shape
+        """The shape of the block. See :attr:`BlockType.shape`."""
+
         self.command = command
         """The method name from the source code, used to identify the block.
 
@@ -1058,12 +1062,16 @@ class TranslatedBlockType(object):
 
         """
 
-        self.text = text
-        """The text displayed on the block in this program.
+        self.parts = parts
+        """A list describing the text and arguments of the block. See
+        :attr:`BlockType.parts`.
 
-        Contains ``"%s"`` in place of inserts.
+        """
 
-        eg. ``'say %s for %s secs'``
+        self._match = match
+        """``(plugin, command)`` -- equivalent command from other plugin.
+
+        The plugin to match against must have been registered first.
 
         """
 

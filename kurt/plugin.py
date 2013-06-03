@@ -62,6 +62,8 @@ Some things to keep in mind:
 
 from collections import OrderedDict
 
+import kurt
+
 
 
 class KurtPlugin(object):
@@ -126,8 +128,8 @@ class KurtPlugin(object):
     # Override the following methods in subclass
 
     def make_blocks(self):
-        """Return a list of :class:`BlockType` objects, which will be the value
-        of the :attr:`blocks` property.
+        """Return a list of :class:`TranslatedBlockType` objects, which will be
+        the value of the :attr:`blocks` property.
 
         This function is only called once.
 
