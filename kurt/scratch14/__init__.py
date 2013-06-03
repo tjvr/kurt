@@ -100,7 +100,7 @@ def save_block(kurt_block):
             arg = map(save_block, arg)
         args.append(arg)
 
-    cmd = kurt_block.type.scratch14_command
+    cmd = kurt_block.type.command
     if cmd == "changeVariable":
         args[1] = Symbol(args[1])
 
@@ -236,6 +236,9 @@ class Scratch14Plugin(KurtPlugin):
     name = "scratch14"
     display_name = "Scratch 1.4"
     extension = ".sb"
+
+    def make_blocks(self):
+        return []
 
     def load(self, path):
         v14_project = ScratchProjectFile(path)

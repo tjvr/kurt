@@ -88,9 +88,9 @@ except ImportError:
 import PIL.Image
 
 import kurt.plugin
-import kurt.scratch14
-import kurt.scratch20
 import kurt.scratchblocks
+import kurt.scratch20
+import kurt.scratch14
 
 
 
@@ -788,6 +788,22 @@ class List(object):
 class Insert(object):
     """The specification for an argument to a :class:`BlockType`."""
 
+    SHAPE_DEFAULTS = {
+        "number": 0,
+        "number-menu": 0,
+        "stack": [],
+    }
+
+    SHAPE_FMTS = {
+        'number': '(%s)',
+        'string': '[%s]',
+        'readonly-menu': '[%s v]',
+        'number-menu': '(%s v)',
+        'color': '[%s]',
+        'boolean': '<%s>',
+        'stack': '\n%s\n',
+    }
+
     def __init__(self, shape, default=None):
         self.shape = shape
         """What kind of values this argument accepts.
@@ -826,13 +842,15 @@ class Insert(object):
 
         # TODO self.kind -- Valid values for a ``menu`` insert.
 
+        if default is None:
+            default = Insert.SHAPE_DEFAULTS.get(shape, None)
         self.default = default
         """The default value for the insert."""
 
     def __repr__(self):
         r = "%s.%s(%r" % (self.__class__.__module__,
                 self.__class__.__name__, self.shape)
-        if self.default is not None:
+        if self.default != Insert.SHAPE_DEFAULTS.get(self.shape, None):
             r += ", default=%r" % self.default
         r += ")"
         return r
@@ -848,30 +866,31 @@ class Insert(object):
     def __ne__(self, other):
         return not self == other
 
+    def stringify(self, value):
+        value = value or ""
+        if hasattr(value, "__iter__"):
+            value = "\n".join(block.stringify() for block in value)
+        elif hasattr(value, "stringify"):
+            value = value.stringify()
+        return Insert.SHAPE_FMTS[self.shape] % (value,)
+
+
 
 class BlockType(object):
     """The specification for a type of :class:`Block`.
 
-    >>> BlockType('say:duration:elapsed:from:', 'say %s for %n secs',
-    ...           shape='stack', category='looks', defaults=['Hello!', 2])
-    <BlockType(say:duration:elapsed:from:)>
+    These are initialiased by individual format plugins and then combined by
+    :class:`Kurt` to create a single :class:`BlockType` for each command.
 
     """
 
-    def __init__(self, command, parts, shape='stack', category=None):
-        self.command = command
-        """The method name from the source code, used to identify the block.
-        Corresponds to :attr:`Block.command`.
+    def __init__(self, plugin, command, parts, shape='stack', category=None,
+            equal_commands={}):
 
-        eg. ``'say:duration:elapsed:from:'``
+        self.inserts = [p for p in parts if isinstance(p, Insert)]
+        """The type of each argument to the block.
 
-        """
-
-        self.parts = parts
-        """A list describing the text and arguments of the block.
-
-        Contains strings, which are part of the text displayed on the block,
-        and :class:`Insert` instances, which are arguments to the block.
+        List of :class:`Insert` instances.
 
         """
 
@@ -898,23 +917,50 @@ class BlockType(object):
             Like reporter blocks, but return a true/false value. Appear
             hexagonal.
 
+        "C"-shaped blocks with "mouths" for stack blocks, such as ``"doIf"``,
+        are specified by adding ``Insert('stack')`` to the end of
+        :attr:`parts`.
+
         """
         # In Scratch 1.4: one of '-', 'b', 'c', 'r', 'E', 'K', 'M', 'S', 's', 't'
         # In Scratch 2.0: one of ' ', 'b', 'c', 'r', 'e', 'cf', 'f', 'h'
 
-        self.category = category
-        """Where the block is found in the interface."""
-        # In Scratch 1.4, one of:
-        # 'motion', 'looks', 'sound', 'pen', 'control', 'sensing', 'operators',
-        # 'variables', 'list', 'motor', 'obsolete number blocks', 'obsolete
-        # sound blocks', 'obsolete sprite looks blocks', 'obsolete sprite motion
-        # blocks', 'obsolete image effects'
-        #
-        # In Scratch 2.0, one of:
-        # 'control', 'motion', 'looks', 'sound', 'pen', 'data', 'events',
-        # 'control', 'sensing', 'operators', 'more blocks', 'sensing', 'list',
-        # 'obsolete', 'pen', 'obsolete', 'sensor', 'wedo', 'midi', 'looks',
-        # 'midi'
+        self._translations = OrderedDict()
+        """Stores :class:`TranslatedBlockType` objects for each plugin name."""
+
+        t_parts = [("%s" if isinstance(x, Insert) else x.strip()) for x in parts]
+        t_parts = [("%%" if x == "%" else x) for x in t_parts] # escape percent
+        text = " ".join(t_parts)
+        t = TranslatedBlockType(category, command, text, equal_commands)
+        self._translations[plugin] = t
+
+    def merge(self, other):
+        assert self.inserts == other.inserts
+        assert self.shape == other.shape
+
+        self._translations.update(other._translations)
+
+    @property
+    def text(self):
+        return self._translations.values()[0].text
+
+    @property
+    def parts(self):
+        """A list describing the text and arguments of the block.
+
+        Contains strings, which are part of the text displayed on the block,
+        and :class:`Insert` instances, which are arguments to the block.
+
+        """
+        inserts = list(self.inserts)
+        parts = re.split("(%s)", self.text)
+        return [(inserts.pop(0) if p == "%s" else p) for p in parts]
+
+    @classmethod
+    def get(cls, block_type):
+        if isinstance(block_type, BlockType):
+            return block_type
+        return kurt.plugin.Kurt.get_block_type(block_type)
 
     def __eq__(self, other):
         if isinstance(other, BlockType):
@@ -932,39 +978,76 @@ class BlockType(object):
         return BlockType(self.command, self.text, self.flag, self.category,
                 list(self.defaults))
 
-    @classmethod
-    def get(cls, block_type):
-        bt = BlockType(block_type, block_type) # TODO
-        bt.scratch14_command = block_type
-        return bt
-
-    @property
-    def inserts(self):
-        """The type of each of the block's inserts. Found by filtering
-        :attr:`parts`.
-
-        eg. ``['%s', '%n']``
-
-        """
-        return [p for p in self.parts if p[0] == "%"]
-
     @property
     def defaults(self):
         """Default values for block inserts. (see :attr:`Block.args`)"""
-        return [part for part in self.parts if isinstance(part, Insert)]
+        return [part.default for part in self.parts
+                             if isinstance(part, Insert)]
 
     def __repr__(self):
-        r = "%s.%s(%r, %r" % (self.__class__.__module__, self.__class__.__name__,
-                self.command, self.parts)
-        for name in ("shape", "category"):
-            r += ", %s=%s" % (name, getattr(self, name))
-        return r + ")"
-
-        return 'BlockType(%s)' % self.command
+        return "<%s.%s(%r, %r)>" % (self.__class__.__module__,
+                self.__class__.__name__,
+                self.text % tuple(i.stringify(None) for i in self.inserts),
+                self.shape)
 
     def make_default(self):
         """Return a Block instance of this type with the default arguments."""
         return Block(self, *list(self.defaults))
+
+
+class TranslatedBlockType(object):
+    """Holds plugin-specific :class:`BlockType` attributes.
+
+
+    ``BlockType`` also accepts keyword arguments of the form
+    ``command_<plugin>``. For example, to specify a Scratch 1.4 command called
+    "foo" with an equivalent Scratch 2.0 command called "bar"::
+
+        BlockType('scratch14', 'foo', ['do foo'], command_scratch20='bar')
+
+    :class:`Kurt` will then merge the second BlockType with the first one to
+    create a single BlockType object that can be translated for either plugin.
+    Note that whichever plugin is loaded first takes precedence.
+
+    """
+
+    def __init__(self, category, command, text, equal_commands={}):
+        self.category = category
+        """Where the block is found in the interface."""
+        # In Scratch 1.4, one of:
+        # 'motion', 'looks', 'sound', 'pen', 'control', 'sensing', 'operators',
+        # 'variables', 'list', 'motor', 'obsolete number blocks', 'obsolete
+        # sound blocks', 'obsolete sprite looks blocks', 'obsolete sprite motion
+        # blocks', 'obsolete image effects'
+        #
+        # In Scratch 2.0, one of:
+        # 'control', 'motion', 'looks', 'sound', 'pen', 'data', 'events',
+        # 'control', 'sensing', 'operators', 'more blocks', 'sensing', 'list',
+        # 'obsolete', 'pen', 'obsolete', 'sensor', 'wedo', 'midi', 'looks',
+        # 'midi'
+
+        self.command = command
+        """The method name from the source code, used to identify the block.
+
+        eg. ``'say:duration:elapsed:from:'``
+
+        """
+
+        self.text = text
+        """The text displayed on the block in this program.
+
+        Contains ``"%s"`` in place of inserts.
+
+        eg. ``'say %s for %s secs'``
+
+        """
+
+        self._command_translations = {}
+        """Equivalent commands from other format plugins.
+
+        Stored as ``(plugin, command)``. Used internally by :class:`Kurt`.
+
+        """
 
 
 class Block(object):
@@ -1023,13 +1106,6 @@ class Block(object):
         self.args = list(self.args)
         self.comment = unicode(self.comment)
 
-    @property
-    def command(self):
-        """Alias for :attr:`type.command <BlockType.command>`."""
-        if self.type:
-            return self.type.command
-        return ""
-
     def __eq__(self, other):
         return (
             isinstance(other, Block) and
@@ -1061,6 +1137,20 @@ class Block(object):
                 string += repr(arg) + ", "
         string = string.rstrip(" ").rstrip(",")
         return string + ")"
+
+    def stringify(self):
+        args = list(self.args)
+        return self.type.text % \
+                tuple(i.stringify(args.pop(0)) for i in self.type.inserts)
+
+        r = ""
+        for part in self.type.parts:
+            if isinstance(part, Insert):
+                r += part.stringify(args.pop(0))
+            elif isinstance(part, str):
+                r += part
+        return r
+
 
 
 class Script(object):

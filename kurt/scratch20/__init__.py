@@ -26,6 +26,9 @@ import hashlib
 import kurt
 from kurt.plugin import Kurt, KurtPlugin
 
+from kurt.scratch20.blocks import make_block_types
+
+
 
 class _ZipBuilder(object):
     def __init__(self, path, kurt_project):
@@ -136,6 +139,9 @@ class Scratch20Plugin(KurtPlugin):
     display_name = "Scratch 2.0"
     extension = ".sb2"
 
+    def make_blocks(self):
+        return make_block_types()
+
     def load(self, path):
         project_zip = zipfile.ZipFile(path)
 
@@ -149,7 +155,6 @@ class Scratch20Plugin(KurtPlugin):
 
     def save(self, path, kurt_project):
         _ZipBuilder(path, kurt_project)
-
 
 
 
