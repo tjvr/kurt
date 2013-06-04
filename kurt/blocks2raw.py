@@ -7,33 +7,6 @@ from kurt import BlockType
 import itertools
 
 
-
-categories20 = {
-    1:  "motion",
-    2:  "looks",
-    3:  "sound",
-    4:  "pen",
-    5:  "events",
-    6:  "control",
-    7:  "sensing",
-    8:  "operators",
-    9:  "variables",
-    10: "more blocks",
-    12: "list",
-    20: "sensor",
-    21: "wedo",
-    30: "midi",
-    91: "midi",
-    98: "obsolete", # --> we should use the 1.4 blockspecs for these instead
-    99: "obsolete", # scrolling
-
-    # for stage?
-    102: "looks",
-    104: "pen",
-    106: "control",
-    107: "sensing",
-}
-
 categories14 = set([
     'motion',
     'looks',
@@ -53,15 +26,6 @@ categories14 = set([
     'obsolete image effects'
 ])
 
-inserts20 = {
-    '%b': 'boolean',
-    '%c': 'color',
-    '%d': ['number', 'menu'],
-    '%m': 'readonly',
-    '%n': 'number',
-    '%s': 'string',
-}
-
 flags14 = {
     '-': '',
     'b': 'boolean',
@@ -77,54 +41,10 @@ flags14 = {
 
 kurt.blocks_by_cmd['doReturn'][0].shape = "cap"
 
-flags20 = {
-    ' ':  '',
-    'b':  'boolean',
-    'c':  'cblock',
-    'r':  'reporter',
-    'e':  'eblock',
-    'cf': 'cap cblock',
-    'f':  'cap',
-    'h':  'hat',
-}
-
-
-plugin_defaults = {
-    '%n': '0',
-    '%d': '0',
-    '%b': '',
-}
-
-plugin_inserts20 = {
-    '%b': '<%s>',
-    '%n': '(%s)',
-    '%d': '(%s v)',
-    '%s': '[%s]',
-    '%m': '[%s v]',
-    '%c': '[#ff00ff]',
-}
-
-from kurt.scratch20.scratch2_as import blocks as blocks20
-
-def blockify(blockspec):
-    if len(blockspec) > 1:
-        (text, flag, category_id, command) = blockspec[:4]
-        defaults = blockspec[4:]
-        category = categories20[category_id]
-        return BlockType(command, text, flag, category, defaults)
-    else:
-        return None
-
 
 def strip_text(block):
     text = "".join(filter(lambda p: p[0] != "%", block.parts))
     return text.lower().replace(" ", "")
-
-
-blocks20 = map(blockify, blocks20)
-
-blocks20_by_cmd = dict((block.command, block) for block in blocks20 if block)
-
 
 
 plugin_specials = {
