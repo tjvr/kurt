@@ -236,4 +236,14 @@ class Kurt(object):
                 matches.append(block)
         return matches
 
+    @classmethod
+    def block_by_text(cls, text):
+        """Return a list of blocks loosely matching the given :attr:`text`."""
+        text = kurt.BlockType._strip_text(text)
+        matches = []
+        for block in cls.blocks:
+            for tb in block._translations.values():
+                if kurt.BlockType._strip_text(tb.text) == text:
+                    matches.append(block)
+        return matches
 

@@ -861,13 +861,21 @@ class Insert(object):
     def __ne__(self, other):
         return not self == other
 
+    def similar_to(self, other):
+        assert isinstance(other, Insert)
+        def sim(shape):
+            if shape == 'number-menu':
+                return 'number'
+            return shape
+        return (sim(self.shape) == sim(other.shape))
+
     def stringify(self, value=None):
         if value is None:
             value = self.default
             if value is None:
                 value = ""
         if isinstance(value, Block):
-            return value.stringify() # use block's shape
+            return value.stringify(in_insert=True) # use block's shape
         else:
             if hasattr(value, "__iter__"):
                 value = "\n".join(block.stringify() for block in value)
@@ -961,14 +969,20 @@ class BaseBlockType(object):
                 self.text % tuple(i.stringify(None) for i in self.inserts),
                 self.shape)
 
-    def stringify(self, args=None):
+    def stringify(self, args=None, in_insert=False):
         if args is None: args = self.defaults
         args = list(args)
+
         r = self.text % tuple(i.stringify(args.pop(0)) for i in self.inserts)
         for insert in self.inserts:
             if insert.shape == 'stack':
                 return r + "end"
-        return BaseBlockType.SHAPE_FMTS.get(self.shape, "%s") % r
+
+        fmt = BaseBlockType.SHAPE_FMTS.get(self.shape, "%s")
+        if in_insert and fmt == "%s":
+            fmt = "{%s}"
+
+        return fmt % r
 
 
 class BlockType(BaseBlockType):
@@ -991,7 +1005,9 @@ class BlockType(BaseBlockType):
 
         """
         assert self.shape == tb.shape
-        assert [i.shape for i in self.inserts] == [i.shape for i in tb.inserts]
+        assert len(self.inserts) == len(tb.inserts)
+        for (i, o) in zip(self.inserts, tb.inserts):
+            assert i.similar_to(o)
         if tb._plugin not in self._translations:
             self._translations[tb._plugin] = tb
 
@@ -1013,6 +1029,16 @@ class BlockType(BaseBlockType):
                 return True
         return False
 
+    @staticmethod
+    def _strip_text(text):
+        """Returns text with spaces and inserts removed."""
+        text = re.sub(r'[ ,?:]|%s', "", text.lower())
+        for chr in "-%":
+            new_text = text.replace(chr, "")
+            if new_text:
+                text = new_text
+        return text.lower()
+
     @property
     def shape(self):
         return self.translate().shape
@@ -1023,11 +1049,28 @@ class BlockType(BaseBlockType):
 
     @classmethod
     def get(cls, block_type):
+        """Return a :class:`BlockType` instance from the given parameter.
+
+        * If it's already a BlockType instance, return that.
+
+        * If it exactly matches the command on a :class:`TranslatedBlockType`,
+          return the corresponding BlockType.
+
+        * If it loosely matches the text on a TranslatedBlockType, return the
+          corresponding BlockType.
+
+        """
         if isinstance(block_type, BlockType):
             return block_type
+
         blocks = kurt.plugin.Kurt.block_by_command(block_type)
         if blocks:
             return blocks[0]
+
+        blocks = kurt.plugin.Kurt.block_by_text(block_type)
+        if blocks:
+            return blocks[0]
+
         raise ValueError, "Unknown block type %r" % block_type
 
     def __eq__(self, other):
@@ -1104,20 +1147,33 @@ class TranslatedBlockType(BaseBlockType):
 class Block(object):
     """A statement in a graphical programming language. Blocks can connect
     together to form sequences of commands, which are stored in a
-    :class:`Script`.
-
-    Blocks can perform different commands depending on their type. See
-    :class:`BlockType`.
+    :class:`Script`.  Blocks perform different commands depending on their
+    type.
 
     :param type:      A :class:`BlockType` instance, used to identify the
                       command the block performs.
+                      Will also exact match a :attr:`command` or loosely match
+                      :attr:`text`.
+
     :param ``*args``: List of the block's arguments.
 
-    >>> block = kurt.Block('say:duration:elapsed:from:', 'Hello!', 2)
-    >>> block.command
-    'say:duration:elapsed:from:'
-    >>> block.args
-    ['Hello!', 2]
+    So the following constructors are all equivalent::
+
+        >>> block = kurt.Block('say:duration:elapsed:from:', 'Hello!', 2)
+        >>> block = kurt.Block("say %s for %s secs", "Hello!", 2)
+        >>> block = kurt.Block("sayforsecs", "Hello!", 2)
+
+    Using BlockType::
+
+        >>> block.type
+        <kurt.BlockType('say [Hello!] for (2) secs', 'stack')>
+        >>> block.args
+        ['Hello!', 2]
+        >>> block2 = kurt.Block(block.type, "Goodbye!", 5)
+        >>> block.stringify()
+        'say [Hello!] for (2) secs'
+        >>> block2.stringify()
+        'say [Goodbye!] for (5) secs'
 
     """
 
@@ -1189,8 +1245,8 @@ class Block(object):
         string = string.rstrip(" ").rstrip(",")
         return string + ")"
 
-    def stringify(self):
-        return self.type.stringify(self.args)
+    def stringify(self, in_insert=False):
+        return self.type.stringify(self.args, in_insert)
 
 
 class Script(object):
@@ -1550,7 +1606,6 @@ class Image(object):
 #-- Import plugins --#
 
 import kurt.plugin
-import kurt.scratchblocks
 import kurt.scratch20
 import kurt.scratch14
 

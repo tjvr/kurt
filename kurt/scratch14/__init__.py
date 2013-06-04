@@ -23,6 +23,7 @@ from kurt.plugin import Kurt, KurtPlugin
 from kurt.scratch14.objtable import *
 from kurt.scratch14.files import *
 from kurt.scratch14.scripts import *
+from kurt.scratch14.blocks import block_list
 
 
 
@@ -238,7 +239,7 @@ class Scratch14Plugin(KurtPlugin):
     extension = ".sb"
 
     def make_blocks(self):
-        return []
+        return block_list
 
     def load(self, path):
         v14_project = ScratchProjectFile(path)

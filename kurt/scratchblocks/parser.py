@@ -19,9 +19,13 @@ from ply import yacc
 import os
 from lexer import tokens, pretty_error
 
-from kurt.scratch14.blockspecs import find_block, blocks_by_cmd
-from kurt.scratch14.scripts import Block, Script, SpriteRef
-from kurt.scratch14 import Symbol, Color
+#from kurt.scratch14.blockspecs import find_block, blocks_by_cmd
+#from kurt.scratch14.scripts import Block, Script, SpriteRef
+#from kurt.scratch14 import Symbol, Color
+
+class Symbol(object):
+    def __init__(self, value):
+        self.value = value
 
 
 import htmlcolor
