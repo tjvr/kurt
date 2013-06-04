@@ -87,11 +87,6 @@ except ImportError:
 
 import PIL.Image
 
-import kurt.plugin
-import kurt.scratchblocks
-import kurt.scratch20
-import kurt.scratch14
-
 
 
 #-- Utils --#
@@ -875,8 +870,38 @@ class Insert(object):
         return Insert.SHAPE_FMTS[self.shape] % (value,)
 
 
+class BaseBlockType(object):
+    @property
+    def inserts(self):
+        """The type of each argument to the block.
 
-class BlockType(object):
+        List of :class:`Insert` instances.
+
+        """
+        return [p for p in self.parts if isinstance(p, Insert)]
+
+    @property
+    def text(self):
+        """The text displayed on the block.
+
+        Contains ``"%s"`` in place of inserts.
+
+        eg. ``'say %s for %s secs'``
+
+        """
+        parts = [("%s" if isinstance(p, Insert) else p.strip())
+                 for p in self.parts]
+        parts = [("%%" if p == "%" else p) for p in parts] # escape percent
+        return " ".join(parts)
+
+    def __repr__(self):
+        return "<%s.%s(%r, %r)>" % (self.__class__.__module__,
+                self.__class__.__name__,
+                self.text % tuple(i.stringify(None) for i in self.inserts),
+                self.shape)
+
+
+class BlockType(BaseBlockType):
     """The specification for a type of :class:`Block`.
 
     These are initialiased by :class:`Kurt` by combining
@@ -889,11 +914,16 @@ class BlockType(object):
         self._translations = OrderedDict(translations)
         """Stores :class:`TranslatedBlockType` objects for each plugin name."""
 
-    def _merge(self, other):
-        """Add the translations of the given BlockType to this object."""
-        assert self.shape == other.shape
-        assert self.inserts == other.inserts
-        self._translations.update(other._translations)
+    def _add_translation(self, tb):
+        """Add the given TranslatedBlockType to :attr:`_translations`.
+
+        If the plugin already exists, replace the existing translation.
+
+        """
+        assert self.shape == tb.shape
+        assert [i.shape for i in self.inserts] == [i.shape for i in tb.inserts]
+        if tb._plugin not in self._translations:
+            self._translations[tb._plugin] = tb
 
     def translate(self, plugin=None):
         """Return a :class:`TranslatedBlockType` for the given plugin name.
@@ -905,6 +935,13 @@ class BlockType(object):
             return self._translations[plugin]
         else:
             return self._translations.values()[0]
+
+    def has_command(self, command):
+        """Returns True if any of the translations have the given command."""
+        for tb in self._translations.values():
+            if tb.command == command:
+                return True
+        return False
 
     @property
     def shape(self):
@@ -952,28 +989,6 @@ class BlockType(object):
         return self.translate().parts
 
     @property
-    def inserts(self):
-        """The type of each argument to the block.
-
-        List of :class:`Insert` instances.
-
-        """
-        return [p for p in self.parts if isinstance(p, Insert)]
-
-    @property
-    def text(self):
-        """The text displayed on the block.
-
-        Contains ``"%s"`` in place of inserts.
-
-        eg. ``'say %s for %s secs'``
-
-        """
-        parts = [("%s" if isinstance(p, Insert) else p.strip()) for p in self.parts]
-        parts = [("%%" if p == "%" else p) for p in parts] # escape percent
-        return " ".join(parts)
-
-    @property
     def defaults(self):
         """Default values for block inserts. (See :attr:`Block.args`.)"""
         return [i.default for i in self.inserts]
@@ -996,13 +1011,6 @@ class BlockType(object):
     def __ne__(self, other):
         return not self == other
 
-
-    def __repr__(self):
-        return "<%s.%s(%r, %r)>" % (self.__class__.__module__,
-                self.__class__.__name__,
-                self.text % tuple(i.stringify(None) for i in self.inserts),
-                self.shape)
-
     def copy(self):
         """Return a new BlockType instance with the same attributes."""
         return BlockType(self.command, self.text, self.flag, self.category,
@@ -1013,7 +1021,7 @@ class BlockType(object):
         return Block(self, *list(self.defaults))
 
 
-class TranslatedBlockType(object):
+class TranslatedBlockType(BaseBlockType):
     """Holds plugin-specific :class:`BlockType` attributes.
 
     For each block concept, :class:`Kurt` builds a single BlockType that
@@ -1059,9 +1067,10 @@ class TranslatedBlockType(object):
         """
 
         self._match = match
-        """``(plugin, command)`` -- equivalent command from other plugin.
+        """String -- equivalent command from other plugin.
 
-        The plugin to match against must have been registered first.
+        The plugin containing the command to match against must have been
+        registered first.
 
         """
 
@@ -1533,4 +1542,12 @@ class Image(object):
                 extension = "jpg"
             return "." + extension
 
+
+
+#-- Import plugins --#
+
+import kurt.plugin
+import kurt.scratchblocks
+import kurt.scratch20
+import kurt.scratch14
 
