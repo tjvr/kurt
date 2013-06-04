@@ -906,16 +906,6 @@ class BlockType(object):
         else:
             return self._translations.values()[0]
 
-    def get_command(self, plugin=None):
-        """Return the method name from the source code of the given plugin,
-        used to identify the block.
-
-        If plugin is ``None``, return the :attr:`command` of the first
-        registered plugin.
-
-        """
-        return self.translate(plugin).command
-
     @property
     def shape(self):
         """The shape of the block. Valid values:
@@ -1083,6 +1073,10 @@ class TranslatedBlockType(object):
     def __ne__(self, other):
         return not self == other
 
+    def make_default(self):
+        """Return a Block instance of this type with the default arguments."""
+        return BlockType([(self._plugin, self)]).make_default()
+
 
 class Block(object):
     """A statement in a graphical programming language. Blocks can connect
@@ -1152,7 +1146,7 @@ class Block(object):
 
     def __repr__(self):
         string = "%s.%s(%s, " % (self.__class__.__module__,
-                self.__class__.__name__, repr(self.type.get_command()))
+                self.__class__.__name__, repr(self.type.translate().command))
         for arg in self.args:
             if isinstance(arg, Block):
                 string = string.rstrip("\n")

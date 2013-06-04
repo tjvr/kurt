@@ -226,14 +226,15 @@ class Kurt(object):
     def _load_blocks(cls):
         while cls._load_plugin_blocks:
             plugin = cls._load_plugin_blocks.pop(0)
-            plugin_blocks = filter(None, plugin.blocks)
-            for b in plugin_blocks:
+            blocks = filter(None, plugin.blocks)
+            blocks = [BlockType([(plugin.name, b)]) for b in blocks]
+            for b in blocks:
                 if b._match:
                     (plugin, command) = block._match
                     other = cls.get_plugin(plugin).blocks_by_command[command]
                     other.merge(block)
                 else:
-                    other = cls.block_by_command(b.get_command())
+                    other = cls.block_by_command(b.translate().command)
                     if other:
                         other[0].merge(b)
 
