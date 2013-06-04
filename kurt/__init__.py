@@ -871,6 +871,12 @@ class Insert(object):
 
 
 class BaseBlockType(object):
+    """Base for :class:`BlockType` and :class:`TranslatedBlockType`.
+
+    Defines common attributes.
+
+    """
+
     def __init__(self, shape, parts):
         self.shape = shape
         """The shape of the block. Valid values:
@@ -909,15 +915,13 @@ class BaseBlockType(object):
         Contains strings, which are part of the text displayed on the block,
         and :class:`Insert` instances, which are arguments to the block.
 
-        Uses the :attr:`text` from the first registered plugin.
-
         """
 
     @property
     def text(self):
         """The text displayed on the block.
 
-        Contains ``"%s"`` in place of inserts.
+        String containing ``"%s"`` in place of inserts.
 
         eg. ``'say %s for %s secs'``
 
@@ -1021,10 +1025,6 @@ class BlockType(BaseBlockType):
         return BlockType(self.command, self.text, self.flag, self.category,
                 list(self.defaults))
 
-    def make_default(self):
-        """Return a :class:`Block` of this type with the default arguments."""
-        return Block(self, *list(self.defaults))
-
 
 class TranslatedBlockType(BaseBlockType):
     """Holds plugin-specific :class:`BlockType` attributes.
@@ -1080,14 +1080,14 @@ class TranslatedBlockType(BaseBlockType):
     def __ne__(self, other):
         return not self == other
 
-    def _make_default(self):
-        """Return a :class:`Block` instance of this type with the default arguments.
+    def _make_block(self):
+        """Return a :class:`Block` with this type.
 
-        Warning: Blocks created from `TranslatedBlockType` can't be translated
-        properly for conversion.
+        WARNING: Blocks created from `TranslatedBlockType` can't be translated
+        properly for conversion. This method is unsupported.
 
         """
-        return BlockType([(self._plugin, self)]).make_default()
+        return Block(BlockType([(self._plugin, self)]))
 
 
 class Block(object):

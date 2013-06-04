@@ -220,7 +220,7 @@ class Kurt(object):
             else:
                 return plugin
 
-        raise ValueError, "Unknown format %r" % format
+        raise ValueError, "Unknown format %r" % kwargs
 
     @classmethod
     def block_by_command(cls, command):
