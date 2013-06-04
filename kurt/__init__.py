@@ -861,13 +861,19 @@ class Insert(object):
     def __ne__(self, other):
         return not self == other
 
-    def stringify(self, value):
-        value = value or ""
-        if hasattr(value, "__iter__"):
-            value = "\n".join(block.stringify() for block in value)
-        elif hasattr(value, "stringify"):
-            value = value.stringify()
-        return Insert.SHAPE_FMTS[self.shape] % (value,)
+    def stringify(self, value=None):
+        if value is None:
+            value = self.default
+            if value is None:
+                value = ""
+        if isinstance(value, Block):
+            return value.stringify() # use block's shape
+        else:
+            if hasattr(value, "__iter__"):
+                value = "\n".join(block.stringify() for block in value)
+            elif hasattr(value, "stringify"):
+                value = value.stringify()
+            return Insert.SHAPE_FMTS[self.shape] % (value,)
 
 
 class BaseBlockType(object):
@@ -876,6 +882,11 @@ class BaseBlockType(object):
     Defines common attributes.
 
     """
+
+    SHAPE_FMTS = {
+        'reporter': '(%s)',
+        'boolean': '<%s>',
+    }
 
     def __init__(self, shape, parts):
         self.shape = shape
@@ -926,10 +937,9 @@ class BaseBlockType(object):
         eg. ``'say %s for %s secs'``
 
         """
-        parts = [("%s" if isinstance(p, Insert) else p.strip())
-                 for p in self.parts]
+        parts = [("%s" if isinstance(p, Insert) else p) for p in self.parts]
         parts = [("%%" if p == "%" else p) for p in parts] # escape percent
-        return " ".join(parts)
+        return "".join(parts)
 
     @property
     def inserts(self):
@@ -950,6 +960,15 @@ class BaseBlockType(object):
                 self.__class__.__name__,
                 self.text % tuple(i.stringify(None) for i in self.inserts),
                 self.shape)
+
+    def stringify(self, args=None):
+        if args is None: args = self.defaults
+        args = list(args)
+        r = self.text % tuple(i.stringify(args.pop(0)) for i in self.inserts)
+        for insert in self.inserts:
+            if insert.shape == 'stack':
+                return r + "end"
+        return BaseBlockType.SHAPE_FMTS.get(self.shape, "%s") % r
 
 
 class BlockType(BaseBlockType):
@@ -1009,6 +1028,7 @@ class BlockType(BaseBlockType):
         blocks = kurt.plugin.Kurt.block_by_command(block_type)
         if blocks:
             return blocks[0]
+        raise ValueError, "Unknown block type %r" % block_type
 
     def __eq__(self, other):
         if isinstance(other, BlockType):
@@ -1079,15 +1099,6 @@ class TranslatedBlockType(BaseBlockType):
 
     def __ne__(self, other):
         return not self == other
-
-    def _make_block(self):
-        """Return a :class:`Block` with this type.
-
-        WARNING: Blocks created from `TranslatedBlockType` can't be translated
-        properly for conversion. This method is unsupported.
-
-        """
-        return Block(BlockType([(self._plugin, self)]))
 
 
 class Block(object):
@@ -1179,18 +1190,7 @@ class Block(object):
         return string + ")"
 
     def stringify(self):
-        args = list(self.args)
-        return self.type.text % \
-                tuple(i.stringify(args.pop(0)) for i in self.type.inserts)
-
-        r = ""
-        for part in self.type.parts:
-            if isinstance(part, Insert):
-                r += part.stringify(args.pop(0))
-            elif isinstance(part, str):
-                r += part
-        return r
-
+        return self.type.stringify(self.args)
 
 
 class Script(object):
