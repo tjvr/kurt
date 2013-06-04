@@ -871,14 +871,47 @@ class Insert(object):
 
 
 class BaseBlockType(object):
-    @property
-    def inserts(self):
-        """The type of each argument to the block.
+    def __init__(self, shape, parts):
+        self.shape = shape
+        """The shape of the block. Valid values:
 
-        List of :class:`Insert` instances.
+        ``'stack'``
+            The default. Can connect to blocks above and below. Appear
+            jigsaw-shaped.
+
+        ``'cap'``
+            Stops the script executing after this block. No blocks can be
+            connected below them.
+
+        ``'hat'``
+            A block that starts a script, such as by responding to an event.
+            Can connect to blocks below.
+
+        ``'reporter'``
+            Return a value. Can be placed into insert slots of other blocks as
+            an argument to that block. Appear rounded.
+
+        ``'boolean'``
+            Like reporter blocks, but return a true/false value. Appear
+            hexagonal.
+
+        "C"-shaped blocks with "mouths" for stack blocks, such as ``"doIf"``,
+        are specified by adding ``Insert('stack')`` to the end of
+        :attr:`parts`.
 
         """
-        return [p for p in self.parts if isinstance(p, Insert)]
+        # In Scratch 1.4: one of '-', 'b', 'c', 'r', 'E', 'K', 'M', 'S', 's', 't'
+        # In Scratch 2.0: one of ' ', 'b', 'c', 'r', 'e', 'cf', 'f', 'h'
+
+        self.parts = parts
+        """A list describing the text and arguments of the block.
+
+        Contains strings, which are part of the text displayed on the block,
+        and :class:`Insert` instances, which are arguments to the block.
+
+        Uses the :attr:`text` from the first registered plugin.
+
+        """
 
     @property
     def text(self):
@@ -893,6 +926,20 @@ class BaseBlockType(object):
                  for p in self.parts]
         parts = [("%%" if p == "%" else p) for p in parts] # escape percent
         return " ".join(parts)
+
+    @property
+    def inserts(self):
+        """The type of each argument to the block.
+
+        List of :class:`Insert` instances.
+
+        """
+        return [p for p in self.parts if isinstance(p, Insert)]
+
+    @property
+    def defaults(self):
+        """Default values for block inserts. (See :attr:`Block.args`.)"""
+        return [i.default for i in self.inserts]
 
     def __repr__(self):
         return "<%s.%s(%r, %r)>" % (self.__class__.__module__,
@@ -945,53 +992,11 @@ class BlockType(BaseBlockType):
 
     @property
     def shape(self):
-        """The shape of the block. Valid values:
-
-        ``'stack'``
-            The default. Can connect to blocks above and below. Appear
-            jigsaw-shaped.
-
-        ``'cap'``
-            Stops the script executing after this block. No blocks can be
-            connected below them.
-
-        ``'hat'``
-            A block that starts a script, such as by responding to an event.
-            Can connect to blocks below.
-
-        ``'reporter'``
-            Return a value. Can be placed into insert slots of other blocks as
-            an argument to that block. Appear rounded.
-
-        ``'boolean'``
-            Like reporter blocks, but return a true/false value. Appear
-            hexagonal.
-
-        "C"-shaped blocks with "mouths" for stack blocks, such as ``"doIf"``,
-        are specified by adding ``Insert('stack')`` to the end of
-        :attr:`parts`.
-
-        """
-        # In Scratch 1.4: one of '-', 'b', 'c', 'r', 'E', 'K', 'M', 'S', 's', 't'
-        # In Scratch 2.0: one of ' ', 'b', 'c', 'r', 'e', 'cf', 'f', 'h'
         return self.translate().shape
 
     @property
     def parts(self):
-        """A list describing the text and arguments of the block.
-
-        Contains strings, which are part of the text displayed on the block,
-        and :class:`Insert` instances, which are arguments to the block.
-
-        Uses the :attr:`text` from the first registered plugin.
-
-        """
         return self.translate().parts
-
-    @property
-    def defaults(self):
-        """Default values for block inserts. (See :attr:`Block.args`.)"""
-        return [i.default for i in self.inserts]
 
     @classmethod
     def get(cls, block_type):
@@ -1017,7 +1022,7 @@ class BlockType(BaseBlockType):
                 list(self.defaults))
 
     def make_default(self):
-        """Return a Block instance of this type with the default arguments."""
+        """Return a :class:`Block` of this type with the default arguments."""
         return Block(self, *list(self.defaults))
 
 
@@ -1033,8 +1038,17 @@ class TranslatedBlockType(BaseBlockType):
     """
 
     def __init__(self, plugin, category, shape, command, parts, match=None):
+        BaseBlockType.__init__(self, shape, parts)
+
         self._plugin = plugin
         """The format plugin the block belongs to."""
+
+        self.command = command
+        """The method name from the source code, used to identify the block.
+
+        eg. ``'say:duration:elapsed:from:'``
+
+        """
 
         self.category = category
         """Where the block is found in the interface."""
@@ -1049,22 +1063,6 @@ class TranslatedBlockType(BaseBlockType):
         # 'control', 'sensing', 'operators', 'more blocks', 'sensing', 'list',
         # 'obsolete', 'pen', 'obsolete', 'sensor', 'wedo', 'midi', 'looks',
         # 'midi'
-
-        self.shape = shape
-        """The shape of the block. See :attr:`BlockType.shape`."""
-
-        self.command = command
-        """The method name from the source code, used to identify the block.
-
-        eg. ``'say:duration:elapsed:from:'``
-
-        """
-
-        self.parts = parts
-        """A list describing the text and arguments of the block. See
-        :attr:`BlockType.parts`.
-
-        """
 
         self._match = match
         """String -- equivalent command from other plugin.
@@ -1082,8 +1080,13 @@ class TranslatedBlockType(BaseBlockType):
     def __ne__(self, other):
         return not self == other
 
-    def make_default(self):
-        """Return a Block instance of this type with the default arguments."""
+    def _make_default(self):
+        """Return a :class:`Block` instance of this type with the default arguments.
+
+        Warning: Blocks created from `TranslatedBlockType` can't be translated
+        properly for conversion.
+
+        """
         return BlockType([(self._plugin, self)]).make_default()
 
 
