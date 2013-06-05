@@ -75,16 +75,33 @@ def save_sound(kurt_sound):
     pass
 
 def load_block(v14_block):
+    # special-case blocks with weird arguments
+    if v14_block.command == 'EventHatMorph':
+        assert v14_block.args
+        if v14_block.args[0] == 'Scratch-StartClicked':
+            return kurt.Block('whenGreenFlag')
+        else:
+            return kurt.Block('whenIreceive', v14_block.args[0])
+    elif v14_block.command == 'changeVariable':
+        command = v14_block.args.pop(1).value
+    else:
+        command = v14_block.command
+
+    # S14BlockType("changeVariable", "change %v by %n", category="variables",
+    #        defaults = [None, Symbol("changeVar:by:"), None]),
+    # S14BlockType("changeVariable", "set %v to %s", category="variables",
+    #        defaults = [None, Symbol("setVar:to:"), None]),
+
     args = []
     for arg in v14_block.args:
         if isinstance(arg, Block):
             arg = load_block(arg)
         elif isinstance(arg, list):
             arg = map(load_block, arg)
-        elif isinstance(arg, Symbol): # TODO: translate these
-            arg = arg.value
+        elif isinstance(arg, Symbol):
+            raise ValueError(arg) # TODO translate these
         args.append(arg)
-    return kurt.Block(v14_block.command, *args)
+    return kurt.Block(command, *args)
 
 def load_script(v14_script):
     return kurt.Script(
@@ -101,7 +118,7 @@ def save_block(kurt_block):
             arg = map(save_block, arg)
         args.append(arg)
 
-    cmd = kurt_block.type.command
+    cmd = kurt_block.type.translate("scratch14").command
     if cmd == "changeVariable":
         args[1] = Symbol(args[1])
 

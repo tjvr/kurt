@@ -65,6 +65,9 @@ INSERT_SHAPES = {
     '%m': 'readonly-menu',
     '%n': 'number',
     '%s': 'string',
+
+    # special
+    '%x': 'inline',
 }
 
 
@@ -96,7 +99,10 @@ def blockify(blockspec):
     else:
         return None
 
+
 def make_block_types():
+    global commands
+
     # Add extras
     for spec in extras:
         if len(spec) > 1:
@@ -104,6 +110,13 @@ def make_block_types():
             commands.append([text, flag, 20, command] + spec[3:])
         else:
             commands.append(spec)
+
+    # Add not-actually-blocks
+    commands += [
+        ['%x.var', 'r', 9, 'readVariable'],
+        ['%x.list', 'r', 12, "contentsOfList:"],
+        ['%x', 'r', 10, "getParam"],
+    ]
 
     # Blockify
     return map(blockify, commands)

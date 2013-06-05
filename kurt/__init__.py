@@ -797,6 +797,7 @@ class Insert(object):
         'color': '[%s]',
         'boolean': '<%s>',
         'stack': '\n\t%s\n',
+        'inline': '%s',
     }
 
     def __init__(self, shape, default=None):
@@ -832,6 +833,11 @@ class Insert(object):
 
             The block is rendered with a "mouth" into which blocks can be
             inserted.
+
+        Special shapes:
+
+        ``'inline'``
+            Not actually an insert -- used for variable and list reporters.
 
         """
 

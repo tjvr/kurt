@@ -75,17 +75,17 @@ class Block(object):
                         raise ValueError, "Invalid argument " + repr(args[1]) \
                             + " to changeVariable block"
 
-                elif command == "EventHatMorph":
-                    if args[0] == "Scratch-StartClicked": # when gf clicked
-                        for type in poss_types:
-                            if type.defaults == ["Scratch-StartClicked"]:
-                                self.type = type
-                                break
-                    else: # broadcast
-                        for type in poss_types:
-                            if type.defaults == []:
-                                self.type = type
-                                break
+                #elif command == "EventHatMorph":
+                    #if args[0] == "Scratch-StartClicked": # when gf clicked
+                    #    for type in poss_types:
+                    #        if type.defaults == ["Scratch-StartClicked"]:
+                    #            self.type = type
+                    #            break
+                    #else: # broadcast
+                    #    for type in p:oss_types:
+                    #        if type.defaults == []:
+                    #            self.type = type
+                    #            break
                 else:
                     self.type = poss_types[0]
 

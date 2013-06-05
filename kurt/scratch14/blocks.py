@@ -159,16 +159,15 @@ blocks = (list(parse_blockspec(squeak_blockspecs)) +
     list(parse_blockspec(squeak_obsolete_blockspecs)))
 
 blocks += [
-    S14BlockType("readVariable", "%v", "r", category="variables"),
+    S14BlockType("readVariable", "%x", "r", category="variables",
+           defaults = ['var']),
+    S14BlockType("contentsOfList:", "%X", "r", "variables", defaults=["list"]),
 
     # TODO special-case variable blocks
-
-    #S14BlockType("changeVariable", "change %v by %n", category="variables",
-    #       defaults = [None, Symbol("changeVar:by:"), None]),
-    #S14BlockType("changeVariable", "set %v to %s", category="variables",
-    #       defaults = [None, Symbol("setVar:to:"), None]),
-
-    S14BlockType("contentsOfList:", "%l", "r", "variables"),
+    # S14BlockType("changeVariable", "change %v by %n", category="variables",
+    #        defaults = [None, Symbol("changeVar:by:"), None]),
+    # S14BlockType("changeVariable", "set %v to %s", category="variables",
+    #        defaults = [None, Symbol("setVar:to:"), None]),
 
     S14BlockType("EventHatMorph", "when gf clicked", "S",  # alternate spelling
            defaults = ["Scratch-StartClicked"]),
@@ -190,17 +189,15 @@ for block in blocks:
 assert blocks_by_cmd['EventHatMorph'][0].text == 'when green flag clicked'
 assert blocks_by_cmd['EventHatMorph'][1].text == 'when I receive %e'
 assert blocks_by_cmd['EventHatMorph'][2].text == 'when gf clicked'
-blocks_by_cmd['EventHatMorph'][1].defaults = [""]
+blocks_by_cmd['EventHatMorph'][1].defaults = []
 blocks_by_cmd['EventHatMorph'].pop(2)
 blocks_by_cmd['EventHatMorph'].pop(0)
 
 assert blocks_by_cmd['MouseClickEventHatMorph'][0].text == 'when %m clicked'
 blocks_by_cmd['MouseClickEventHatMorph'][0].defaults = ["Scratch-MouseClickEvent"]
 
-blocks_by_cmd['contentsOfList:'][0].defaults = ["list"]
 blocks_by_cmd['KeyEventHatMorph'][0].defaults = ["space"]
 blocks_by_cmd['doIfElse'][0].defaults = [False, None]
-blocks_by_cmd['readVariable'][0].defaults = ['var']
 
 
 
@@ -269,6 +266,14 @@ INSERT_SHAPES = {
     '%h': 'readonly-menu', # Numerical sensor board selector menu
     '%H': 'readonly-menu', # Boolean sensor board selector menu
     '%W': 'readonly-menu', # motor direction
+
+    # special
+    '%x': 'inline',
+    '%X': 'inline',
+}
+
+MATCH_COMMANDS = {
+    'EventHatMorph': 'whenIReceive',
 }
 
 
@@ -291,12 +296,14 @@ def blockify(block):
             part = kurt.Insert(INSERT_SHAPES[part], default=default)
         parts.append(part)
 
+    match = MATCH_COMMANDS.get(block.command, None)
+
     if block.command == "doIfElse":
         parts += [kurt.Insert("stack"), "else", kurt.Insert("stack")]
     elif block.flag == "c":
         parts += [kurt.Insert("stack")]
 
     return kurt.TranslatedBlockType("scratch14", block.category, shape,
-            block.command, parts)
+            block.command, parts, match=match)
 
 block_list = map(blockify, sum(blocks_by_cmd.values(), []))
