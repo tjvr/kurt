@@ -216,7 +216,8 @@ class Kurt(object):
         """
         if 'extension' in kwargs:
             kwargs['extension'] = kwargs['extension'].lower()
-        kwargs["name"] = name
+        if name:
+            kwargs["name"] = name
 
         for plugin in cls.plugins.values():
             for name in kwargs:

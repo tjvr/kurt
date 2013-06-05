@@ -796,7 +796,7 @@ class Insert(object):
         'number-menu': '(%s v)',
         'color': '[%s]',
         'boolean': '<%s>',
-        'stack': '\n%s\n',
+        'stack': '\n\t%s\n',
     }
 
     def __init__(self, shape, default=None):
@@ -881,6 +881,10 @@ class Insert(object):
                 value = "\n".join(block.stringify() for block in value)
             elif hasattr(value, "stringify"):
                 value = value.stringify()
+
+            if self.shape == 'stack':
+                value = value.replace("\n", "\n\t")
+
             return Insert.SHAPE_FMTS[self.shape] % (value,)
 
 
@@ -1292,6 +1296,9 @@ class Script(object):
             string += "\t" + repr(block).replace("\n", "\n\t") + ",\n"
         string = string.rstrip().rstrip(",")
         return string + "], %r)" % self.pos
+
+    def stringify(self):
+        return "\n".join(block.stringify() for block in self.blocks)
 
     # Pretend to be a list #
 
