@@ -126,7 +126,7 @@ def save_block(kurt_block):
 
 def save_script(kurt_script):
     return Script(
-        kurt_script.pos,
+        kurt_script.pos or (10, 10),
         map(save_block, kurt_script.blocks),
     )
 

@@ -1271,12 +1271,12 @@ class Script(object):
 
     """
 
-    def __init__(self, blocks=None, pos=(10,10)):
+    def __init__(self, blocks=None, pos=None):
         self.blocks = blocks or []
         self.blocks = list(self.blocks)
         """The list of :class:`Blocks <Block>`."""
 
-        self.pos = pos
+        self.pos = tuple(pos) if pos else None
         """``(x, y)`` position from the top-left of the script area in
         pixels.
 
@@ -1300,13 +1300,15 @@ class Script(object):
                 self.__class__.__name__)
         for block in self.blocks:
             string += "\t" + repr(block).replace("\n", "\n\t") + ",\n"
-        string = string.rstrip().rstrip(",")
-        return string + "], %r)" % self.pos
+        string = string.rstrip().rstrip(",") + "]"
+        if self.pos:
+            string += "], pos=%r" % (self.pos,)
+        return string + ")"
 
     def stringify(self):
         return "\n".join(block.stringify() for block in self.blocks)
 
-    # Pretend to be a list #
+    # Pretend to be a list
 
     def __getattr__(self, name):
         return getattr(self.blocks, name)
