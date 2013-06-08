@@ -440,7 +440,7 @@ class SpriteCollection(OrderedCollection):
             for sprite in self.value:
                 if sprite.name == item:
                     return sprite
-        return self.value[index]
+        return self.value[item]
 
     def __repr__(self):
         return repr(self.value)

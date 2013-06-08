@@ -87,11 +87,6 @@ def load_block(v14_block):
     else:
         command = v14_block.command
 
-    # S14BlockType("changeVariable", "change %v by %n", category="variables",
-    #        defaults = [None, Symbol("changeVar:by:"), None]),
-    # S14BlockType("changeVariable", "set %v to %s", category="variables",
-    #        defaults = [None, Symbol("setVar:to:"), None]),
-
     args = []
     for arg in v14_block.args:
         if isinstance(arg, Block):
@@ -110,6 +105,8 @@ def load_script(v14_script):
     )
 
 def save_block(kurt_block):
+    command = kurt_block.type.translate('scratch14').command
+
     args = []
     for arg in kurt_block.args:
         if isinstance(arg, kurt.Block):
@@ -118,11 +115,16 @@ def save_block(kurt_block):
             arg = map(save_block, arg)
         args.append(arg)
 
-    cmd = kurt_block.type.translate("scratch14").command
-    if cmd == "changeVariable":
-        args[1] = Symbol(args[1])
+    # special-case blocks with weird arguments
+    if command == 'whenGreenFlag':
+        return Block('EventHatMorph', 'Scratch-StartClicked')
+    elif command == 'whenIReceive':
+        return Block('EventHatMorph', args[0])
+    elif command in ('changeVar:by:', 'setVar:to:'):
+        return Block('changeVariable', args[0],
+                Symbol(command), args[1])
+    return Block(command, *args)
 
-    return Block(cmd, *args)
 
 def save_script(kurt_script):
     return Script(

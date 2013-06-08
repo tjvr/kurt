@@ -1039,6 +1039,13 @@ class BlockType(BaseBlockType):
                 return True
         return False
 
+    def has_insert(self, shape):
+        """Returns True if any of the inserts have the given shape."""
+        for insert in self.inserts:
+            if insert.shape == shape:
+                return True
+        return False
+
     @staticmethod
     def _strip_text(text):
         """Returns text with spaces and inserts removed."""

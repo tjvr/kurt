@@ -159,20 +159,20 @@ blocks = (list(parse_blockspec(squeak_blockspecs)) +
     list(parse_blockspec(squeak_obsolete_blockspecs)))
 
 blocks += [
+    # variable reporters
     S14BlockType("readVariable", "%x", "r", category="variables",
-           defaults = ['var']),
-    S14BlockType("contentsOfList:", "%X", "r", "variables", defaults=["list"]),
+       defaults = ['var']),
+    S14BlockType("contentsOfList:", "%X", "r", category="variables",
+        defaults=["list"]),
 
-    # TODO special-case variable blocks
-    # S14BlockType("changeVariable", "change %v by %n", category="variables",
-    #        defaults = [None, Symbol("changeVar:by:"), None]),
-    # S14BlockType("changeVariable", "set %v to %s", category="variables",
-    #        defaults = [None, Symbol("setVar:to:"), None]),
-
-    S14BlockType("EventHatMorph", "when gf clicked", "S",  # alternate spelling
-           defaults = ["Scratch-StartClicked"]),
-
-    S14BlockType("", "obsolete!"),
+    # Blocks with different meaning depending on arguments.
+    # These are special-cased inside load_block/save_block.
+    S14BlockType("changeVar:by:", "change %v by %n", category="variables"),
+    S14BlockType("setVar:to:", "set %v to %s", category="variables"),
+    S14BlockType("whenGreenFlag", "when green flag clicked", "S",
+        category="control", defaults = ["Scratch-StartClicked"]),
+    S14BlockType("whenIReceive", "when I receive %e", "E", category="control",
+        defaults=[""]),
 ]
 
 blocks_by_cmd = {}
@@ -186,12 +186,7 @@ for block in blocks:
 
 #-- various fixes --#
 
-assert blocks_by_cmd['EventHatMorph'][0].text == 'when green flag clicked'
-assert blocks_by_cmd['EventHatMorph'][1].text == 'when I receive %e'
-assert blocks_by_cmd['EventHatMorph'][2].text == 'when gf clicked'
-blocks_by_cmd['EventHatMorph'][1].defaults = []
-blocks_by_cmd['EventHatMorph'].pop(2)
-blocks_by_cmd['EventHatMorph'].pop(0)
+del blocks_by_cmd['EventHatMorph']
 
 assert blocks_by_cmd['MouseClickEventHatMorph'][0].text == 'when %m clicked'
 blocks_by_cmd['MouseClickEventHatMorph'][0].defaults = ["Scratch-MouseClickEvent"]
@@ -273,7 +268,9 @@ INSERT_SHAPES = {
 }
 
 MATCH_COMMANDS = {
-    'EventHatMorph': 'whenIReceive',
+    'KeyEventHatMorph': 'whenKeyPressed',
+    '\\\\': '%', # mod
+    # play drum
 }
 
 
@@ -305,5 +302,6 @@ def blockify(block):
 
     return kurt.TranslatedBlockType("scratch14", block.category, shape,
             block.command, parts, match=match)
+
 
 block_list = map(blockify, sum(blocks_by_cmd.values(), []))
