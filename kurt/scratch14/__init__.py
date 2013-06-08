@@ -82,6 +82,8 @@ def load_block(v14_block):
             return kurt.Block('whenGreenFlag')
         else:
             return kurt.Block('whenIreceive', v14_block.args[0])
+    elif v14_block.command == 'MouseClickEventHatMorph':
+        return kurt.Block('whenClicked')
     elif v14_block.command == 'changeVariable':
         command = v14_block.args.pop(1).value
     else:
@@ -120,11 +122,13 @@ def save_block(kurt_block):
         return Block('EventHatMorph', 'Scratch-StartClicked')
     elif command == 'whenIReceive':
         return Block('EventHatMorph', args[0])
+    elif command == 'whenClicked':
+        return Block('MouseClickEventHatMorph', 'Scratch-MouseClickEvent')
     elif command in ('changeVar:by:', 'setVar:to:'):
         return Block('changeVariable', args[0],
                 Symbol(command), args[1])
-    return Block(command, *args)
 
+    return Block(command, *args)
 
 def save_script(kurt_script):
     return Script(

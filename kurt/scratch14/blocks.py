@@ -187,9 +187,7 @@ for block in blocks:
 #-- various fixes --#
 
 del blocks_by_cmd['EventHatMorph']
-
-assert blocks_by_cmd['MouseClickEventHatMorph'][0].text == 'when %m clicked'
-blocks_by_cmd['MouseClickEventHatMorph'][0].defaults = ["Scratch-MouseClickEvent"]
+del blocks_by_cmd['MouseClickEventHatMorph']
 
 blocks_by_cmd['KeyEventHatMorph'][0].defaults = ["space"]
 blocks_by_cmd['doIfElse'][0].defaults = [False, None]
@@ -233,7 +231,7 @@ SHAPE_FLAGS = {
 INSERT_SHAPES = {
     '%b': 'boolean',
     '%n': 'number',
-    '%d': 'number',        # direction ( )
+    '%d': 'number-menu',        # direction ( v)
     '%s': 'string',        # string [ ]
     '%c': 'color',         # color picker with menu [#hexcode]
     '%C': 'color',         # color [#hexcode]
@@ -269,8 +267,9 @@ INSERT_SHAPES = {
 
 MATCH_COMMANDS = {
     'KeyEventHatMorph': 'whenKeyPressed',
-    '\\\\': '%', # mod
-    # play drum
+    'drum:duration:elapsed:from:': 'playDrum',
+    '\\\\': '%', # modulo
+    'midiInstrument:': 'instrument:',
 }
 
 

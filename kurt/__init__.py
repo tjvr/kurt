@@ -867,14 +867,6 @@ class Insert(object):
     def __ne__(self, other):
         return not self == other
 
-    def similar_to(self, other):
-        assert isinstance(other, Insert)
-        def sim(shape):
-            if shape == 'number-menu':
-                return 'number'
-            return shape
-        return (sim(self.shape) == sim(other.shape))
-
     def stringify(self, value=None):
         if value is None:
             value = self.default
@@ -1016,8 +1008,7 @@ class BlockType(BaseBlockType):
         """
         assert self.shape == tb.shape
         assert len(self.inserts) == len(tb.inserts)
-        for (i, o) in zip(self.inserts, tb.inserts):
-            assert i.similar_to(o)
+        assert [i.shape for i in self.inserts] == [i.shape for i in tb.inserts]
         if tb._plugin not in self._translations:
             self._translations[tb._plugin] = tb
 
