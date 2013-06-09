@@ -1,14 +1,12 @@
-- Block inserts
-	- specify insert types?
-	- ``eblock`` -- >2 C-slots?
-- Block definitions
 - parser
 	- Block constructors
 	- add Insert.kind and corresponding option lists for disambiguating "of"
 		key: [0-9a-z]|space|(left|right|up|down) arrow
-- Color class
 - converting scripts
 	- remove kurt.scratch14.scripts
+
+- scratch20 saving scripts
+- scratch20 loading
 
 - rename `scratchblocks` -> `text`
 

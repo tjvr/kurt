@@ -710,7 +710,7 @@ class ListReference(object):
 
 
 
-#-- Media / Scriptable attributes --#
+#-- Variables --#
 
 class Variable(object):
     """A memory value used in scripts.
@@ -779,6 +779,85 @@ class List(object):
         r += ")"
         return r
 
+
+
+#-- Color --#
+
+class Color(object):
+    """A 24-bit RGB color value.
+
+    Accepts tuple or hexcode arguments::
+
+        >>> kurt.Color('#f08')
+        kurt.Color(255, 0, 136)
+
+        >>> kurt.Color((255, 0, 136))
+        kurt.Color(255, 0, 136)
+
+        >>> kurt.Color('#f0ffee')
+        kurt.Color(240, 255, 238)
+
+    """
+
+    def __init__(self, r, g=None, b=None):
+        if g is None and b is None:
+            if isinstance(r, Color):
+                r = r.value
+            elif isinstance(r, basestring) and r.startswith("#"):
+                r = r[1:]
+                if len(r) == 3:
+                    r = r[0] + r[0] + r[1] + r[1] + r[2] + r[2]
+                split = (r[0:2], r[2:4], r[4:6])
+                r = [int(x, 16) for x in split]
+            (r, g, b) = r
+
+        self.r = r
+        """Red component, 0-255"""
+
+        self.g = g
+        """Green component, 0-255"""
+
+        self.b = b
+        """Blue component, 0-255"""
+
+    @property
+    def value(self):
+        """Return ``(r, g, b)`` tuple."""
+        return (self.r, self.g, self.b)
+
+    @value.setter
+    def value(self, value):
+        (self.r, self.g, self.b) = value
+
+    def __eq__(self, other):
+        return isinstance(other, Color) and self.value == other.value
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __iter__(self):
+        return iter(self.value)
+
+    def __repr__(self):
+        return "%s.%s(%s)" % (self.__class__.__module__,
+                self.__class__.__name__, repr(self.value).strip("()"))
+
+    def stringify(self):
+        """Returns the color value in hexcode format.
+
+        eg. ``'#ff1056'``
+
+        """
+        hexcode = "#"
+        for x in self.value:
+            part = hex(x)[2:]
+            if len(part) < 2: part = "0" + part
+            hexcode += part
+        return hexcode
+
+
+
+#-- Scripts --#
 
 class Insert(object):
     """The specification for an argument to a :class:`BlockType`."""
@@ -875,10 +954,10 @@ class Insert(object):
         if isinstance(value, Block):
             return value.stringify(in_insert=True) # use block's shape
         else:
-            if hasattr(value, "__iter__"):
-                value = "\n".join(block.stringify() for block in value)
-            elif hasattr(value, "stringify"):
+            if hasattr(value, "stringify"):
                 value = value.stringify()
+            elif hasattr(value, "__iter__"):
+                value = "\n".join(block.stringify() for block in value)
 
             if self.shape == 'stack':
                 value = value.replace("\n", "\n\t")
@@ -1344,6 +1423,9 @@ class Comment(object):
         self.pos = self.pos
         self.text = unicode(self.text)
 
+
+
+#-- Costumes --#
 
 class Costume(object):
     """Describes the look of a sprite.

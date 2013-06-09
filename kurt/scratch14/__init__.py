@@ -95,6 +95,8 @@ def load_block(v14_block):
             arg = load_block(arg)
         elif isinstance(arg, list):
             arg = map(load_block, arg)
+        elif isinstance(arg, Color):
+            arg = kurt.Color(arg.to_8bit())
         elif isinstance(arg, Symbol):
             raise ValueError(arg) # TODO translate these
         args.append(arg)
@@ -115,6 +117,8 @@ def save_block(kurt_block):
             arg = save_block(arg)
         elif isinstance(arg, list):
             arg = map(save_block, arg)
+        elif isinstance(arg, kurt.Color):
+            arg = Color.from_8bit(arg)
         args.append(arg)
 
     # special-case blocks with weird arguments
