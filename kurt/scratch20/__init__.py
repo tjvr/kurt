@@ -22,6 +22,7 @@ import json
 import time
 import os
 import hashlib
+import struct
 
 import kurt
 from kurt.plugin import Kurt, KurtPlugin
@@ -100,9 +101,14 @@ class _ZipBuilder(object):
         scriptable_dict = {
             "objName": kurt_scriptable.name,
             "currentCostumeIndex": kurt_scriptable.costume_index or 0,
+            "scripts": [],
             "costumes": [],
             "sounds": [],
         }
+
+        for kurt_script in kurt_scriptable.scripts:
+            script_array = self.save_script(kurt_script)
+            scriptable_dict["scripts"].append(script_array)
 
         for kurt_costume in kurt_scriptable.costumes:
             costume_dict = self.save_costume(kurt_costume)
@@ -123,6 +129,24 @@ class _ZipBuilder(object):
 
         return scriptable_dict
 
+    def save_block(self, block):
+        command = block.type.translate("scratch20").command
+        args = []
+        for arg in block.args:
+            if isinstance(arg, kurt.Block):
+                arg = self.save_block(arg)
+            elif isinstance(arg, list):
+                arg = map(self.save_block, arg)
+            elif isinstance(arg, kurt.Color):
+                arg = self.save_color(arg)
+            args.append(arg)
+        return [command] + args
+
+    def save_script(self, script):
+        (x, y) = script.pos
+        script_array = [x, y, map(self.save_block, script.blocks)]
+        return []
+
     def save_costume(self, kurt_costume):
         costume_dict = self.write_image(kurt_costume.image)
         (rx, ry) = kurt_costume.rotation_center
@@ -132,6 +156,14 @@ class _ZipBuilder(object):
             "rotationCenterY": ry,
         })
         return costume_dict
+
+    def save_color(self, color):
+        # build RGB values
+        value = (color.r << 16) + (color.g << 8) + color.b
+        # convert unsigned to signed 32-bit int
+        value = struct.unpack('=i', struct.pack('=I', value))[0]
+        return value
+
 
 
 class Scratch20Plugin(KurtPlugin):
@@ -150,6 +182,18 @@ class Scratch20Plugin(KurtPlugin):
         kurt_project = kurt.Project()
 
         kurt_project._original = project_dict
+
+        def load_color(value):
+            # convert signed to unsigned 32-bit int
+            value = struct.unpack('=I', struct.pack('=i', value))[0]
+            # throw away leading ff, if any
+            value &= 0x00ffffff
+            # extract RGB values
+            return kurt.Color(
+                (value & 0xff0000) >> 16,
+                (value & 0x00ff00) >> 8,
+                (value & 0x0000ff),
+            )
 
         return kurt_project
 
