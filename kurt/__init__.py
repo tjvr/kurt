@@ -1379,7 +1379,7 @@ class Script(object):
             string += "\t" + repr(block).replace("\n", "\n\t") + ",\n"
         string = string.rstrip().rstrip(",") + "]"
         if self.pos:
-            string += "], pos=%r" % (self.pos,)
+            string += ", pos=%r" % (self.pos,)
         return string + ")"
 
     def stringify(self):

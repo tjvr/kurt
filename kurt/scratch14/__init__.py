@@ -24,6 +24,7 @@ from kurt.scratch14.objtable import *
 from kurt.scratch14.files import *
 from kurt.scratch14.scripts import *
 from kurt.scratch14.blocks import block_list
+from kurt.scratch14.heights import clean_up
 
 
 
@@ -230,8 +231,10 @@ def load_scriptable(kurt_scriptable, v14_scriptable):
         kurt_scriptable.position = (x, y)
 
 def save_scriptable(kurt_scriptable, v14_scriptable):
+    clean_up(kurt_scriptable.scripts)
     v14_scriptable.scripts = user_objects.ScriptCollection(
             map(save_script, kurt_scriptable.scripts))
+
     v14_scriptable.variables = dict(map(save_variable,
         kurt_scriptable.variables.items()))
     v14_scriptable.images = map(save_image, kurt_scriptable.costumes)
