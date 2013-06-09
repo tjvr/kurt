@@ -23,7 +23,6 @@ from construct import *
 from construct.text import *
 
 import kurt
-
 from kurt.scratch14.fixed_objects import Symbol
 from kurt.scratch14.blockspecs_src import *
 
@@ -173,6 +172,8 @@ blocks += [
         category="control", defaults = ["Scratch-StartClicked"]),
     S14BlockType("whenIReceive", "when I receive %e", "E", category="control",
         defaults=[""]),
+    S14BlockType("whenClicked", "when m clicked", "M")
+            # should really be 'when %m clicked'
 ]
 
 blocks_by_cmd = {}
