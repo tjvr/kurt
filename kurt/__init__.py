@@ -435,6 +435,9 @@ class Scriptable(object):
 
         Defaults to the first costume in :attr:`self.costumes` on save.
 
+        If a sprite doesn't have a costume, a black 1x1 pixel square will be
+        used.
+
         """
 
         self.volume = 100
@@ -449,7 +452,9 @@ class Scriptable(object):
             if self.costumes:
                 self.costume = self.costumes[0]
             else:
-                raise ValueError, "%r doesn't have a costume" % self
+                BLACK = (0, 0, 0)
+                self.costume = Costume("blank", Image(PIL.Image.new("RGB",
+                    (1, 1), BLACK)))
 
     @property
     def costume_index(self):
