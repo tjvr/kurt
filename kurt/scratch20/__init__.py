@@ -31,7 +31,74 @@ from kurt.scratch20.blocks import make_block_types
 
 
 
-class _ZipBuilder(object):
+class ZipReader(object):
+    def __init__(self, path):
+        self.zip_file = zipfile.ZipFile(path)
+
+        project_dict = json.load(self.zip_file.open("project.json"))
+
+        kurt_project = kurt.Project()
+
+        kurt_project.stage = self.load_scriptable(project_dict, is_sprite=False)
+
+        for sprite_dict in project_dict['children']:
+            kurt_project.sprites.append(self.load_scriptable(sprite_dict))
+
+        return kurt_project
+
+    def load_scriptable(self, scriptable_dict, is_sprite=True):
+        if is_sprite:
+            kurt_scriptable = kurt.Sprite(scriptable_dict["objName"])
+        else:
+            kurt_scriptable = kurt.Stage()
+
+        for costume_dict in scriptable_dict["costumes"]:
+            kurt_scriptable.costumes.append(self.load_costume(costume_dict))
+
+        if is_sprite:
+            pass
+
+    def load_block(self, block_array):
+        command = block_array.pop(0)
+        block_type = kurt.BlockType.get(command)
+
+        inserts = list(block_type.inserts)
+        args = []
+        for arg in block_array:
+            insert = inserts.pop(0) if inserts else None
+            if isinstance(arg, list):
+                if isinstance(arg[0], list): # 'stack'-shaped Insert
+                    arg = map(self.load_block, arg)
+                else: # Block
+                    arg = self.load_block(arg)
+            elif insert and insert.shape == 'color':
+                arg = self.load_color(arg)
+            args.append(arg)
+
+        return kurt.Block(block_type, args)
+
+    def load_script(self, script_array):
+        (x, y, blocks) = script_array
+        blocks = map(self.load_block, blocks)
+        return kurt.Script(blocks, pos=(x, y))
+
+    def load_color(value):
+        # convert signed to unsigned 32-bit int
+        value = struct.unpack('=I', struct.pack('=i', value))[0]
+        # throw away leading ff, if any
+        value &= 0x00ffffff
+        # extract RGB values
+        return kurt.Color(
+            (value & 0xff0000) >> 16,
+            (value & 0x00ff00) >> 8,
+            (value & 0x0000ff),
+        )
+
+    def load_costume(self, costume_dict):
+        return kurt.Costume()
+
+
+class ZipWriter(object):
     def __init__(self, path, kurt_project):
         self.zip_file = zipfile.ZipFile(path, "w")
 
@@ -66,6 +133,8 @@ class _ZipBuilder(object):
 
         self.zip_file.close()
 
+        self.project_dict = project_dict
+
     def write_file(self, name, contents):
         """Write file contents string into archive."""
         # TODO: find a way to make ZipFile accept a file object.
@@ -96,7 +165,7 @@ class _ZipBuilder(object):
 
 
     def save_scriptable(self, kurt_scriptable):
-        is_stage = isinstance(kurt_scriptable, kurt.Stage)
+        is_sprite = isinstance(kurt_scriptable, kurt.Sprite)
 
         scriptable_dict = {
             "objName": kurt_scriptable.name,
@@ -114,7 +183,7 @@ class _ZipBuilder(object):
             costume_dict = self.save_costume(kurt_costume)
             scriptable_dict["costumes"].append(costume_dict)
 
-        if isinstance(kurt_scriptable, kurt.Sprite):
+        if is_sprite:
             scriptable_dict.update({
                 "scratchX": 0,
                 "scratchY": 0,
@@ -143,7 +212,7 @@ class _ZipBuilder(object):
         return [command] + args
 
     def save_script(self, script):
-        (x, y) = script.pos
+        (x, y) = script.pos or (10, 10)
         script_array = [x, y, map(self.save_block, script.blocks)]
         return []
 
@@ -175,30 +244,13 @@ class Scratch20Plugin(KurtPlugin):
         return make_block_types()
 
     def load(self, path):
-        project_zip = zipfile.ZipFile(path)
-
-        project_dict = json.load(project_zip.open("project.json"))
-
-        kurt_project = kurt.Project()
-
-        kurt_project._original = project_dict
-
-        def load_color(value):
-            # convert signed to unsigned 32-bit int
-            value = struct.unpack('=I', struct.pack('=i', value))[0]
-            # throw away leading ff, if any
-            value &= 0x00ffffff
-            # extract RGB values
-            return kurt.Color(
-                (value & 0xff0000) >> 16,
-                (value & 0x00ff00) >> 8,
-                (value & 0x0000ff),
-            )
-
+        zl = ZipLoader(path, kurt_project)
+        kurt_project._original = zl.project_dict
         return kurt_project
 
     def save(self, path, kurt_project):
-        _ZipBuilder(path, kurt_project)
+        zw = ZipWriter(path, kurt_project)
+        return zw.project_dict
 
 
 
