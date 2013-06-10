@@ -80,6 +80,7 @@ __version__ = '2.0.0'
 from collections import OrderedDict
 import re
 import os
+import random
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -860,6 +861,11 @@ class Color(object):
             hexcode += part
         return hexcode
 
+    @classmethod
+    def random(cls):
+        f = lambda: random.randint(0, 255)
+        return cls(f(), f(), f())
+
 
 
 #-- Scripts --#
@@ -868,9 +874,10 @@ class Insert(object):
     """The specification for an argument to a :class:`BlockType`."""
 
     SHAPE_DEFAULTS = {
-        "number": 0,
-        "number-menu": 0,
-        "stack": [],
+        'number': 0,
+        'number-menu': 0,
+        'stack': [],
+        'color': Color.random,
     }
 
     SHAPE_FMTS = {
@@ -929,6 +936,8 @@ class Insert(object):
 
         if default is None:
             default = Insert.SHAPE_DEFAULTS.get(shape, None)
+            if callable(default):
+                default = default()
         self.default = default
         """The default value for the insert."""
 
