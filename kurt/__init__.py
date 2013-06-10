@@ -1160,9 +1160,15 @@ class BlockType(BaseBlockType):
         * If it loosely matches the text on a TranslatedBlockType, return the
           corresponding BlockType.
 
+        * If it's a TranslatedBlockType instance, look for and return the
+          corresponding BlockType.
+
         """
         if isinstance(block_type, BlockType):
             return block_type
+
+        if isinstance(block_type, TranslatedBlockType):
+            block_type = block_type.command
 
         blocks = kurt.plugin.Kurt.block_by_command(block_type)
         if blocks:
