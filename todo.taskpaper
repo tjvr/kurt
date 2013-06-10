@@ -1,18 +1,21 @@
+- converting scripts
+	- remove kurt.scratch14.scripts
+
+- empty changeVariables
+- scratch20 saving scripts
+- scratch20 loading
+
+- stacking order of actors
+- sounds
+
+- rename `scratchblocks` -> `text`
+
 - parser
 	- Block constructors
 	- add Insert.kind and corresponding option lists for disambiguating "of"
 		key: [0-9a-z]|space|(left|right|up|down) arrow
-- converting scripts
-	- remove kurt.scratch14.scripts
 
-- scratch20 saving scripts
-- scratch20 loading
-
-- rename `scratchblocks` -> `text`
-
-- stacking order of actors
 - don't convert kurt.scratch14 images to pil
-- sounds
 
 - what if the path at Project.save(path) already exists?
 - Does json need open("rb")?
