@@ -164,16 +164,20 @@ blocks += [
     S14BlockType("contentsOfList:", "%X", "r", category="variables",
         defaults=["list"]),
 
-    # Blocks with different meaning depending on arguments.
-    # These are special-cased inside load_block/save_block.
-    S14BlockType("changeVar:by:", "change %v by %n", category="variables"),
-    S14BlockType("setVar:to:", "set %v to %s", category="variables"),
+    # Blocks with different meaning depending on arguments are special-cased
+    # inside load_block/save_block.
     S14BlockType("whenGreenFlag", "when green flag clicked", "S",
         category="control", defaults = ["Scratch-StartClicked"]),
     S14BlockType("whenIReceive", "when I receive %e", "E", category="control",
         defaults=[""]),
-    S14BlockType("whenClicked", "when m clicked", "M")
-            # should really be 'when %m clicked'
+
+    # changeVariable is special-cased (and isn't in blockspecs)
+    S14BlockType("changeVar:by:", "change %v by %n", category="variables"),
+    S14BlockType("setVar:to:", "set %v to %s", category="variables"),
+
+    # MouseClickEventHatMorph is special-cased as it has an extra argument:
+    # 'when %m clicked'
+    S14BlockType("whenClicked", "when clicked", "M")
 ]
 
 blocks_by_cmd = {}
@@ -187,8 +191,8 @@ for block in blocks:
 
 #-- various fixes --#
 
-del blocks_by_cmd['EventHatMorph']
-del blocks_by_cmd['MouseClickEventHatMorph']
+del blocks_by_cmd['EventHatMorph'] # whenGreenFlag / whenIReceive
+del blocks_by_cmd['MouseClickEventHatMorph'] # whenClicked
 
 blocks_by_cmd['KeyEventHatMorph'][0].defaults = ["space"]
 blocks_by_cmd['doIfElse'][0].defaults = [False, None]
