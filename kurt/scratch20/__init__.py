@@ -46,6 +46,9 @@ class ZipReader(object):
 
         return kurt_project
 
+    def finish(self):
+        self.zip_file.close()
+
     def load_scriptable(self, scriptable_dict, is_sprite=True):
         if is_sprite:
             kurt_scriptable = kurt.Sprite(scriptable_dict["objName"])
@@ -98,6 +101,7 @@ class ZipReader(object):
         return kurt.Costume()
 
 
+
 class ZipWriter(object):
     def __init__(self, path, kurt_project):
         self.zip_file = zipfile.ZipFile(path, "w")
@@ -125,15 +129,16 @@ class ZipWriter(object):
         stage_dict = self.save_scriptable(kurt_project.stage)
         project_dict.update(stage_dict)
 
-        for kurt_sprite in kurt_project.sprites:
-            sprite_dict = self.save_scriptable(kurt_sprite)
+        for (i, kurt_sprite) in enumerate(kurt_project.sprites):
+            sprite_dict = self.save_scriptable(kurt_sprite, i)
             project_dict["children"].append(sprite_dict)
 
         self.write_file("project.json", json.dumps(project_dict))
 
-        self.zip_file.close()
-
         self.project_dict = project_dict
+
+    def finish(self):
+        self.zip_file.close()
 
     def write_file(self, name, contents):
         """Write file contents string into archive."""
@@ -164,7 +169,7 @@ class ZipWriter(object):
         return image_dict
 
 
-    def save_scriptable(self, kurt_scriptable):
+    def save_scriptable(self, kurt_scriptable, i=None):
         is_sprite = isinstance(kurt_scriptable, kurt.Sprite)
 
         scriptable_dict = {
@@ -189,7 +194,7 @@ class ZipWriter(object):
                 "scratchY": 0,
                 "scale": 1,
                 "direction": 90,
-                "indexInLibrary": 1,
+                "indexInLibrary": i,
                 "isDraggable": False,
                 "rotationStyle": "normal",
                 "spriteInfo": {},
@@ -213,8 +218,7 @@ class ZipWriter(object):
 
     def save_script(self, script):
         (x, y) = script.pos or (10, 10)
-        script_array = [x, y, map(self.save_block, script.blocks)]
-        return []
+        return [x, y, map(self.save_block, script.blocks)]
 
     def save_costume(self, kurt_costume):
         costume_dict = self.write_image(kurt_costume.image)
@@ -246,10 +250,12 @@ class Scratch20Plugin(KurtPlugin):
     def load(self, path):
         zl = ZipLoader(path, kurt_project)
         kurt_project._original = zl.project_dict
+        zl.finish()
         return kurt_project
 
     def save(self, path, kurt_project):
         zw = ZipWriter(path, kurt_project)
+        zw.finish()
         return zw.project_dict
 
 

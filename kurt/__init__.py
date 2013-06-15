@@ -905,6 +905,7 @@ class Insert(object):
         'number-menu': 0,
         'stack': [],
         'color': Color.random,
+        'inline': 'nil', # Can't be empty
     }
 
     SHAPE_FMTS = {
