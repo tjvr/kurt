@@ -278,7 +278,13 @@ class Project(object):
 
         """
 
-        plugin = kurt.plugin.Kurt.get_plugin(name=format)
+        if isinstance(format, kurt.plugin.KurtPlugin):
+            plugin = format
+        else:
+            plugin = kurt.plugin.Kurt.get_plugin(name=format)
+
+        if plugin == self._plugin:
+            return # No point converting
 
         self._normalize()
 
@@ -288,7 +294,7 @@ class Project(object):
 
         return self
 
-    def save(self, path=None, debug=False):
+    def save(self, path=None, guess_format=True, debug=False):
         """Save project to file.
 
         :param path: Path or URL. If path is not given, the original path given
@@ -300,8 +306,15 @@ class Project(object):
                      If the path ends in a folder instead of a file, the
                      filename is based on the project's :attr:`name`.
 
-        :param debug: If true, return debugging information from the format
-                      plugin instead of the path.
+                     Subsequent calls to :attr:`save()` with no path parameter
+                     will save to the new path.
+
+        :param guess_format: If a `path` is given with the extension of an
+                             existing plugin, the project will be converted
+                             using :attr:`convert`. You can suppress this
+                             behaviour using `guess_format=False` :param debug:
+                             If true, return debugging information from the
+                             format plugin instead of the path.
 
         :raises: :py:class:`ValueError` if there's no path or name, or you forgot
                  to :attr:`convert()` before saving.
@@ -310,19 +323,33 @@ class Project(object):
 
         """
 
+        given_path = False
         if path is None:
             path = self.path
 
             if path is None:
                 raise ValueError, "path is required"
-
-        if self._plugin is None:
-            raise ValueError, "must convert project to a format before saving"
+        else:
+            given_path = True
 
         (folder, filename) = os.path.split(path)
         (name, extension) = os.path.splitext(filename)
 
+        # convert if given path with extension
+        if given_path:
+            if extension:
+                try:
+                    plugin = kurt.plugin.Kurt.get_plugin(extension=extension)
+                except ValueError:
+                    pass
+                else:
+                    self.convert(plugin)
+
+        if self._plugin is None:
+            raise ValueError, "must convert project to a format before saving"
+
         extension = self._plugin.extension
+
         if not name:
             name = _clean_filename(self.name)
             if not name:
