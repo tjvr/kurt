@@ -218,6 +218,8 @@ class Kurt(object):
             kwargs['extension'] = kwargs['extension'].lower()
         if name:
             kwargs["name"] = name
+        if not kwargs:
+            raise ValueError, "No arguments"
 
         for plugin in cls.plugins.values():
             for name in kwargs:
