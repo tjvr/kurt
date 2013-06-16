@@ -1138,6 +1138,8 @@ class BlockType(BaseBlockType):
 
         """
         if plugin:
+            if isinstance(plugin, kurt.plugin.KurtPlugin):
+                plugin = plugin.name
             return self._translations[plugin]
         else:
             return self._translations.values()[0]
@@ -1216,11 +1218,6 @@ class BlockType(BaseBlockType):
     def __ne__(self, other):
         return not self == other
 
-    def copy(self):
-        """Return a new BlockType instance with the same attributes."""
-        return BlockType(self.command, self.text, self.flag, self.category,
-                list(self.defaults))
-
 
 class TranslatedBlockType(BaseBlockType):
     """Holds plugin-specific :class:`BlockType` attributes.
@@ -1277,10 +1274,23 @@ class TranslatedBlockType(BaseBlockType):
         return not self == other
 
 
+class BlockWorkaround(object):
+    def __init__(self, workaround):
+        if isinstance(workaround, Block):
+            w = workaround
+            self.workaround = lambda block: workaround.copy()
+        else:
+            assert callable(workaround)
+            self.workaround = workaround
+
+    def run(self, block):
+        return self.workaround(block)
+
+
 class Block(object):
     """A statement in a graphical programming language. Blocks can connect
     together to form sequences of commands, which are stored in a
-    :class:`Script`.  Blocks perform different commands depending on their
+    :class:`Script`. Blocks perform different commands depending on their
     type.
 
     :param type:      A :class:`BlockType` instance, used to identify the
@@ -1288,9 +1298,11 @@ class Block(object):
                       Will also exact match a :attr:`command` or loosely match
                       :attr:`text`.
 
-    :param ``*args``: List of the block's arguments.
+    :param ``*args``: List of the block's arguments. Arguments can be numbers,
+                      strings, Blocks, or lists of Blocks (for 'stack' shaped
+                      Inserts).
 
-    So the following constructors are all equivalent::
+    The following constructors are all equivalent::
 
         >>> block = kurt.Block('say:duration:elapsed:from:', 'Hello!', 2)
         >>> block = kurt.Block("say %s for %s secs", "Hello!", 2)
@@ -1380,6 +1392,10 @@ class Block(object):
 
     def stringify(self, in_insert=False):
         return self.type.stringify(self.args, in_insert)
+
+    def copy(self):
+        """Return a new Block instance with the same attributes."""
+        return Block(self.type, *self.args)
 
 
 class Script(object):
