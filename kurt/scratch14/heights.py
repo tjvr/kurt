@@ -112,9 +112,9 @@ def clean_up(scripts):
     scripts_with_pos.sort(key=lambda s: (s.pos[1], s.pos[0]))
     scripts = scripts_with_pos + [s for s in scripts if not s.pos]
 
-    y = 10
+    y = 20
     for script in scripts:
-        script.pos = (10, y)
+        script.pos = (20, y)
         y += stack_height(script.blocks)
         y += 15
 
