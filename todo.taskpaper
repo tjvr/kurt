@@ -1,9 +1,19 @@
-- converting scripts
-	- remove kurt.scratch14.scripts
+- Kurt.Block('of')
+- drop HTMLcolor
+- hook up watchers properly
+- context for parser
+
+- get rid of convert completely?
 
 - empty changeVariables
+what about them?
 - scratch20 saving scripts
 - scratch20 loading
+
+- switch to pillow
+
+- converting scripts
+	- remove kurt.scratch14.scripts
 
 - stacking order of actors
 - sounds
