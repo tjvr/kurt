@@ -589,8 +589,6 @@ class Sprite(Scriptable, Actor):
     def _normalize(self):
         Scriptable._normalize(self)
         assert self.rotation_style in ("normal", "leftRight", "none")
-        if not self.costume:
-            raise ValueError, "%r doesn't have a costume" % self
 
     def __repr__(self):
         return "<%s.%s(%r)>" % (self.__class__.__module__,

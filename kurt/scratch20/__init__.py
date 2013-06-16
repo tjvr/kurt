@@ -44,7 +44,8 @@ class ZipReader(object):
         for sprite_dict in project_dict['children']:
             kurt_project.sprites.append(self.load_scriptable(sprite_dict))
 
-        return kurt_project
+        self.project_dict = project_dict
+        self.kurt_project = kurt_project
 
     def finish(self):
         self.zip_file.close()
@@ -55,11 +56,17 @@ class ZipReader(object):
         else:
             kurt_scriptable = kurt.Stage()
 
-        for costume_dict in scriptable_dict["costumes"]:
-            kurt_scriptable.costumes.append(self.load_costume(costume_dict))
+        #for costume_dict in scriptable_dict["costumes"]:
+        #    kurt_scriptable.costumes.append(self.load_costume(costume_dict))
+
+        for script_array in scriptable_dict.get("scripts", []):
+            kurt_scriptable.scripts.append(self.load_script(script_array))
+
 
         if is_sprite:
             pass
+
+        return kurt_scriptable
 
     def load_block(self, block_array):
         command = block_array.pop(0)
@@ -98,8 +105,7 @@ class ZipReader(object):
         )
 
     def load_costume(self, costume_dict):
-        return kurt.Costume()
-
+        return None #kurt.Costume()
 
 
 class ZipWriter(object):
@@ -238,7 +244,6 @@ class ZipWriter(object):
         return value
 
 
-
 class Scratch20Plugin(KurtPlugin):
     name = "scratch20"
     display_name = "Scratch 2.0"
@@ -248,7 +253,8 @@ class Scratch20Plugin(KurtPlugin):
         return make_block_types()
 
     def load(self, path):
-        zl = ZipLoader(path, kurt_project)
+        zl = ZipReader(path)
+        kurt_project = zl.kurt_project
         kurt_project._original = zl.project_dict
         zl.finish()
         return kurt_project
