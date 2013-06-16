@@ -125,6 +125,7 @@ class ZipWriter(object):
                 "spriteCount": 0,
                 "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.20 Safari/537.36",
                 "videoOn": False,
+                "hasCloudData": False, # todo
             },
             "videoAlpha": 0.5,
         }
@@ -169,7 +170,7 @@ class ZipWriter(object):
             image_dict = {
                 "baseLayerID": image_id, #-1 for download
                 "bitmapResolution": 1,
-                #"baseLayerMD5": hashlib.md5(contents).hexdigest(),
+                "baseLayerMD5": hashlib.md5(image.contents).hexdigest(),
             }
             self.image_dicts[image] = image_dict
         return image_dict
