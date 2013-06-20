@@ -148,8 +148,6 @@ class PythonicAdapter(Adapter):
             return Dictionary(obj)
         elif isinstance(obj, list) or isinstance(obj, tuple):
             return Array(obj)
-        elif isinstance(obj, Script):
-            return Array(obj.to_array())
         else:
             return obj
 

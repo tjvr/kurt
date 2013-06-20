@@ -115,6 +115,9 @@ def clean_up(scripts):
     y = 20
     for script in scripts:
         script.pos = (20, y)
-        y += stack_height(script.blocks)
+        if isinstance(script, kurt.Script):
+            y += stack_height(script.blocks)
+        elif isinstance(script, kurt.Comment):
+            y += 14
         y += 15
 

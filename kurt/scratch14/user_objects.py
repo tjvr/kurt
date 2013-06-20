@@ -286,21 +286,6 @@ class ScriptableScratchMorph(BaseMorph):
     def built(self):
         UserObject.built(self)
 
-        scripts = [Script.from_array(self, script) for script in self.scripts]
-        self.scripts = ScriptCollection(scripts)
-
-        comments = []
-        for script in self.scripts:
-            if isinstance(script, Comment):
-                comments.append(script)
-        for comment in comments:
-            self.scripts.remove(comment)
-
-        blocks_by_id = list(self.blocks_by_id())
-
-        for comment in comments:
-            comment.attach_scripts(blocks_by_id)
-
         self.build_media()
 
     def build_media(self):
@@ -316,18 +301,6 @@ class ScriptableScratchMorph(BaseMorph):
                 self.images.append(media)
             else:
                 self.media.append(media)
-
-    def blocks_by_id(self):
-        """Return a list of all the blocks in script order but reverse script
-        blocks order.
-        Used to determine which block a Comment is anchored to.
-
-        Note that Squeak arrays are 1-based, so index with:
-            blocks_by_id[index - 1]
-        """
-        for script in self.scripts:
-            for block in reversed(list(script.to_block_list())):
-                yield block
 
     def normalize(self):
         """Called before saving"""
@@ -359,14 +332,7 @@ class ScriptableScratchMorph(BaseMorph):
             scratch_list.normalize()
 
     def _encode_field(self, name, value):
-        if name == 'scripts':
-            scripts = [script.to_array() for script in value]
-            blocks_by_id = list(self.blocks_by_id())
-            for block in blocks_by_id:
-                if block.comment:
-                    scripts.append(block.comment.to_array(blocks_by_id))
-            return scripts
-        elif name == 'media':
+        if name == 'media':
             return OrderedCollection(self.sounds + self.images + self.media)
         else:
             return value
@@ -537,11 +503,6 @@ class Stage(ScriptableScratchMorph):
     @backgrounds.setter
     def backgrounds(self, value):
         self.images = value
-
-
-from scripts import Script, Comment
-# Yes, this is stupid. Circular dependencies ftw. -_-
-
 
 
 

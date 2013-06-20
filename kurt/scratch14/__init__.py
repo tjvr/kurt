@@ -22,7 +22,6 @@ from kurt.plugin import Kurt, KurtPlugin
 
 from kurt.scratch14.objtable import *
 from kurt.scratch14.files import *
-from kurt.scratch14.scripts import *
 from kurt.scratch14.blocks import block_list
 from kurt.scratch14.heights import clean_up
 
@@ -75,39 +74,59 @@ def load_sound(v14_sound):
 def save_sound(kurt_sound):
     pass
 
-def load_block(v14_block):
+def load_block(block_array):
+    args = list(block_array)
+    command = args.pop(0)
+    assert isinstance(command, Symbol)
+    command = command.value
+
     # special-case blocks with weird arguments
-    if v14_block.command == 'EventHatMorph':
-        assert v14_block.args
-        if v14_block.args[0] == 'Scratch-StartClicked':
+    if command == 'EventHatMorph':
+        if args[0] == 'Scratch-StartClicked':
             return kurt.Block('whenGreenFlag')
         else:
-            return kurt.Block('whenIreceive', v14_block.args[0])
-    elif v14_block.command == 'MouseClickEventHatMorph':
+            return kurt.Block('whenIreceive', args[0])
+    elif command == 'MouseClickEventHatMorph':
         return kurt.Block('whenClicked')
-    elif v14_block.command == 'changeVariable':
-        command = v14_block.args.pop(1).value
+    elif command == 'changeVariable':
+        command = args.pop(1).value
     else:
-        command = v14_block.command
+        command = command
 
-    args = []
-    for arg in v14_block.args:
-        if isinstance(arg, Block):
-            arg = load_block(arg)
-        elif isinstance(arg, list):
-            arg = map(load_block, arg)
+    # recursively load args
+    new_args = []
+    for arg in args:
+        if isinstance(arg, list):
+            #if len(arg) == 0:
+            #    arg = Block.from_array([''])
+            if isinstance(arg[0], Symbol):
+                arg = load_block(arg)
+            else:
+                arg = map(load_block, arg)
         elif isinstance(arg, Color):
             arg = kurt.Color(arg.to_8bit())
         elif isinstance(arg, Symbol):
             raise ValueError(arg) # TODO translate these
-        args.append(arg)
-    return kurt.Block(command, *args)
+        new_args.append(arg)
+    return kurt.Block(command, *new_args)
 
-def load_script(v14_script):
-    return kurt.Script(
-        map(load_block, v14_script.blocks),
-        pos = v14_script.pos,
-    )
+def load_script(script_array):
+    (pos, blocks) = script_array
+
+    # comment?
+    if len(blocks) == 1:
+        block = blocks[0]
+        if block:
+            if (isinstance(block[0], Symbol) and
+                    block[0].value == 'scratchComment'):
+                text = block[1].replace("\r", "\n")
+                comment = kurt.Comment(text, pos)
+                if len(block) > 4:
+                    comment._anchor = block[4]
+                return comment
+
+    # script
+    return kurt.Script(map(load_block, blocks), pos)
 
 def save_block(kurt_block):
     command = kurt_block.type.translate('scratch14').command
@@ -124,22 +143,34 @@ def save_block(kurt_block):
 
     # special-case blocks with weird arguments
     if command == 'whenGreenFlag':
-        return Block('EventHatMorph', 'Scratch-StartClicked')
+        command = 'EventHatMorph'
+        args = ['Scratch-StartClicked']
     elif command == 'whenIReceive':
-        return Block('EventHatMorph', args[0])
+        command = 'EventHatMorph'
+        args = [args[0]]
     elif command == 'whenClicked':
-        return Block('MouseClickEventHatMorph', 'Scratch-MouseClickEvent')
+        command = 'MouseClickEventHatMorph'
+        args = ['Scratch-MouseClickEvent']
     elif command in ('changeVar:by:', 'setVar:to:'):
-        return Block('changeVariable', args[0],
-                Symbol(command), args[1])
+        args = [args[0], Symbol(command), args[1]]
+        command = 'changeVariable'
 
-    return Block(command, *args)
+    return [Symbol(command)] + args
 
 def save_script(kurt_script):
-    return Script(
-        kurt_script.pos or (10, 10),
-        map(save_block, kurt_script.blocks),
-    )
+    if isinstance(kurt_script, kurt.Script):
+        pos = kurt_script.pos or (10, 10)
+        blocks = map(save_block, kurt_script.blocks)
+        return [Point(pos), blocks]
+    elif isinstance(kurt_script, kurt.Comment):
+        comment = kurt_script
+        array = [Symbol('scratchComment'), comment.text, True, 112]
+        #if comment._anchor:
+        #    for i in xrange(len(blocks_by_id)):
+        #        if blocks_by_id[i] is comment._anchor:
+        #            array.append(i + 1)
+        #            break
+        return [Point(comment.pos), [array]]
 
 def load_variable((name, value)):
     return (name, kurt.Variable(value))
@@ -203,20 +234,70 @@ def save_lists(kurt_thing, kurt_project, v14_morph, v14_project):
 
         v14_morph.lists[v14_list.name] = v14_list
 
+def get_blocks_by_id(this_block):
+    if isinstance(this_block, kurt.Script):
+        for block in this_block.blocks:
+            for b in get_blocks_by_id(block):
+                yield b
+    else:
+        yield this_block
+        for arg in this_block.args:
+            if isinstance(arg, kurt.Block):
+                for block in get_blocks_by_id(arg):
+                    yield block
+            elif isinstance(arg, list):
+                for block in arg:
+                    for b in get_blocks_by_id(block):
+                        yield b
+
 def load_scriptable(kurt_scriptable, v14_scriptable):
+    # scripts
     kurt_scriptable.scripts = map(load_script, v14_scriptable.scripts)
+
+    # fix comments
+    comments = []
+
+    blocks_by_id = []
+    # A list of all the blocks in script order but reverse script
+    # blocks order.
+    # Used to determine which block a Comment is anchored to.
+    #
+    # Note that Squeak arrays are 1-based, so index with:
+    #     blocks_by_id[index - 1]
+
+    for script in kurt_scriptable.scripts:
+        if isinstance(script, kurt.Comment):
+            comments.append(script)
+        elif isinstance(script, kurt.Script):
+            for block in reversed(list(get_blocks_by_id(script))):
+                blocks_by_id.append(block)
+
+    attached_comments = []
+    for comment in comments:
+        if hasattr(comment, '_anchor'):
+            # Attach the comment to the right block from the given scripts.
+            block = blocks_by_id[comment._anchor - 1]
+            block.comment = comment.text
+            attached_comments.append(comment)
+
+    for comment in attached_comments:
+        kurt_scriptable.scripts.remove(comment)
+
+    # media
     kurt_scriptable.variables = dict(map(load_variable,
             v14_scriptable.variables.items()))
     kurt_scriptable.costumes = map(load_image, v14_scriptable.images)
     # kurt_scriptable.sounds = dict(map(load_sound, v14_scriptable.sounds) # TODO
 
+    # costume
     costume_index = v14_scriptable.images.index(v14_scriptable.costume)
     kurt_scriptable.costume = kurt_scriptable.costumes[costume_index]
 
+    # attributes
     kurt_scriptable.volume = v14_scriptable.volume
     kurt_scriptable.tempo = v14_scriptable.tempoBPM
 
-    # sprite
+    # for sprites:
     if isinstance(kurt_scriptable, kurt.Sprite):
         kurt_scriptable.name = v14_scriptable.name
         kurt_scriptable.direction = v14_scriptable.rotationDegrees
@@ -232,8 +313,37 @@ def load_scriptable(kurt_scriptable, v14_scriptable):
 
 def save_scriptable(kurt_scriptable, v14_scriptable):
     clean_up(kurt_scriptable.scripts)
-    v14_scriptable.scripts = user_objects.ScriptCollection(
-            map(save_script, kurt_scriptable.scripts))
+
+    scripts = map(save_script, kurt_scriptable.scripts)
+    v14_scriptable.scripts = user_objects.ScriptCollection(scripts)
+
+    blocks_by_id = []
+    for script in kurt_scriptable.scripts:
+        if isinstance(script, kurt.Script):
+            for block in reversed(list(get_blocks_by_id(script))):
+                blocks_by_id.append(block)
+
+    def grab_comments(block):
+        if block.comment:
+            (x, y) = v14_scriptable.scripts[-1][0]
+            pos = (x, y + 29)
+            array = save_script(kurt.Comment(block.comment, pos))
+            for i in xrange(len(blocks_by_id)):
+                if blocks_by_id[i] is block:
+                    array[1][0].append(i + 1)
+                    break
+            v14_scriptable.scripts.append(array)
+
+        for arg in block.args:
+            if isinstance(arg, kurt.Block):
+                grab_comments(arg)
+            elif isinstance(arg, list):
+                map(grab_comments, arg)
+
+    for script in kurt_scriptable.scripts:
+        if isinstance(script, kurt.Script):
+            for block in script.blocks:
+                grab_comments(block)
 
     v14_scriptable.variables = dict(map(save_variable,
         kurt_scriptable.variables.items()))

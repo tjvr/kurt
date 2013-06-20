@@ -1,4 +1,3 @@
-- remove kurt.scratch14.scripts
 - rename `scratchblocks` -> `text`
 - context for parser
 - Does json need open("rb")?
