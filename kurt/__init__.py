@@ -1391,7 +1391,13 @@ class Block(object):
         return string + ")"
 
     def stringify(self, in_insert=False):
-        return self.type.stringify(self.args, in_insert)
+        s = self.type.stringify(self.args, in_insert)
+        if self.comment:
+            i = s.index("\n") if "\n" in s else len(s)
+            indent = "\n"  +  " " * i  +  " // "
+            comment = " // " + self.comment.replace("\n", indent)
+            s = s[:i] + comment + s[i:]
+        return s
 
     def copy(self):
         """Return a new Block instance with the same attributes."""
@@ -1435,14 +1441,14 @@ class Script(object):
         return not self == other
 
     def __repr__(self):
-        string = "%s.%s([\n" % (self.__class__.__module__,
+        r = "%s.%s([\n" % (self.__class__.__module__,
                 self.__class__.__name__)
         for block in self.blocks:
-            string += "\t" + repr(block).replace("\n", "\n\t") + ",\n"
-        string = string.rstrip().rstrip(",") + "]"
+            r += "\t" + repr(block).replace("\n", "\n\t") + ",\n"
+        r = r.rstrip().rstrip(",") + "]"
         if self.pos:
-            string += ", pos=%r" % (self.pos,)
-        return string + ")"
+            r += ", pos=%r" % (self.pos,)
+        return r + ")"
 
     def stringify(self):
         return "\n".join(block.stringify() for block in self.blocks)
@@ -1471,15 +1477,25 @@ class Script(object):
 class Comment(object):
     """A free-floating comment in :attr:`Scriptable.scripts`."""
 
-    def __init__(self, comment, pos):
-        self.pos = pos
+    def __init__(self, text, pos=None):
+        self.text = unicode(text)
+        """The text of the comment."""
+
+        self.pos = tuple(pos) if pos else None
         """``(x, y)`` position from the top-left of the script area in
         pixels.
 
         """
 
-        self.text = u""
-        """The text of the comment."""
+    def __repr__(self):
+        r = "%s.%s(%r" % (self.__class__.__module__,
+                self.__class__.__name__, self.text)
+        if self.pos:
+            r += ", pos=%r" % (self.pos,)
+        return r + ")"
+
+    def stringify(self):
+        return "// " + self.text.replace("\n", "\n// ")
 
     def _normalize(self):
         self.pos = self.pos
