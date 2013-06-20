@@ -1,36 +1,32 @@
-- Kurt.Block('of')
-- hook up watchers properly
+- switch to pillow
+- rename `scratchblocks` -> `text`
 - context for parser
-
-- get rid of convert completely?
-
+- Does json need open("rb")?
 - empty changeVariables
-what about them?
+	what about them?
+	oh yeah, they break Scratch
+- don't convert kurt.scratch14 images to pil
+- remove kurt.scratch14.scripts
+
+- converting
+	- get rid of convert completely?
+	- converting scripts
+
+- Kurt.Block('of')
+
 - scratch20 saving scripts
 - scratch20 loading
 
-- switch to pillow
-
-- converting scripts
-	- remove kurt.scratch14.scripts
-
 - stacking order of actors
 - sounds
-
-- rename `scratchblocks` -> `text`
 
 - parser
 	- Block constructors
 	- add Insert.kind and corresponding option lists for disambiguating "of"
 		key: [0-9a-z]|space|(left|right|up|down) arrow
 
-- don't convert kurt.scratch14 images to pil
-
-- what if the path at Project.save(path) already exists?
-- Does json need open("rb")?
 - Script x/y < 0
 - Script.pos vs Sprite.position
-- Comment/Script superclass?
 
 - fix compiler/decompiler
 
