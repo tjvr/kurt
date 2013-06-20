@@ -17,7 +17,7 @@ setup(name = 'kurt',
       keywords = ['scratch'],
       license = 'LGPL',
       packages = ['kurt', 'kurt.scratchblocks', 'kurt.scratch14',
-      'kurt.scratch20', 'htmlcolor'],
+          'kurt.scratch20'],
       scripts = glob.glob('util/*'),
       classifiers = [
         "Programming Language :: Python",
