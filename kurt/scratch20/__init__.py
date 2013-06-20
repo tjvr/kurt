@@ -41,7 +41,9 @@ class ZipReader(object):
 
         kurt_project.stage = self.load_scriptable(project_dict, is_sprite=False)
 
-        for sprite_dict in project_dict['children']:
+        children = sorted(project_dict['children'],
+                key=lambda c: c['indexInLibrary'])
+        for sprite_dict in children:
             kurt_project.sprites.append(self.load_scriptable(sprite_dict))
 
         self.project_dict = project_dict
