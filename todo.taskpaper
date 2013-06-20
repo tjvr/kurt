@@ -5,7 +5,6 @@
 	what about them?
 	oh yeah, they break Scratch
 - don't convert kurt.scratch14 images to pil
-- cleanup tests
 - must make_blocks() be a method?
 - cleanup scratch14
 - cleanup scratch14 comments/blocks_by_id
