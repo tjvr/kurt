@@ -996,7 +996,7 @@ class Insert(object):
         else:
             if hasattr(value, "stringify"):
                 value = value.stringify()
-            elif hasattr(value, "__iter__"):
+            elif isinstance(value, list):
                 value = "\n".join(block.stringify() for block in value)
 
             if self.shape == 'stack':
