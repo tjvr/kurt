@@ -87,7 +87,7 @@ class ZipReader(object):
                 arg = self.load_color(arg)
             args.append(arg)
 
-        return kurt.Block(block_type, args)
+        return kurt.Block(block_type, *args)
 
     def load_script(self, script_array):
         (x, y, blocks) = script_array
