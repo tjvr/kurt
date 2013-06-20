@@ -2,11 +2,6 @@
 *.sb
 *.egg-info/
 build/
-construct/
 dist/
 doc/_*
-files/
-tests/
-parser.out
-parselog.txt
 *.swp
