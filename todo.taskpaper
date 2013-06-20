@@ -9,9 +9,11 @@
 - cleanup scratch14
 - cleanup scratch14 comments/blocks_by_id
 
+- fix "point towards" for scratch14: string to morph
 - converting
 	- get rid of convert completely?
 	- converting scripts
+	- fix "mouse pointer"
 
 - Kurt.Block('of')
 
