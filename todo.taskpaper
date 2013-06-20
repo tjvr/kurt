@@ -1,4 +1,4 @@
-- switch to pillow
+- remove kurt.scratch14.scripts
 - rename `scratchblocks` -> `text`
 - context for parser
 - Does json need open("rb")?
@@ -6,7 +6,6 @@
 	what about them?
 	oh yeah, they break Scratch
 - don't convert kurt.scratch14 images to pil
-- remove kurt.scratch14.scripts
 
 - converting
 	- get rid of convert completely?
