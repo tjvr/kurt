@@ -592,7 +592,7 @@ class WatcherMorph(AlignmentMorph):
             getSelector = Symbol('getVar:'),
             growable = True,
             owner = None, # self.readoutFrame
-            parameter = u'x',
+            parameter = None,
             properties = None,
             putSelector = None,
             stepTime = 100,

@@ -165,11 +165,6 @@ def save_script(kurt_script):
     elif isinstance(kurt_script, kurt.Comment):
         comment = kurt_script
         array = [Symbol('scratchComment'), comment.text, True, 112]
-        #if comment._anchor:
-        #    for i in xrange(len(blocks_by_id)):
-        #        if blocks_by_id[i] is comment._anchor:
-        #            array.append(i + 1)
-        #            break
         return [Point(comment.pos), [array]]
 
 def load_variable((name, value)):
@@ -239,7 +234,7 @@ def get_blocks_by_id(this_block):
         for block in this_block.blocks:
             for b in get_blocks_by_id(block):
                 yield b
-    else:
+    elif isinstance(this_block, kurt.Block):
         yield this_block
         for arg in this_block.args:
             if isinstance(arg, kurt.Block):
@@ -416,14 +411,18 @@ class Scratch14Plugin(KurtPlugin):
 
                 v14_sprite = v14_watcher.readout.target
                 if v14_sprite == v14_project.stage:
-                    kurt_thing = kurt_project
+                    kurt_target = kurt_project
                 else:
-                    kurt_thing = kurt_project.get_sprite(v14_sprite.name)
+                    kurt_target = kurt_project.get_sprite(v14_sprite.name)
 
-                name = v14_watcher.readout.parameter
-                kurt_var_ref = kurt.VariableReference(kurt_thing, name)
+                command = v14_watcher.readout.getSelector.value
+                command = 'readVariable' if command == 'getVar:' else command
+                if v14_watcher.readout.parameter:
+                    kurt_block = kurt.Block(command, v14_watcher.readout.parameter)
+                else:
+                    kurt_block = kurt.Block(command)
 
-                kurt_watcher = kurt.Watcher(kurt_var_ref)
+                kurt_watcher = kurt.Watcher(kurt_target, kurt_block)
 
                 (x, y, right, bottom) = v14_watcher.bounds.value
                 kurt_watcher.pos = (x, y)
@@ -478,7 +477,8 @@ class Scratch14Plugin(KurtPlugin):
 
             if isinstance(kurt_actor, kurt.Watcher):
                 kurt_watcher = kurt_actor
-                if isinstance(kurt_watcher.watching, kurt.ListReference):
+                selector = kurt_watcher.block.type.translate('scratch14').command
+                if selector == 'contentsOfList:':
                     continue
 
                 if not kurt_watcher.visible:
@@ -491,23 +491,24 @@ class Scratch14Plugin(KurtPlugin):
                 else:
                     (x, y) = (10, 10)
 
-                if isinstance(kurt_watcher.watching, kurt.VariableReference):
-                    kurt_parent = kurt_watcher.watching.scriptable
-                else:
-                    kurt_parent = kurt_project
-                if kurt_parent == kurt_project:
+                v14_watcher.name = kurt_watcher.block.type.translate('scratch14').text
+
+                if kurt_watcher.target == kurt_project:
                     v14_morph = v14_project.stage
                     v14_watcher.isSpriteSpecfic = False
                 else:
-                    v14_morph = v14_project.sprites[kurt_parent.name]
+                    v14_morph = v14_project.sprites[kurt_watcher.target.name]
+                    v14_watcher.name = v14_morph.name + " " + v14_watcher.name
 
                 v14_watcher.readout.target = v14_morph
                 v14_watcher.owner = v14_project.stage
 
-                if isinstance(kurt_watcher.watching, kurt.VariableReference):
-                    v14_watcher.readout.parameter = kurt_watcher.watching.name
+                command = 'getVar:' if selector == 'readVariable' else selector
+                v14_watcher.readout.getSelector = Symbol(command)
 
-                    v14_watcher.name = kurt_watcher.watching.name
+                if kurt_watcher.block.args:
+                    v14_watcher.readout.parameter = kurt_watcher.block.args[0]
+
 
                 (w, h) = (63, 21)
 

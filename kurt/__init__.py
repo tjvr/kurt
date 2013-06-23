@@ -603,14 +603,24 @@ class Watcher(Actor):
 
     """
 
-    def __init__(self, watching, style="normal", visible=True, pos=None):
+    def __init__(self, target, block, style="normal", visible=True, pos=None):
         Actor.__init__(self)
 
-        self.watching = watching
-        """The data the watcher displays.
+        self.target = target
+        """The :attr:`Scriptable` or :attr:`Project` the watcher belongs to.
 
-        Can be a :class:`VariableReference`, a :class:`ListReference`, or a
-        reporter :class:`Block`.
+        """
+
+        self.block = block
+        """The :attr:`Block` to evaluate on :attr:`target`.
+
+        For variables::
+
+            kurt.Block('getVar:', 'variable name')
+
+        For lists::
+
+            kurt.Block('contentsOfList:', 'list name')
 
         """
 
@@ -654,90 +664,18 @@ class Watcher(Actor):
 
     def _normalize(self):
         assert self.style in ("normal", "large", "slider")
-        if isinstance(self.watching, ListReference):
-            assert self.style == "normal"
-        elif isinstance(self.watching, Block):
-            assert self.style != "slider"
-        elif isinstance(self.watching, VariableReference):
-            pass
 
     def __repr__(self):
         r = "%s.%s(%r, %r" % (self.__class__.__module__,
-                self.__class__.__name__, self.watching, self.style)
+                self.__class__.__name__, self.target, self.block)
+        if self.style != "normal":
+            r += ", style=%r" % self.style
         if not self.visible:
             r += ", visible=False"
         if self.pos:
             r += ", pos=%s" % repr(self.pos)
         r += ")"
         return r
-
-
-class VariableReference(object):
-    """A reference to a :class:`Variable` owned by a :class:`Scriptable`."""
-
-    def __init__(self, scriptable, name):
-        self.scriptable = scriptable
-        """The :class:`Scriptable` or :class:`Project` instance the variable
-        belongs to.
-
-        """
-
-        self.name = name
-        """The name of the variable in :attr:`Scriptable.variables`."""
-
-    @property
-    def variable(self):
-        """Return the :class:`Variable` instance the reference points to."""
-        return self.scriptable.variables[self.name]
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, VariableReference) and
-            self.scriptable == other.scriptable and
-            self.name == other.name
-        )
-
-    def __ne__(self, other):
-        return not self == other
-
-    def __repr__(self):
-        return "%s.%s(%r, %r)" % (self.__class__.__module__,
-                self.__class__.__name__, self.scriptable, self.name)
-
-
-class ListReference(object):
-    """A reference to a :class:`List` owned by a :class:`Scriptable`."""
-
-    def __init__(self, scriptable, name):
-        self.scriptable = scriptable
-        """The :class:`Scriptable` or :class:`Project` instance the list
-        belongs to.
-
-        """
-
-        self.name = name
-        """The name of the list, as found in :attr:`Scriptable.lists`.
-
-        """
-
-    @property
-    def list(self):
-        """Return the :class:`List` instance the reference points to."""
-        return self.scriptable.lists[self.name]
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, ListReference) and
-            self.scriptable == other.scriptable and
-            self.name == other.name
-        )
-
-    def __ne__(self, other):
-        return not self == other
-
-    def __repr__(self):
-        return "%s.%s(%r, %r)" % (self.__class__.__module__, self.__class__.__name__,
-                self.scriptable, self.name)
 
 
 
