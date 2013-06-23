@@ -86,7 +86,8 @@ def blockify(blockspec):
         for part in filter(None, INSERT_RE.split(text)):
             if INSERT_RE.match(part):
                 default = defaults.pop(0) if defaults else None
-                part = kurt.Insert(INSERT_SHAPES[part[:2]], default=default)
+                part = kurt.Insert(INSERT_SHAPES[part[:2]], part[3:] or None,
+                        default=default)
             parts.append(part)
 
         if "c" in flag:

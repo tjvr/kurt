@@ -862,14 +862,45 @@ class Insert(object):
         'inline': '%s',
     }
 
-    def __init__(self, shape, default=None):
+    KIND_OPTIONS = {
+        'booleanSensor': ['button pressed', 'A connected', 'B connected',
+            'C connected', 'D connected'],
+        'drum': range(1, 18),
+        'effect': ['color', 'fisheye', 'whirl', 'pixelate', 'mosaic',
+            'brightness', 'ghost'],
+        'instrument': range(1, 21),
+        'key': ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b',
+            'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
+            'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'space',
+            'left arrow', 'right arrow', 'up arrow', 'down arrow'],
+        'listDeleteItem': ['last', 'random'],
+        'listItem': ['last', 'all'],
+        'mathOp': ['abs', 'floor', 'ceiling', 'sqrt', 'sin', 'cos', 'tan',
+            'asin', 'acos', 'atan', 'ln', 'log', 'e ^', '10 ^'],
+        'motorDirection': ['this way', 'that way', 'reverse'],
+        'rotationStyle': ['left-right', "don't rotate", 'all around'],
+        'sensor': ['slider', 'light', 'sound', 'resistance-A', 'resistance-B',
+            'resistance-C', 'resistance-D'],
+        'spriteOnly': ['_myself_'],
+        'spriteOrMouse': ['_mouse_'],
+        'spriteOrStage': ['_stage_'],
+        'stop': ['all', 'this script', 'other scripts in sprite'],
+        'timeAndDate': ['year', 'month', 'date', 'day of week', 'hour',
+            'minute', 'second'],
+        'touching': ['_mouse_', '_edge'],
+        'triggerSensor': ['loudness', 'timer', 'video motion'],
+        'videoMotionType': ['motion', 'direction'],
+        'videoState': ['off', 'on', 'on-flipped'],
+    }
+
+    def __init__(self, shape, kind=None, default=None):
         self.shape = shape
         """What kind of values this argument accepts.
 
         Shapes that accept a simple data value or a reporter block:
 
         ``'number'``
-            An integer or float number.
+            An integer or float number. Defaults to ``0``.
 
         ``'string'``
             A unicode text value.
@@ -882,8 +913,10 @@ class Insert(object):
         ``'number-menu'``
             Either a number value, or a choice of special value from a menu.
 
+            Defaults to ``0``.
+
         ``'color'``
-            A :class:`Color` value.
+            A :class:`Color` value. Defaults to a random color.
 
         Shapes that only accept blocks with the corresponding :attr:`shape`:
 
@@ -903,6 +936,47 @@ class Insert(object):
 
         """
 
+        self.kind = kind
+        """Valid arguments for a "menu"-shaped insert. Default is ``None``.
+
+        Valid values include:
+
+        * ``'attribute'``
+        * ``'booleanSensor'``
+        * ``'broadcast'``
+        * ``'costume'``
+        * ``'direction'``
+        * ``'drum'``
+        * ``'effect'``
+        * ``'instrument'``
+        * ``'key'``
+        * ``'list'``
+        * ``'listDeleteItem'``
+        * ``'listItem'``
+        * ``'mathOp'``
+        * ``'motorDirection'``
+        * ``'note'``
+        * ``'sensor'``
+        * ``'sound'``
+        * ``'spriteOrMouse'``
+        * ``'spriteOrStage'``
+        * ``'touching'``
+        * ``'var'``
+
+        Scratch 2.0-specific:
+
+        * ``'backdrop'``
+        * ``'rotationStyle'``
+        * ``'spriteOnly'``
+        * ``'stageOrThis'``
+        * ``'stop'``
+        * ``'timeAndDate'``
+        * ``'triggerSensor'``
+        * ``'videoMotionType'``
+        * ``'videoState'``
+
+        """
+
         # TODO self.kind -- Valid values for a ``menu`` insert.
 
         if default is None:
@@ -915,6 +989,8 @@ class Insert(object):
     def __repr__(self):
         r = "%s.%s(%r" % (self.__class__.__module__,
                 self.__class__.__name__, self.shape)
+        if self.kind != None:
+            r += ", %r" % self.kind
         if self.default != Insert.SHAPE_DEFAULTS.get(self.shape, None):
             r += ", default=%r" % self.default
         r += ")"
@@ -948,6 +1024,37 @@ class Insert(object):
                 value = value.replace("\n", "\n\t")
 
             return Insert.SHAPE_FMTS[self.shape] % (value,)
+
+    def options(self, scriptable=None):
+        """Return a list of valid options to a menu insert, given a
+        Scriptable for context.
+
+        Mostly complete, excepting 'attribute' and 'broadcast'.
+
+        """
+        options = Insert.KIND_OPTIONS.get(self.kind, [])
+        if scriptable:
+            if self.kind == 'var':
+                options += scriptable.variables.keys()
+                options += scriptable.project.variables.keys()
+            elif self.kind == 'list':
+                options += scriptable.lists.keys()
+                options += scriptable.project.lists.keys()
+            elif self.kind == 'costume':
+                options += [c.name for c in scriptable.costumes]
+            elif self.kind == 'backdrop':
+                options += [c.name for c in scriptable.project.stage.costumes]
+            elif self.kind == 'sound':
+                options += [c.name for c in scriptable.sounds]
+                options += [c.name for c in scriptable.project.stage.sounds]
+            elif self.kind in ('spriteOnly', 'spriteOrMouse', 'spriteOrStage',
+                    'touching'):
+                options += [s.name for s in scriptable.project.sprites]
+            elif self.kind == 'attribute':
+                pass # TODO
+            elif self.kind == 'broadcast':
+                pass # TODO
+        return options
 
 
 class BaseBlockType(object):
@@ -1071,6 +1178,13 @@ class BlockType(BaseBlockType):
         assert self.shape == tb.shape
         assert len(self.inserts) == len(tb.inserts)
         assert [i.shape for i in self.inserts] == [i.shape for i in tb.inserts]
+        if not [i.kind for i in self.inserts] == [i.kind for i in tb.inserts]:
+            print self
+            print tb
+            print self.inserts
+            print tb.inserts
+            print tb.command
+            print
         if tb._plugin not in self._translations:
             self._translations[tb._plugin] = tb
 

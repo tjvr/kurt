@@ -261,13 +261,45 @@ INSERT_SHAPES = {
     '%N': 'number-menu',   # MIDI note (60 v)
     '%I': 'number-menu',   # MIDI instrument (1 v)
 
-    '%h': 'readonly-menu', # Numerical sensor board selector menu
-    '%H': 'readonly-menu', # Boolean sensor board selector menu
+    '%h': 'readonly-menu', # Boolean sensor board selector menu
+    '%H': 'readonly-menu', # Numerical sensor board selector menu
     '%W': 'readonly-menu', # motor direction
 
+    # special for kurt
+    '%x': 'inline', # for variable reporters
+    '%X': 'inline', # for list reporters
+}
+
+INSERT_KINDS = {
+    '%d': 'direction',
+
+    '%m': 'spriteOrMouse', # most of the time
+    '%a': 'attribute',
+    '%e': 'broadcast',
+    '%k': 'key',
+
+    '%v': 'var',
+    '%L': 'list',
+    '%i': 'listItem',
+    '%y': 'listDeleteItem',
+
+    '%f': 'mathOp',
+
+    '%l': 'costume',
+    '%g': 'effect',
+
+    '%S': 'sound',
+    '%D': 'drum',
+    '%N': 'note',
+    '%I': 'instrument',
+
+    '%h': 'booleanSensor',
+    '%H': 'sensor',
+    '%W': 'motorDirection',
+
     # special
-    '%x': 'inline',
-    '%X': 'inline',
+    '%x': 'var',
+    '%X': 'list',
 }
 
 MATCH_COMMANDS = {
@@ -294,7 +326,8 @@ def blockify(block):
             default = defaults.pop(0) if defaults else None
             if isinstance(default, Symbol):
                 default = default.value
-            part = kurt.Insert(INSERT_SHAPES[part], default=default)
+            kind = INSERT_KINDS.get(part, None)
+            part = kurt.Insert(INSERT_SHAPES[part], kind, default=default)
         parts.append(part)
 
     match = MATCH_COMMANDS.get(block.command, None)
@@ -304,8 +337,15 @@ def blockify(block):
     elif block.flag == "c":
         parts += [kurt.Insert("stack")]
 
-    return kurt.TranslatedBlockType("scratch14", block.category, shape,
+    tb = kurt.TranslatedBlockType("scratch14", block.category, shape,
             block.command, parts, match=match)
+
+    if block.command == 'getAttribute:of:':
+        tb.inserts[1].kind = 'spriteOrStage'
+    elif block.command == 'touching:':
+        tb.inserts[0].kind = 'touching'
+
+    return tb
 
 
 block_list = map(blockify, sum(blocks_by_cmd.values(), []))
