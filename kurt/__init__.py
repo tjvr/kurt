@@ -777,7 +777,9 @@ class Color(object):
         if g is None and b is None:
             if isinstance(r, Color):
                 r = r.value
-            elif isinstance(r, basestring) and r.startswith("#"):
+            elif isinstance(r, basestring):
+                if not r.startswith("#"):
+                    raise ValueError, "invalid color hexcode: %r" % r
                 r = r[1:]
                 if len(r) == 3:
                     r = r[0] + r[0] + r[1] + r[1] + r[2] + r[2]
