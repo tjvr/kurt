@@ -12,8 +12,8 @@
 # A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
 # details.
 #
-# You should have received a copy of the GNU Lesser General Public License along
-# with Kurt. If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
 """
 A Python module for reading and writing Scratch project files.
@@ -316,8 +316,8 @@ class Project(object):
                              If true, return debugging information from the
                              format plugin instead of the path.
 
-        :raises: :py:class:`ValueError` if there's no path or name, or you forgot
-                 to :attr:`convert()` before saving.
+        :raises: :py:class:`ValueError` if there's no path or name, or you
+                 forgot to :attr:`convert()` before saving.
 
         :returns: path to the saved file.
 
@@ -529,7 +529,8 @@ class Stage(Scriptable):
         return self.costumes
 
     def __repr__(self):
-        return "<%s.%s()>" % (self.__class__.__module__, self.__class__.__name__)
+        return "<%s.%s()>" % (self.__class__.__module__,
+                self.__class__.__name__)
 
     def _normalize(self):
         if not self.costume and not self.costumes:
@@ -708,7 +709,8 @@ class Variable(object):
         """
 
     def __repr__(self):
-        r = "%s.%s(%r" % (self.__class__.__module__, self.__class__.__name__, self.value)
+        r = "%s.%s(%r" % (self.__class__.__module__, self.__class__.__name__,
+                self.value)
         if self.is_cloud:
             r += ", is_cloud=%r" % self.is_cloud
         r += ")"
@@ -726,7 +728,10 @@ class List(object):
     """
     def __init__(self, items=None, is_cloud=False):
         self.items = list(items) if items else []
-        """The items contained in the list. A Python list of unicode strings."""
+        """The items contained in the list. A Python list of unicode
+        strings.
+
+        """
 
         self.is_cloud = bool(is_cloud)
         """Whether the value of the list is shared with other users.
@@ -984,8 +989,6 @@ class BaseBlockType(object):
         :attr:`parts`.
 
         """
-        # In Scratch 1.4: one of '-', 'b', 'c', 'r', 'E', 'K', 'M', 'S', 's', 't'
-        # In Scratch 2.0: one of ' ', 'b', 'c', 'r', 'e', 'cf', 'f', 'h'
 
         self.parts = parts
         """A list describing the text and arguments of the block.
@@ -1182,18 +1185,17 @@ class TranslatedBlockType(BaseBlockType):
         """
 
         self.category = category
-        """Where the block is found in the interface."""
-        # In Scratch 1.4, one of:
-        # 'motion', 'looks', 'sound', 'pen', 'control', 'sensing', 'operators',
-        # 'variables', 'list', 'motor', 'obsolete number blocks', 'obsolete
-        # sound blocks', 'obsolete sprite looks blocks', 'obsolete sprite motion
-        # blocks', 'obsolete image effects'
-        #
-        # In Scratch 2.0, one of:
-        # 'control', 'motion', 'looks', 'sound', 'pen', 'data', 'events',
-        # 'control', 'sensing', 'operators', 'more blocks', 'sensing', 'list',
-        # 'obsolete', 'pen', 'obsolete', 'sensor', 'wedo', 'midi', 'looks',
-        # 'midi'
+        """Where the block is found in the interface.
+
+        The same blocks may have different categories in different formats.
+
+        Possible values include::
+
+            'motion', 'looks', 'sound', 'pen', 'control', 'events', 'sensing',
+            'operators', 'data', 'variables', 'list', 'more blocks', 'motor',
+            'sensor', 'wedo', 'midi', 'obsolete'
+
+        """
 
         self._match = match
         """String -- equivalent command from other plugin.
