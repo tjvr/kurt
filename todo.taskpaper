@@ -1,5 +1,5 @@
-- rename `scratchblocks` -> `text`
 - context for parser
+- Kurt.block_by_command, Kurt.block**s**_by_text
 - Does json need open("rb")?
 - empty changeVariables
 	what about them?

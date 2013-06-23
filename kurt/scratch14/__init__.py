@@ -139,6 +139,11 @@ def save_block(kurt_block):
             arg = map(save_block, arg)
         elif isinstance(arg, kurt.Color):
             arg = Color.from_8bit(arg)
+        # TODO
+        #elif insert_type == "%m":
+        #    arg = SpriteRef(arg)
+        #elif insert_type in ("%f", "%g", "%k"):
+        #    arg = str(arg) # Will not accept unicode!
         args.append(arg)
 
     # special-case blocks with weird arguments
@@ -438,6 +443,7 @@ class Scratch14Plugin(KurtPlugin):
                 kurt_project.actors.append(kurt_watcher)
 
         # TODO: stacking order of actors.
+        # TODO: cleanup watchers
 
         kurt_project._original = v14_project # DEBUG
 

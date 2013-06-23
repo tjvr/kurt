@@ -469,6 +469,7 @@ class Scriptable(object):
         """
 
         self.volume = 100
+        """TODO"""
 
     def _normalize(self):
         if self.costume:
@@ -1832,9 +1833,12 @@ class Image(object):
 
 
 
-#-- Import plugins --#
+#-- Import submodules --#
 
 import kurt.plugin
+
 import kurt.scratch20
 import kurt.scratch14
+
+import kurt.text
 

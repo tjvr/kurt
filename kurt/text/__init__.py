@@ -20,5 +20,6 @@ import ply
 from lexer import lex, tokens
 from parser import block_plugin_parser
 
-def parse_block_plugin(input):
-    return block_plugin_parser.parse(input, tracking=True)
+def parse_block_plugin(text, project):
+    script = block_plugin_parser.parse(text, tracking=True)
+    return script

@@ -23,6 +23,7 @@ import re
 reserved = {
    'forever': 'FOREVER',
    'if':      'IF',
+   'then':    'THEN',
    'else':    'ELSE',
    'repeat':  'REPEAT',
    'until':   'UNTIL',
