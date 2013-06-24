@@ -178,15 +178,14 @@ def load_variable((name, value)):
 def save_variable((name, kurt_variable)):
     return (name, kurt_variable.value)
 
-def load_lists(v14_lists, kurt_project, kurt_owner):
+def load_lists(v14_lists, kurt_project, kurt_target):
     kurt_lists = {}
     for v14_list in v14_lists.values():
         kurt_list = kurt.List(map(unicode, v14_list.items))
         kurt_lists[v14_list.name] = kurt_list
 
-        kurt_list_ref = kurt.ListReference(kurt_owner, v14_list.name)
-
-        kurt_watcher = kurt.Watcher(kurt_list_ref)
+        kurt_watcher = kurt.Watcher(kurt_target,
+                kurt.Block("contentsOfList:", v14_list.name))
         kurt_watcher.visible = bool(v14_list.owner)
 
         (x, y, w, h) = v14_list.bounds.value
@@ -198,22 +197,23 @@ def load_lists(v14_lists, kurt_project, kurt_owner):
 
     return kurt_lists
 
-def save_lists(kurt_thing, kurt_project, v14_morph, v14_project):
-    for (name, kurt_list) in kurt_thing.lists.items():
+def save_lists(kurt_target, kurt_project, v14_morph, v14_project):
+    for (name, kurt_list) in kurt_target.lists.items():
         v14_list = ScratchListMorph(
             name = name,
             items = kurt_list.items,
         )
 
-        kurt_list_ref = kurt.ListReference(kurt_thing, name)
-
         for actor in kurt_project.actors:
             if isinstance(actor, kurt.Watcher):
-                if actor.watching == kurt_list_ref:
+                if (actor.target == kurt_target and
+                        actor.block.type.has_command('contentsOfList:') and
+                        actor.block.args[0] == name):
                     kurt_watcher = actor
                     break
         else:
-            kurt_watcher = kurt.Watcher(kurt_list_ref, visible=False)
+            kurt_watcher = kurt.Watcher(kurt_target,
+                    kurt.Block("contentsOfList:", name), visible=False)
 
         pos = kurt_watcher.pos
         if pos:
