@@ -1,17 +1,24 @@
 """
 Load fonts into Scratch as costumes, complete with a script for stamping text.
 
-Each font is loaded into a sprite, and can write any message you please — feel
+Each font is loaded into a sprite, and can write any message you please - feel
 free to export any of the sprites and use them in your own projects!
 
 Customise the options below...
 
 """
-from PIL import Image, ImageDraw, ImageFont
-import kurt
 import os
 import sys
 import re
+
+from PIL import Image, ImageDraw, ImageFont
+
+# try and find kurt directory
+path_to_file = os.path.join(os.getcwd(), __file__)
+path_to_lib = os.path.split(os.path.split(path_to_file)[0])[0]
+sys.path.append(path_to_lib)
+import kurt
+
 
 ################################################################################
 
@@ -39,7 +46,7 @@ FONT_PATHS = [
     # Will make a sprite for each font
 ]
 
-# The list of characters 
+# The list of characters
 # Default is A-z, 0-9, and ' !"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
 CHARACTERS = ''.join(map(chr, range(32, 127)))
 
@@ -67,10 +74,7 @@ def text_to_image(font, text, color):
 
 
 
-project = kurt.ScratchProjectFile.new(PROJECT_NAME)
-if os.path.exists(project.path):
-    print "%s exists!" % project.path
-    exit(1)
+project = kurt.Project()
 
 y = 170
 
@@ -98,41 +102,38 @@ for font_path in FONT_PATHS:
         continue
     print font_name
 
-    sprite = kurt.Sprite(name=font_name)
+    sprite = kurt.Sprite(project, name=font_name)
 
-    sprite.variables = dict(map(lambda x: (x, 0), [
-        "i", "j", "word x", "message",
-    ]))
+    for name in ("i", "j", "word x", "message"):
+        sprite.variables[name] = kurt.Variable(0)
 
-    widths_list = kurt.ScratchListMorph(name="widths")
-    sprite.lists[widths_list.name] = widths_list
-    
+    sprite.lists["widths"] = kurt.List()
+
     error = False
     for char in CHARACTERS:
-        image = text_to_image(font, char, TEXT_COLOR)
+        pil_image = text_to_image(font, char, TEXT_COLOR)
 
         try:
-            costume = kurt.Image.from_image(char, image)
+            costume = kurt.Costume(char, kurt.Image(pil_image), (0, 0))
         except SystemError:
             error = True
             break
-        costume.rotationCenter = kurt.Point(0, 0)
         sprite.costumes.append(costume)
         if char == 'A':
             sprite.costume = costume
 
-        widths_list.items.append(costume.width)
+        sprite.lists["widths"].items.append(costume.width)
         line_height = max(line_height, costume.height)
 
     if error:
         continue
-    
-    sprite.scripts.append(kurt.parse_block_plugin("""
+
+    sprite.parse("""
     when gf clicked
     hide
-    """))
+    """)
 
-    writer_script = kurt.parse_block_plugin("""
+    sprite.parse("""
     when I receive [Fonts.Write]
     if <not <(Fonts.Font) = [{font_name}]>>
         stop script
@@ -176,8 +177,6 @@ for font_path in FONT_PATHS:
     set [Fonts.x v] to (x position)
     set [Fonts.y v] to (y position)
     """.format(**locals()))
-    writer_script.pos = kurt.Point(20, 100)
-    sprite.scripts.append(writer_script)
 
     stage_script += """
     set [Fonts.Font v] to [{font_name}]
@@ -189,19 +188,18 @@ for font_path in FONT_PATHS:
 
 
 stage_script = stage_script.replace("::line_height::", str(line_height))
-stage_script_parsed = kurt.parse_block_plugin(stage_script)
-stage_script_parsed.pos = kurt.Point(20, 200)
-project.stage.scripts.append(stage_script_parsed)
+project.stage.parse(stage_script)
 
-project.stage.scripts.append(kurt.parse_block_plugin("""
+project.stage.parse("""
 set [Fonts.Message v] to [Hello there!] // How to use
 set [Fonts.x v] to [0]
 set [Fonts.y v] to [0]
 set [Fonts.Font v] to [HelveticaCY]
 broadcast [Fonts.Write] and wait
-"""))
+""")
 
 
 print
 print "Saving %i fonts..." % len(project.sprites)
-project.save()
+project.convert('scratch14')
+project.save(PROJECT_NAME)

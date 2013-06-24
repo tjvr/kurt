@@ -1,4 +1,3 @@
-- update fonts example for kurt 2
 - Stage.volume -> Project.volume ?
 
 - Does json need open("rb")?
