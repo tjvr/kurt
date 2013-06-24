@@ -38,6 +38,7 @@ class ZipReader(object):
         project_dict = json.load(self.zip_file.open("project.json"))
 
         kurt_project = kurt.Project()
+        self.kurt_project = kurt_project
 
         kurt_project.stage = self.load_scriptable(project_dict, is_sprite=False)
 
@@ -47,16 +48,16 @@ class ZipReader(object):
             kurt_project.sprites.append(self.load_scriptable(sprite_dict))
 
         self.project_dict = project_dict
-        self.kurt_project = kurt_project
 
     def finish(self):
         self.zip_file.close()
 
     def load_scriptable(self, scriptable_dict, is_sprite=True):
         if is_sprite:
-            kurt_scriptable = kurt.Sprite(scriptable_dict["objName"])
+            kurt_scriptable = kurt.Sprite(self.kurt_project,
+                    scriptable_dict["objName"])
         else:
-            kurt_scriptable = kurt.Stage()
+            kurt_scriptable = kurt.Stage(self.kurt_project)
 
         #for costume_dict in scriptable_dict["costumes"]:
         #    kurt_scriptable.costumes.append(self.load_costume(costume_dict))

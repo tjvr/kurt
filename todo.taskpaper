@@ -1,4 +1,7 @@
-- context for parser
+- update fonts example for kurt 2
+- kurt.text doc
+- Stage.volume -> Project.volume ?
+
 - Does json need open("rb")?
 - don't convert kurt.scratch14 images to pil
 - must make_blocks() be a method?
@@ -11,6 +14,7 @@
 - converting
 	- get rid of convert completely?
 	- converting scripts
+- examples/ sb(2)
 
 - scratch20 saving scripts
 - scratch20 loading

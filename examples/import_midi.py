@@ -51,7 +51,7 @@ else:
     (_, midi_path, project_path) = sys.argv
 
     p = kurt.Project()
-    sprite = kurt.Sprite("midi")
+    sprite = kurt.Sprite(p, "midi")
     sprite.costume = kurt.Costume("b", kurt.Image(PIL.Image.new("RGB", (1, 1))))
 
     p.sprites.append(sprite)

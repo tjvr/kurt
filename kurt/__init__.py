@@ -154,7 +154,7 @@ class Project(object):
 
         """
 
-        self.stage = Stage()
+        self.stage = Stage(self)
         """The :class:`Stage`."""
 
         self.sprites = []
@@ -435,7 +435,10 @@ class Scriptable(object):
 
     """
 
-    def __init__(self):
+    def __init__(self, project):
+        self.project = project
+        """The :class:`Project` this belongs to."""
+
         self.scripts = []
         """The contents of the scripting area.
 
@@ -502,6 +505,15 @@ class Scriptable(object):
         else:
             self.costume = self.costumes[index]
 
+    def parse(self, text):
+        """Parse the given code and add it to :attr:`scripts`.
+
+        The syntax matches :attr:`Script.stringify()`. See :mod:`kurt.text` for
+        reference.
+
+        """
+        self.scripts.append(kurt.text.parse(text, self))
+
 
 class Stage(Scriptable):
     """Represents the background of the project. The stage is similar to a
@@ -514,6 +526,10 @@ class Stage(Scriptable):
     Not all formats have stage-specific variables and lists. Global variables
     and lists are stored on the :class:`Project`.
 
+    :param project: The :class:`Project` this Stage belongs to.
+                    Note that you still need to set :attr:`Project.stage` to
+                    this Stage instance.
+
     """
 
     name = "Stage"
@@ -521,8 +537,8 @@ class Stage(Scriptable):
     SIZE = (480, 360)
     COLOR = (255, 255, 255)
 
-    def __init__(self):
-        Scriptable.__init__(self)
+    def __init__(self, project):
+        Scriptable.__init__(self, project)
 
     @property
     def backgrounds(self):
@@ -547,10 +563,14 @@ class Sprite(Scriptable, Actor):
     Sprites require a :attr:`costume`, and will raise an error when saving
     without one.
 
+    :param project: The :class:`Project` this Sprite belongs to.
+                    Note that you still need to add this sprite to
+                    :attr:`Project.sprites`.
+
     """
 
-    def __init__(self, name):
-        Scriptable.__init__(self)
+    def __init__(self, project, name):
+        Scriptable.__init__(self, project)
 
         self.name = unicode(name)
         """The name of the sprite, as referred to from scripts and displayed in

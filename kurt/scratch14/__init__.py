@@ -401,7 +401,7 @@ class Scratch14Plugin(KurtPlugin):
 
         # sprites
         for v14_sprite in v14_project.sprites:
-            kurt_sprite = kurt.Sprite(v14_sprite.name)
+            kurt_sprite = kurt.Sprite(kurt_project, v14_sprite.name)
             load_scriptable(kurt_sprite, v14_sprite)
             kurt_sprite.lists = load_lists(v14_sprite.lists, kurt_project,
                     kurt_sprite)

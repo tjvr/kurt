@@ -30,7 +30,7 @@ def measure_height(blocks):
         blocks = [blocks]
 
     p = kurt.Project()
-    #s = kurt.Sprite("measure")
+    #s = kurt.Sprite(p, "measure")
     #s.costume = kurt.Costume("b", kurt.Image(PIL.Image.new("RGB", (1, 1))))
     s = p.stage
     s.scripts.append(kurt.Script(blocks))
