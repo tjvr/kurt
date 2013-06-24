@@ -53,6 +53,11 @@ class BlockError(Exception):
     pass
 
 
+BLOCK_TEXT_ALIASES = {
+    'whengfclicked': 'whengreenflagclicked',
+    'turnleftdegrees': 'turnccwdegrees',
+    'turnrightdegrees': 'turncwdegrees',
+}
 
 # TODO: Symbols
 special_variables = {
@@ -140,6 +145,9 @@ def block_from_parts(parts, flag=None):
 
     script = None
     block = None
+
+    text = kurt.BlockType._strip_text(text)
+    text = BLOCK_TEXT_ALIASES.get(text, text)
     poss_types = kurt.plugin.Kurt.blocks_by_text(text)
 
     if poss_types:
