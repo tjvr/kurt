@@ -1,5 +1,3 @@
-- Stage.volume -> Project.volume ?
-
 - Does json need open("rb")?
 - don't convert kurt.scratch14 images to pil
 - must make_blocks() be a method?
