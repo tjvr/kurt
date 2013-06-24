@@ -150,72 +150,72 @@ def block_from_parts(parts, flag=None):
     text = BLOCK_TEXT_ALIASES.get(text, text)
     poss_types = kurt.plugin.Kurt.blocks_by_text(text)
 
-    if poss_types:
-        if len(poss_types) == 1:
-            type = poss_types[0]
-        else:
-            if text == 'of':
-                if poss_types[0].has_command('getAttribute:of:'):
-                    poss_types.reverse()
-            # verify arg types against block.inserts
-            for type in poss_types:
-                for (arg, insert) in zip(arguments, type.inserts):
-                    if not fits(arg, insert):
-                        break # Not this type
-                else:
-                    break # Type is ok!
-
-            else: # No types matched
-                type = poss_types[0]
-                print "WARNING: wrong args for %r" % type
-                print arguments
-
-        has_args = not type.has_command("whenClicked")
-        allow_vars = not (type.has_command("whenGreenFlag") or
-                type.has_command("whenIreceive"))
-
-        block_args = list(type.defaults)
-        if has_args:
-            for i in range(len(arguments)):
-                arg = arguments[i]
-                if arg is None:
-                    continue
-
-                kind = arg.kind
-                if kind == Arg.VARIABLE and allow_vars:
-                    value = kurt.Block("readVariable", arg.value)
-                else:
-                    value = arg.value
-
-                if i < len(type.inserts):
-                    insert = type.inserts[i]
-
-                    if kind in (Arg.STRING, Arg.STRING_DROPDOWN):
-                        if insert.shape == 'color':
-                            value = kurt.Color(value)
-
-                        elif (insert.shape in ('number', 'number-menu')):
-                            # cast DROPDOWN / STRING to NUMBER
-                            if value.strip().isdigit():
-                                value = int(value)
-                            elif value.strip().replace('.', '').isdigit():
-                                value = float(value)
-
-                    elif (kind == Arg.NUMBER and
-                            insert.shape in ('readonly-menu', 'string')):
-                        # cast NUMBER to STRING
-                        value = unicode(value)
-
-                if i >= len(block_args):
-                    block_args.append(value)
-                else:
-                    block_args[i] = value
-
-        block = kurt.Block(type, *block_args)
-
-    if not block:
+    if not poss_types:
         e = "No block type found for %r \n"%text + repr(arguments)
         raise BlockError(e)
+
+
+    if len(poss_types) == 1:
+        bt = poss_types[0]
+    else:
+        if text == 'of':
+            if poss_types[0].has_command('getAttribute:of:'):
+                poss_types.reverse()
+        # verify arg types against block.inserts
+        for bt in poss_types:
+            for (arg, insert) in zip(arguments, bt.inserts):
+                if not fits(arg, insert):
+                    break # Not this type
+            else:
+                break # Type is ok!
+
+        else: # No types matched
+            bt = poss_types[0]
+            print "WARNING: wrong args for %r" % bt
+            print arguments
+
+    has_args = not bt.has_command("whenClicked")
+    allow_vars = not (bt.has_command("whenGreenFlag") or
+            bt.has_command("whenIreceive"))
+
+    block_args = list(bt.defaults)
+    if has_args:
+        for i in range(len(arguments)):
+            arg = arguments[i]
+            if arg is None:
+                continue
+
+            kind = arg.kind
+            if kind == Arg.VARIABLE and allow_vars:
+                value = kurt.Block("readVariable", arg.value)
+            else:
+                value = arg.value
+
+            if i < len(bt.inserts):
+                insert = bt.inserts[i]
+
+                if kind in (Arg.STRING, Arg.STRING_DROPDOWN):
+                    if insert.shape == 'color':
+                        value = kurt.Color(value)
+
+                    elif (insert.shape in ('number', 'number-menu')):
+                        # cast DROPDOWN / STRING to NUMBER
+                        if value.strip().isdigit():
+                            value = int(value)
+                        elif value.strip().replace('.', '').isdigit():
+                            value = float(value)
+
+                elif (kind == Arg.NUMBER and
+                        insert.shape in ('readonly-menu', 'string')):
+                    # cast NUMBER to STRING
+                    value = unicode(value)
+
+            if i >= len(block_args):
+                block_args.append(value)
+            else:
+                block_args[i] = value
+
+    block = kurt.Block(bt, *block_args)
 
     return block
 
@@ -291,7 +291,7 @@ def p_if_else(t):
         block.comment += t[4]
     else:
         block.args += [ t[4] ]
-    t[0] = block #Block(block.type, *args)
+    t[0] = block
 
 def p_c_mouth(t):
     """c_mouth : NEWLINE script NEWLINE"""

@@ -1,6 +1,6 @@
 import kurt
 
-p = lambda x: kurt.text.parse_block_plugin(x, kurt.Project())
+p = lambda x: kurt.text.parse(x, kurt.Project())
 
 
 def command_getter(self):
