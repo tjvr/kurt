@@ -1416,9 +1416,9 @@ class Block(object):
 
         """
 
-        self.comment = None
-        """The text of the comment attached to the block. None if no comment is
-        attached.
+        self.comment = ""
+        """The text of the comment attached to the block. Empty if no comment
+        is attached.
 
         Comments can only be attached to stack blocks.
 

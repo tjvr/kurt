@@ -253,7 +253,8 @@ def p_script(t):
               | script NEWLINE block COMMENT"""
     block = t[3]
     if len(t) > 4:
-        block.add_comment(t[4])
+        if block.comment: block.comment += '\n'
+        block.comment += t[4]
     t[0] = t[1] + [ block ]
 
 def p_script_one(t):
@@ -262,7 +263,8 @@ def p_script_one(t):
     """
     block = t[1]
     if len(t) > 2:
-        block.add_comment(t[2])
+        if block.comment: block.comment += '\n'
+        block.comment += t[2]
     t[0] = [ block ]
 
 
@@ -285,7 +287,8 @@ def p_if_else(t):
     block.args += [ t[2] ]
     if len(t) > 6:
         block.args += [ t[5] ]
-        block.add_comment(t[4])
+        if block.comment: block.comment += '\n'
+        block.comment += t[4]
     else:
         block.args += [ t[4] ]
     t[0] = block #Block(block.type, *args)
@@ -304,7 +307,8 @@ def p_c_block(t):
     """
     block = t[1]
     if len(t) > 2:
-        block.add_comment(t[2])
+        if block.comment: block.comment += '\n'
+        block.comment += t[2]
     t[0] = block
 
 def p_c_block_def(t):
@@ -321,7 +325,8 @@ def p_if_block(t):
     """
     block = t[1]
     if len(t) > 2:
-        block.add_comment(t[2])
+        if block.comment: block.comment += '\n'
+        block.comment += t[2]
     t[0] = block
 
 def p_if_block_def(t):
