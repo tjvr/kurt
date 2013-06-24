@@ -140,7 +140,7 @@ def block_from_parts(parts, flag=None):
 
     script = None
     block = None
-    poss_types = kurt.plugin.Kurt.block_by_text(text)
+    poss_types = kurt.plugin.Kurt.blocks_by_text(text)
 
     if poss_types:
         if len(poss_types) == 1:

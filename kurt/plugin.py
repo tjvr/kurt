@@ -115,8 +115,7 @@ class KurtPlugin(object):
         self.blocks_by_command = {}
         """Map of command names to :class:`TranslatedBlockType` objects.
 
-        Unlike :attr:`Kurt.block_by_command`, only stores the first block with
-        the given command.
+        Only stores the first block with the given command.
 
         """
         for b in self.blocks:
@@ -232,16 +231,22 @@ class Kurt(object):
 
     @classmethod
     def block_by_command(cls, command):
-        """Return a list of blocks with the given :attr:`command`."""
-        matches = []
+        """Return the block with the given :attr:`command`.
+
+        Returns None if the block is not found.
+
+        """
         for block in cls.blocks:
             if block.has_command(command):
-                matches.append(block)
-        return matches
+                return block
 
     @classmethod
-    def block_by_text(cls, text):
-        """Return a list of blocks loosely matching the given :attr:`text`."""
+    def blocks_by_text(cls, text):
+        """Return a list of blocks matching the given :attr:`text`.
+
+        Capitalisation and spaces are ignored.
+
+        """
         text = kurt.BlockType._strip_text(text)
         matches = []
         for block in cls.blocks:

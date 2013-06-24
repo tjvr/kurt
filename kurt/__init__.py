@@ -1256,15 +1256,18 @@ class BlockType(BaseBlockType):
         if isinstance(block_type, TranslatedBlockType):
             block_type = block_type.command
 
-        blocks = kurt.plugin.Kurt.block_by_command(block_type)
-        if blocks:
+        block = kurt.plugin.Kurt.block_by_command(block_type)
+        if block:
+            return block
+
+        blocks = kurt.plugin.Kurt.blocks_by_text(block_type)
+        if len(blocks) > 1:
+            raise ValueError("ambigious block text %r, use one of %r instead" %
+                    (block_type, [b.translate().command for b in blocks]))
+        elif blocks:
             return blocks[0]
 
-        blocks = kurt.plugin.Kurt.block_by_text(block_type)
-        if blocks:
-            return blocks[0]
-
-        raise ValueError, "Unknown block type %r" % block_type
+        raise ValueError, "unknown block type %r" % block_type
 
     def __eq__(self, other):
         if isinstance(other, BlockType):

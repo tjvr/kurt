@@ -1,12 +1,8 @@
 - context for parser
-- Kurt.block_by_command, Kurt.block**s**_by_text
 - Does json need open("rb")?
-- empty changeVariables
-	what about them?
-	oh yeah, they break Scratch
 - don't convert kurt.scratch14 images to pil
 - must make_blocks() be a method?
-- cleanup scratch14
+- cleanup scratch14.__init__
 - cleanup scratch14 comments/blocks_by_id
 
 - fix "point towards" for scratch14: string to morph
@@ -15,9 +11,6 @@
 - converting
 	- get rid of convert completely?
 	- converting scripts
-	- fix "mouse pointer"
-
-- Kurt.Block('of') -> raise Ambigious error?
 
 - scratch20 saving scripts
 - scratch20 loading
