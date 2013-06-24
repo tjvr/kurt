@@ -333,7 +333,7 @@ def p_if_block_def(t):
     """if_block_def : IF insert
                     | IF insert THEN
     """
-    block = block_from_parts(t[1])
+    block = block_from_parts(t[1:])
     t[0] = block
 
 
