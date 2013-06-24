@@ -202,8 +202,8 @@ class Project(object):
         self._normalize()
 
     def __repr__(self):
-        return "<%s.%s name=%r>" % (self.__class__.__module__,
-                self.__class__.__name__, self.name)
+        return "<%s.%s()>" % (self.__class__.__module__,
+                self.__class__.__name__)
 
     def get_sprite(self, name):
         """Get a sprite from :attr:`sprites` by name.
