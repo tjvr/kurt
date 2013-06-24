@@ -1650,6 +1650,10 @@ class Costume(object):
             self.rotation_center[0], self.rotation_center[1], id(self)
         )
 
+    def __getattr__(self, name):
+        if name in ('width', 'height', 'size'):
+            return getattr(self.image, name)
+        raise AttributeError, "%r object has no attribute %r" % (self, name)
 
 class Image(object):
     """The contents of an image file.
