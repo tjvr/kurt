@@ -1,35 +1,25 @@
-- Does json need open("rb")?
-- don't convert kurt.scratch14 images to pil
-- must make_blocks() be a method?
-- cleanup scratch14.__init__
-- cleanup scratch14 comments/blocks_by_id
-
 - fix "point towards" for scratch14: string to morph
 - symbols:
 	_mouse_ => Symbol("mouse")
 - converting
-	- get rid of convert completely?
-	- converting scripts
+	- scripts
 - examples/ sb(2)
+- complete scratch20 saving/loading
 
-- scratch20 saving scripts
-- scratch20 loading
-
-- stacking order of actors
-- sounds
-
-- parser
-	- Block constructors
-	- add Insert.kind and corresponding option lists for disambiguating "of"
-		key: [0-9a-z]|space|(left|right|up|down) arrow
-
-- Script x/y < 0
-- Script.pos vs Sprite.position
-
-- fix compiler/decompiler
-
-- URL regexes?
-
+decide:
+	- Script.pos vs Sprite.position
+	- must make_blocks() be a method?
+question:
+	- Does json need open("rb")?
+optimise:
+	- don't convert scratch14 images to pil
+	- clean up scratch14
+features:
+	- stacking order of actors
+	- sounds
+	- cleanup scratch 2 scripts
+	- fix compiler/decompiler
+	- URL regexes?
 Names I probably shouldn't change:
 	kurt.scripts.Block
 	the Script, Block interfaces
