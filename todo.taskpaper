@@ -1,10 +1,35 @@
-- fix "point towards" for scratch14: string to morph
-- symbols:
-	_mouse_ => Symbol("mouse")
+symbols:
+	- symbols:
+		- _mouse_
+			"
+			Symbol("mouse") @done
+		- _edge_
+			"
+			Symbol("edge") @done
+
+		- all
+			"
+			Symbol("all") @done
+		- last
+			"
+			Symbol("last") @done
+		- any
+			"
+			Symbol("any") @done
+
+		- Stage
+			_stage_
+			<Stage()> @done
+	- sprite names
+		- 'Sprite1'
+			"
+			<Sprite('Sprite1')> @done
+
+- stringify() _mouse_, _myself_, _edge_
+- complete scratch20 saving/loading
+- examples/ sb(2)
 - converting
 	- scripts
-- examples/ sb(2)
-- complete scratch20 saving/loading
 
 decide:
 	- Script.pos vs Sprite.position

@@ -84,8 +84,11 @@ class ZipReader(object):
                     arg = map(self.load_block, arg)
                 else: # Block
                     arg = self.load_block(arg)
-            elif insert and insert.shape == 'color':
-                arg = self.load_color(arg)
+            elif insert:
+                if insert.kind == 'spriteOrStage' and arg == '_stage_':
+                    arg = 'Stage'
+                elif insert.shape == 'color':
+                    arg = self.load_color(arg)
             args.append(arg)
 
         return kurt.Block(block_type, *args)

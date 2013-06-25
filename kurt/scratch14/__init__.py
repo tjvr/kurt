@@ -17,6 +17,8 @@
 
 """A Kurt plugin for Scratch 1.4."""
 
+import re
+
 import kurt
 from kurt.plugin import Kurt, KurtPlugin
 
@@ -106,7 +108,16 @@ def load_block(block_array):
         elif isinstance(arg, Color):
             arg = kurt.Color(arg.to_8bit())
         elif isinstance(arg, Symbol):
-            raise ValueError(arg) # TODO translate these
+            if arg.value in ('mouse', 'edge'):
+                arg = '_%s_' % arg.value
+            elif arg.value in ('all', 'last', 'any'):
+                arg = arg.value
+            else:
+                raise ValueError(arg)
+        elif isinstance(arg, Stage):
+            arg = "Stage"
+        elif isinstance(arg, Sprite):
+            arg = arg.name
         new_args.append(arg)
     return kurt.Block(command, *new_args)
 
@@ -128,22 +139,36 @@ def load_script(script_array):
     # script
     return kurt.Script(map(load_block, blocks), pos)
 
-def save_block(kurt_block):
+def save_block(kurt_block, v14_project):
     command = kurt_block.type.translate('scratch14').command
 
+    inserts = list(kurt_block.type.inserts)
     args = []
     for arg in kurt_block.args:
+        insert = inserts.pop(0) if inserts else None
         if isinstance(arg, kurt.Block):
-            arg = save_block(arg)
+            arg = save_block(arg, v14_project)
         elif isinstance(arg, list):
-            arg = map(save_block, arg)
+            arg = [save_block(b, v14_project) for b in arg]
         elif isinstance(arg, kurt.Color):
             arg = Color.from_8bit(arg)
-        # TODO
-        #elif insert_type == "%m":
-        #    arg = SpriteRef(arg)
-        #elif insert_type in ("%f", "%g", "%k"):
-        #    arg = str(arg) # Will not accept unicode!
+        elif insert:
+            print arg, insert
+            if insert.kind in ('mathOp', 'effect', 'key'):
+                arg = str(arg) # Won't accept unicode
+
+            elif insert.kind in ('spriteOrMouse', 'spriteOrStage', 'touching'):
+                if arg in ('_mouse_', '_edge_'):
+                    arg = Symbol(arg.strip("_"))
+                elif arg == "Stage":
+                    arg = v14_project.stage
+                else:
+                    arg = v14_project.get_sprite(arg)
+
+            elif isinstance(arg, basestring):
+                if insert.kind in ('listItem', 'listDeleteItem'):
+                    if arg in insert.options():
+                        arg = Symbol(arg)
         args.append(arg)
 
     # special-case blocks with weird arguments
@@ -162,10 +187,10 @@ def save_block(kurt_block):
 
     return [Symbol(command)] + args
 
-def save_script(kurt_script):
+def save_script(kurt_script, v14_project):
     if isinstance(kurt_script, kurt.Script):
         pos = kurt_script.pos or (10, 10)
-        blocks = map(save_block, kurt_script.blocks)
+        blocks = [save_block(b, v14_project) for b in kurt_script.blocks]
         return [Point(pos), blocks]
     elif isinstance(kurt_script, kurt.Comment):
         comment = kurt_script
@@ -311,10 +336,10 @@ def load_scriptable(kurt_scriptable, v14_scriptable):
         y = 180 - y - ry
         kurt_scriptable.position = (x, y)
 
-def save_scriptable(kurt_scriptable, v14_scriptable):
+def save_scriptable(kurt_scriptable, v14_scriptable, v14_project):
     clean_up(kurt_scriptable.scripts)
 
-    scripts = map(save_script, kurt_scriptable.scripts)
+    scripts = [save_script(s, v14_project) for s in kurt_scriptable.scripts]
     v14_scriptable.scripts = user_objects.ScriptCollection(scripts)
 
     blocks_by_id = []
@@ -327,7 +352,7 @@ def save_scriptable(kurt_scriptable, v14_scriptable):
         if block.comment:
             (x, y) = v14_scriptable.scripts[-1][0]
             pos = (x, y + 29)
-            array = save_script(kurt.Comment(block.comment, pos))
+            array = save_script(kurt.Comment(block.comment, pos), v14_project)
             for i in xrange(len(blocks_by_id)):
                 if blocks_by_id[i] is block:
                     array[1][0].append(i + 1)
@@ -458,20 +483,25 @@ class Scratch14Plugin(KurtPlugin):
         v14_project.info['author'] = kurt_project.author
         v14_project.info['thumbnail'] = save_image(kurt_project.thumbnail)
 
+        # make all sprites (needs to do before we save scripts)
+        for kurt_sprite in kurt_project.sprites:
+            v14_sprite = Sprite(name=kurt_sprite.name)
+            v14_sprite._original = kurt_sprite
+            v14_project.sprites.append(v14_sprite)
+
         # stage
-        save_scriptable(kurt_project.stage, v14_project.stage)
+        save_scriptable(kurt_project.stage, v14_project.stage, v14_project)
         save_lists(kurt_project, kurt_project, v14_project.stage, v14_project)
         v14_project.stage.variables = dict(map(save_variable,
             kurt_project.variables.items()))
-
         v14_project.stage.tempoBPM = kurt_project.tempo
 
         # sprites
-        for kurt_sprite in kurt_project.sprites:
-            v14_sprite = Sprite()
-            save_scriptable(kurt_sprite, v14_sprite)
+        for v14_sprite in v14_project.sprites:
+            kurt_sprite = v14_sprite._original
+            save_scriptable(kurt_sprite, v14_sprite, v14_project)
             save_lists(kurt_sprite, kurt_project, v14_sprite, v14_project)
-            v14_project.sprites.append(v14_sprite)
+            del v14_sprite._original
 
         # variable watchers
         for kurt_actor in kurt_project.actors:
