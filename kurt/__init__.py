@@ -184,9 +184,6 @@ class Project(object):
         self.tempo = 60
         """The tempo in BPM used for note blocks."""
 
-        self.volume = 100
-        """The volume in percent used for note and sound blocks."""
-
         self.thumbnail = None
         """A screenshot of the project. May be displayed in project browser."""
 
@@ -474,6 +471,9 @@ class Scriptable(object):
 
         """
 
+        self.volume = 100
+        """The volume in percent used for note and sound blocks."""
+
     def _normalize(self):
         # costumes
         if self.costume:
@@ -612,9 +612,6 @@ class Sprite(Scriptable, Actor):
         player/presentation mode.
 
         """
-
-        self.volume = 100
-        """The volume in percent used for note and sound blocks."""
 
     def _normalize(self):
         Scriptable._normalize(self)
