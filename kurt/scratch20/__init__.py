@@ -30,6 +30,11 @@ from kurt.plugin import Kurt, KurtPlugin
 from kurt.scratch20.blocks import make_block_types
 
 
+WATCHER_MODES = [None,
+    'normal',
+    'large',
+    'slider',
+]
 
 class ZipReader(object):
     def __init__(self, path):
@@ -39,24 +44,37 @@ class ZipReader(object):
 
         self.project = kurt.Project()
 
-        self.project.stage = self.load_scriptable(project_dict, is_sprite=False)
+        # stage
+        self.project.stage = self.load_scriptable(project_dict, is_stage=True)
 
-        children = sorted(project_dict['children'],
-                key=lambda c: c['indexInLibrary'])
-        for sprite_dict in children:
-            self.project.sprites.append(self.load_scriptable(sprite_dict))
+        actors = []
+        for child_dict in project_dict['children']:
+            if 'objName' in child_dict:
+                sprite = self.load_scriptable(child_dict)
+                self.project.sprites.append(sprite)
+                actors.append(sprite)
+            else:
+                actors.append(child_dict)
+
+        # watchers
+        for actor in actors:
+            if not isinstance(actor, kurt.Sprite):
+                actor = self.load_watcher(actor)
+            self.project.actors.append(actor)
 
         self.project_dict = project_dict
 
     def finish(self):
         self.zip_file.close()
 
-    def load_scriptable(self, scriptable_dict, is_sprite=True):
-        if is_sprite:
+    def load_scriptable(self, scriptable_dict, is_stage=False):
+        if is_stage:
+            kurt_scriptable = kurt.Stage(self.project)
+        elif 'objName' in scriptable_dict:
             kurt_scriptable = kurt.Sprite(self.project,
                     scriptable_dict["objName"])
         else:
-            kurt_scriptable = kurt.Stage(self.project)
+            return self.load_watcher(scriptable_dict)
 
         #for costume_dict in scriptable_dict["costumes"]:
         #    kurt_scriptable.costumes.append(self.load_costume(costume_dict))
@@ -64,18 +82,53 @@ class ZipReader(object):
         for script_array in scriptable_dict.get("scripts", []):
             kurt_scriptable.scripts.append(self.load_script(script_array))
 
+        target = self.project if is_stage else kurt_scriptable
+
+        for vd in scriptable_dict.get("variables", []):
+            var = kurt.Variable(vd['value'], vd['isPersistent'])
+            target.variables[vd['name']] = var
+
         for ld in scriptable_dict.get("lists", []):
             name = ld['listName']
-            kurt_scriptable.lists[name] = kurt.List(ld['contents'],
+            target.lists[name] = kurt.List(ld['contents'],
                     ld['isPersistent'])
             self.project.actors.append(kurt.Watcher(kurt_scriptable,
                     kurt.Block("contentsOfList:", name), visible=ld['visible'],
                     pos=(ld['x'], ld['y'])))
 
-        if is_sprite:
+        if not is_stage:
             pass
 
         return kurt_scriptable
+
+    def load_watcher(self, wd):
+        {u'cmd': u'getVar:',
+         u'color': -821731,
+         u'isDiscrete': True,
+         u'label': u'x',
+         u'mode': 1,
+         u'param': u'x',
+         u'sliderMax': 100,
+         u'sliderMin': 0,
+         u'target': u'Stage',
+         u'visible': False,
+         u'x': 10,
+         u'y': 10}
+
+        command = 'readVariable' if wd['cmd'] == 'getVar:' else wd['cmd']
+        if wd['target'] == 'Stage':
+            target = self.project
+        else:
+            target = self.project.get_sprite(wd['target'])
+        watcher = kurt.Watcher(target,
+            kurt.Block(command, wd['param']),
+            style=WATCHER_MODES[wd['mode']],
+            visible=wd['visible'],
+            pos=(wd['x'], wd['y']),
+        )
+        watcher.slider_min = wd['sliderMin']
+        watcher.slider_max = wd['sliderMax']
+        return watcher
 
     def load_block(self, block_array):
         command = block_array.pop(0)
@@ -135,9 +188,9 @@ class ZipWriter(object):
                 "projectID": "10442014",
                 "scriptCount": 0,
                 "spriteCount": 0,
-                "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.20 Safari/537.36",
+                "userAgent": "",
                 "videoOn": False,
-                "hasCloudData": False, # todo
+                "hasCloudData": False, # TODO
             },
             "videoAlpha": 0.5,
         }
