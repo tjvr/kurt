@@ -694,6 +694,12 @@ class Watcher(Actor):
 
     def _normalize(self):
         assert self.style in ("normal", "large", "slider")
+        if self.block.type.has_command('readVariable'):
+            v = self.target.variables[self.block.args[0]]
+            v.watcher = self
+        elif self.block.type.has_command('contentsOfList:'):
+            l = self.target.lists[self.block.args[0]]
+            l.watcher = self
 
     def __repr__(self):
         r = "%s.%s(%r, %r" % (self.__class__.__module__,
@@ -737,6 +743,9 @@ class Variable(object):
 
         """
 
+        self.watcher = None
+        """The :class:`Watcher` instance displaying this Variable's value."""
+
     def __repr__(self):
         r = "%s.%s(%r" % (self.__class__.__module__, self.__class__.__name__,
                 self.value)
@@ -768,6 +777,9 @@ class List(object):
         For Scratch 2.0.
 
         """
+
+        self.watcher = None
+        """The :class:`Watcher` instance displaying this List's value."""
 
         self._normalize()
 
