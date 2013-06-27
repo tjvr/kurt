@@ -203,10 +203,9 @@ def save_variable((name, kurt_variable)):
     return (name, kurt_variable.value)
 
 def load_lists(v14_lists, kurt_project, kurt_target):
-    kurt_lists = {}
     for v14_list in v14_lists.values():
         kurt_list = kurt.List(map(unicode, v14_list.items))
-        kurt_lists[v14_list.name] = kurt_list
+        kurt_target.lists[v14_list.name] = kurt_list
 
         kurt_watcher = kurt.Watcher(kurt_target,
                 kurt.Block("contentsOfList:", v14_list.name))
@@ -219,8 +218,6 @@ def load_lists(v14_lists, kurt_project, kurt_target):
         kurt_watcher.pos = (x, y)
         kurt_project.actors.append(kurt_watcher)
 
-    return kurt_lists
-
 def save_lists(kurt_target, kurt_project, v14_morph, v14_project):
     for (name, kurt_list) in kurt_target.lists.items():
         v14_list = ScratchListMorph(
@@ -228,31 +225,24 @@ def save_lists(kurt_target, kurt_project, v14_morph, v14_project):
             items = kurt_list.items,
         )
 
-        for actor in kurt_project.actors:
-            if isinstance(actor, kurt.Watcher):
-                if (actor.target == kurt_target and
-                        actor.block.type.has_command('contentsOfList:') and
-                        actor.block.args[0] == name):
-                    kurt_watcher = actor
-                    break
-        else:
+        if not kurt_list.watcher:
             kurt_watcher = kurt.Watcher(kurt_target,
                     kurt.Block("contentsOfList:", name), visible=False)
 
-        pos = kurt_watcher.pos
+        pos = kurt_list.watcher.pos
         if pos:
             (x, y) = pos
         else:
             (x, y) = (375, 10)
             # TODO: stack them properly
 
-        if not kurt_watcher.visible:
+        if not kurt_list.watcher.visible:
             x += 534
             y += 71
         v14_list.bounds = Rectangle([x, y, x+95, y+115])
 
         v14_list.target = v14_morph
-        if kurt_watcher.visible:
+        if kurt_list.watcher.visible:
             v14_list.owner = v14_project.stage
             v14_project.stage.submorphs.append(v14_list)
 
@@ -416,8 +406,7 @@ class Scratch14Plugin(KurtPlugin):
 
         # stage
         load_scriptable(kurt_project.stage, v14_project.stage)
-        kurt_project.lists = load_lists(v14_project.stage.lists, kurt_project,
-                kurt_project)
+        load_lists(v14_project.stage.lists, kurt_project, kurt_project)
 
         # global vars
         kurt_project.variables = kurt_project.stage.variables
@@ -427,8 +416,7 @@ class Scratch14Plugin(KurtPlugin):
         for v14_sprite in v14_project.sprites:
             kurt_sprite = kurt.Sprite(kurt_project, v14_sprite.name)
             load_scriptable(kurt_sprite, v14_sprite)
-            kurt_sprite.lists = load_lists(v14_sprite.lists, kurt_project,
-                    kurt_sprite)
+            load_lists(v14_sprite.lists, kurt_project, kurt_sprite)
             kurt_project.sprites.append(kurt_sprite)
 
         # variable watchers
