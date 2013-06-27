@@ -37,15 +37,14 @@ class ZipReader(object):
 
         project_dict = json.load(self.zip_file.open("project.json"))
 
-        kurt_project = kurt.Project()
-        self.kurt_project = kurt_project
+        self.project = kurt.Project()
 
-        kurt_project.stage = self.load_scriptable(project_dict, is_sprite=False)
+        self.project.stage = self.load_scriptable(project_dict, is_sprite=False)
 
         children = sorted(project_dict['children'],
                 key=lambda c: c['indexInLibrary'])
         for sprite_dict in children:
-            kurt_project.sprites.append(self.load_scriptable(sprite_dict))
+            self.project.sprites.append(self.load_scriptable(sprite_dict))
 
         self.project_dict = project_dict
 
@@ -54,10 +53,10 @@ class ZipReader(object):
 
     def load_scriptable(self, scriptable_dict, is_sprite=True):
         if is_sprite:
-            kurt_scriptable = kurt.Sprite(self.kurt_project,
+            kurt_scriptable = kurt.Sprite(self.project,
                     scriptable_dict["objName"])
         else:
-            kurt_scriptable = kurt.Stage(self.kurt_project)
+            kurt_scriptable = kurt.Stage(self.project)
 
         #for costume_dict in scriptable_dict["costumes"]:
         #    kurt_scriptable.costumes.append(self.load_costume(costume_dict))
@@ -65,6 +64,13 @@ class ZipReader(object):
         for script_array in scriptable_dict.get("scripts", []):
             kurt_scriptable.scripts.append(self.load_script(script_array))
 
+        for ld in scriptable_dict.get("lists", []):
+            name = ld['listName']
+            kurt_scriptable.lists[name] = kurt.List(ld['contents'],
+                    ld['isPersistent'])
+            self.project.actors.append(kurt.Watcher(kurt_scriptable,
+                    kurt.Block("contentsOfList:", name), visible=ld['visible'],
+                    pos=(ld['x'], ld['y'])))
 
         if is_sprite:
             pass
@@ -267,10 +273,9 @@ class Scratch20Plugin(KurtPlugin):
 
     def load(self, path):
         zl = ZipReader(path)
-        kurt_project = zl.kurt_project
-        kurt_project._original = zl.project_dict
+        zl.project._original = zl.project_dict
         zl.finish()
-        return kurt_project
+        return zl.project
 
     def save(self, path, kurt_project):
         zw = ZipWriter(path, kurt_project)
