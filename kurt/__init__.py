@@ -388,10 +388,15 @@ class Project(object):
                     raise ValueError, \
                         "Can't have sprite on stage that isn't in sprites"
 
-        # normalize actors
+        # normalize Scriptables
         self.stage._normalize()
+        for sprite in self.sprites:
+            sprite._normalize()
+
+        # normalize actors
         for actor in self.actors:
-            actor._normalize()
+            if not isinstance(actor, Scriptable):
+                actor._normalize()
 
         # notes - line endings
         self.notes = self.notes.replace("\r\n", "\n").replace("\r", "\n")
@@ -412,6 +417,16 @@ class UnknownFormat(Exception):
 
     Raised when :class:`Project` can't find a valid format plugin to handle the
     file extension.
+
+    """
+    pass
+
+
+class UnsupportedBlock(Exception):
+    """The plugin doesn't support this Block.
+
+    Raised by :attr:`Block.translate` when it can't find a
+    :class:`TranslatedBlockType` for the given plugin.
 
     """
     pass
@@ -1227,7 +1242,10 @@ class BlockType(BaseBlockType):
         if plugin:
             if isinstance(plugin, kurt.plugin.KurtPlugin):
                 plugin = plugin.name
-            return self._translations[plugin]
+            if plugin in self._translations:
+                return self._translations[plugin]
+            else:
+                raise UnsupportedBlock("%r doesn't have %r" % (plugin, self))
         else:
             return self._translations.values()[0]
 
@@ -1449,7 +1467,7 @@ class Block(object):
         args = []
         for arg in self.args:
             insert = inserts.pop(0) if inserts else None
-            if insert.shape in ('number', 'number-menu'):
+            if insert and insert.shape in ('number', 'number-menu'):
                 try:
                     arg = float(arg)
                     arg = int(arg) if int(arg) == arg else arg
