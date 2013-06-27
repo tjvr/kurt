@@ -1205,13 +1205,7 @@ class BlockType(BaseBlockType):
         assert self.shape == tb.shape
         assert len(self.inserts) == len(tb.inserts)
         assert [i.shape for i in self.inserts] == [i.shape for i in tb.inserts]
-        if not [i.kind for i in self.inserts] == [i.kind for i in tb.inserts]:
-            print self
-            print tb
-            print self.inserts
-            print tb.inserts
-            print tb.command
-            print
+        assert [i.kind for i in self.inserts] == [i.kind for i in tb.inserts]
         if tb._plugin not in self._translations:
             self._translations[tb._plugin] = tb
 

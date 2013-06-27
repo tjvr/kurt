@@ -153,7 +153,6 @@ def save_block(kurt_block, v14_project):
         elif isinstance(arg, kurt.Color):
             arg = Color.from_8bit(arg)
         elif insert:
-            print arg, insert
             if insert.kind in ('mathOp', 'effect', 'key'):
                 arg = str(arg) # Won't accept unicode
 
