@@ -475,6 +475,7 @@ class Scriptable(object):
         """
 
     def _normalize(self):
+        # costumes
         if self.costume:
             # Make sure it's in costumes
             if self.costume not in self.costumes:
@@ -487,6 +488,10 @@ class Scriptable(object):
                 BLACK = (0, 0, 0)
                 self.costume = Costume("blank", Image(PIL.Image.new("RGB",
                     (1, 1), BLACK)))
+
+        # scripts
+        for script in self.scripts:
+            script._normalize()
 
     @property
     def costume_index(self):
@@ -1001,8 +1006,6 @@ class Insert(object):
 
         """
 
-        # TODO self.kind -- Valid values for a ``menu`` insert.
-
         if default is None:
             default = Insert.SHAPE_DEFAULTS.get(shape, None)
             if callable(default):
@@ -1408,7 +1411,6 @@ class Block(object):
     def __init__(self, block_type, *args):
         self.type = BlockType.get(block_type)
         """:class:`BlockType` instance. The command this block performs."""
-        # TODO: accept command? or change repr.
 
         self.args = []
         """List of arguments to the block.
@@ -1436,9 +1438,22 @@ class Block(object):
             else:
                 self.args.append(args[i])
 
+        self._normalize()
+
     def _normalize(self):
         assert isinstance(self.type, BlockType)
-        self.args = list(self.args)
+        inserts = list(self.type.inserts)
+        args = []
+        for arg in self.args:
+            insert = inserts.pop(0) if inserts else None
+            if insert.shape in ('number', 'number-menu'):
+                try:
+                    arg = float(arg)
+                    arg = int(arg) if int(arg) == arg else arg
+                except ValueError:
+                    pass
+            args.append(arg)
+        self.args = args
         self.comment = unicode(self.comment)
 
     def __eq__(self, other):
@@ -1513,6 +1528,8 @@ class Script(object):
     def _normalize(self):
         self.pos = self.pos
         self.blocks = list(self.blocks)
+        for block in self.blocks:
+            block._normalize()
 
     def __eq__(self, other):
         return (
