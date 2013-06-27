@@ -219,13 +219,19 @@ class ZipWriter(object):
     def save_block(self, block):
         command = block.type.translate("scratch20").command
         args = []
+        inserts = list(block.type.inserts)
         for arg in block.args:
+            insert = inserts.pop(0) if inserts else None
             if isinstance(arg, kurt.Block):
                 arg = self.save_block(arg)
             elif isinstance(arg, list):
                 arg = map(self.save_block, arg)
             elif isinstance(arg, kurt.Color):
                 arg = self.save_color(arg)
+            elif insert:
+                if insert.kind == 'spriteOrStage':
+                    if arg == 'Stage':
+                        arg = '_stage_'
             args.append(arg)
         return [command] + args
 

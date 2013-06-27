@@ -111,7 +111,7 @@ def load_block(block_array):
             if arg.value in ('mouse', 'edge'):
                 arg = '_%s_' % arg.value
             elif arg.value in ('all', 'last', 'any'):
-                arg = arg.value
+                arg = 'random' if arg.value == 'any' else arg.value
             else:
                 raise ValueError(arg)
         elif isinstance(arg, Stage):
@@ -166,8 +166,8 @@ def save_block(kurt_block, v14_project):
 
             elif isinstance(arg, basestring):
                 if insert.kind in ('listItem', 'listDeleteItem'):
-                    if arg in insert.options():
-                        arg = Symbol(arg)
+                    if arg in ('last', 'all', 'random'):
+                        arg = Symbol('any' if arg == 'random' else arg)
         args.append(arg)
 
     # special-case blocks with weird arguments
