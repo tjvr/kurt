@@ -4,4 +4,4 @@
 
 plugin writing:
 	- global variables&lists go on *Project*, not the Stage
-	- global volume goes on Project, not Stage
+	- actors vs sprites

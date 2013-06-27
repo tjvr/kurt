@@ -3,7 +3,9 @@
 - examples/ sb(2)
 - converting
 	- scripts
+		- stop
 	- watcher blocks
+- remove inserts from stringify?
 
 decide:
 	- Script.pos vs Sprite.position
