@@ -114,8 +114,8 @@ def make_block_types():
 
     # Add not-actually-blocks
     commands += [
-        ['%x.var', 'r', 9, 'readVariable'],
-        ['%x.list', 'r', 12, "contentsOfList:"],
+        ['%x.var', 'r', 9, 'readVariable', 'var'],
+        ['%x.list', 'r', 12, "contentsOfList:", 'list'],
         ['%x', 'r', 10, "getParam"],
     ]
 

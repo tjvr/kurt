@@ -1186,7 +1186,7 @@ class BaseBlockType(object):
         return [i.default for i in self.inserts]
 
     def __repr__(self):
-        return "<%s.%s(%r, %r)>" % (self.__class__.__module__,
+        return "<%s.%s(%r shape=%r)>" % (self.__class__.__module__,
                 self.__class__.__name__,
                 self.text % tuple(i.stringify(None) for i in self.inserts),
                 self.shape)
