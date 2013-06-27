@@ -192,6 +192,8 @@ class Kurt(object):
                     other._add_translation(tb)
                     break
             else:
+                if tb._match:
+                    raise ValueError, "Couldn't match %r" % tb._match
                 cls.blocks.append(kurt.BlockType([(plugin.name, tb)]))
 
     @classmethod
