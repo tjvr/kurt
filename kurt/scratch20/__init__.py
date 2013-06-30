@@ -44,6 +44,24 @@ CATEGORY_COLORS = {
     'sensing': kurt.Color('#2ca5e2'),
 }
 
+
+def get_blocks_by_id(this_block):
+    if isinstance(this_block, kurt.Script):
+        for block in this_block.blocks:
+            for b in get_blocks_by_id(block):
+                yield b
+    elif isinstance(this_block, kurt.Block):
+        yield this_block
+        for arg in this_block.args:
+            if isinstance(arg, kurt.Block):
+                for block in get_blocks_by_id(arg):
+                    yield block
+            elif isinstance(arg, list):
+                for block in arg:
+                    for b in get_blocks_by_id(block):
+                        yield b
+
+
 class ZipReader(object):
     def __init__(self, path):
         self.zip_file = zipfile.ZipFile(path)
@@ -89,9 +107,7 @@ class ZipReader(object):
         else:
             return self.load_watcher(sd)
 
-        for script_array in sd.get("scripts", []):
-            scriptable.scripts.append(self.load_script(script_array))
-
+        # vars & lists
         target = self.project if is_stage else scriptable
 
         for vd in sd.get("variables", []):
@@ -106,6 +122,23 @@ class ZipReader(object):
                 kurt.Block("contentsOfList:", name), is_visible=ld['visible'],
                 pos=(ld['x'], ld['y'])))
 
+        # scripts
+        for script_array in sd.get("scripts", []):
+            scriptable.scripts.append(self.load_script(script_array))
+
+        blocks_by_id = []
+        for script in scriptable.scripts:
+            for block in list(get_blocks_by_id(script)):
+                blocks_by_id.append(block)
+
+        for comment_array in sd.get("scriptComments", []):
+            (x, y, w, h, expanded, block_id, text) = comment_array
+            if block_id > -1:
+                blocks_by_id[block_id].comment = text
+            else:
+                scriptable.scripts.append(kurt.Comment(text, (x, y)))
+
+        # sprite only
         if not is_stage:
             scriptable.position = (sd['scratchX'], sd['scratchY'])
             scriptable.direction = sd['direction']
@@ -275,13 +308,44 @@ class ZipWriter(object):
         sd = {
             "objName": scriptable.name,
             "currentCostumeIndex": scriptable.costume_index or 0,
-            "scripts": [self.save_script(s) for s in scriptable.scripts],
+            "scripts": filter(None, [self.save_script(s) for s in
+                scriptable.scripts]),
+            "scriptComments": [],
             "costumes": [self.save_costume(c) for c in scriptable.costumes],
             "sounds": [],
             "variables": [],
             "lists": [],
         }
 
+        # comments
+        blocks_by_id = []
+        for script in scriptable.scripts:
+            if isinstance(script, kurt.Comment):
+                sd["scriptComments"].append(self.save_comment(script))
+
+            for block in list(get_blocks_by_id(script)):
+                blocks_by_id.append(block)
+
+        def grab_comments(block):
+            if block.comment:
+                (x, y) = scriptable.scripts[-1].pos
+                pos = (x, y + 29)
+                array = self.save_comment(kurt.Comment(block.comment, pos))
+                array[5] = blocks_by_id.index(block)
+                sd["scriptComments"].append(array)
+
+            for arg in block.args:
+                if isinstance(arg, kurt.Block):
+                    grab_comments(arg)
+                elif isinstance(arg, list):
+                    map(grab_comments, arg)
+
+        for script in scriptable.scripts:
+            if isinstance(script, kurt.Script):
+                for block in script.blocks:
+                    grab_comments(block)
+
+        # sprite only
         if is_sprite:
             sd.update({
                 "indexInLibrary": i+1,
@@ -295,6 +359,7 @@ class ZipWriter(object):
                 "spriteInfo": {},
             })
 
+        # vars & lists
         target = scriptable if is_sprite else scriptable.project
 
         for (name, variable) in target.variables.items():
@@ -341,8 +406,15 @@ class ZipWriter(object):
         return [command] + args
 
     def save_script(self, script):
-        (x, y) = script.pos or (10, 10)
-        return [x, y, map(self.save_block, script.blocks)]
+        if isinstance(script, kurt.Script):
+            (x, y) = script.pos or (10, 10)
+            return [x, y, map(self.save_block, script.blocks)]
+
+    def save_comment(self, comment):
+        (x, y) = comment.pos
+        expanded = True
+        h = 200 if expanded else 19
+        return [x, y, 150, h, expanded, -1, comment.text]
 
     def save_costume(self, costume):
         cd = self.write_image(costume.image)

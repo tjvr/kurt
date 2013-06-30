@@ -6,20 +6,21 @@
 	- simple attributes @done
 		- size @done
 		- visible @done
+	- comments @done
 	- costumes (loading)
-	- scriptComments
-	- drop guess_format?
 - don't change path on save()
 - svgs
 - custom blocks
 - sounds
-- are hidden watchers in actors, or not?
-- stringify() _mouse_, _myself_, _edge_
-- examples/ sb(2)
 - converting
 	- scripts
 		- stop
 	- watcher blocks
+
+- drop guess_format?
+- are hidden watchers in actors, or not?
+- stringify() _mouse_, _myself_, _edge_
+- examples/ sb(2)
 - remove inserts from stringify?
 
 decide:
