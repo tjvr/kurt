@@ -297,6 +297,8 @@ class ZipWriter(object):
             "scripts": [],
             "costumes": [],
             "sounds": [],
+            "variables": [],
+            "lists": [],
         }
 
         for kurt_script in kurt_scriptable.scripts:
@@ -318,6 +320,15 @@ class ZipWriter(object):
                 "rotationStyle": "normal",
                 "spriteInfo": {},
                 "visible": True,
+            })
+
+        target = kurt_scriptable if is_sprite else kurt_scriptable.project
+
+        for (name, variable) in target.variables.items():
+            scriptable_dict["variables"].append({
+                "name": name,
+                "value": variable.value,
+                "isPersistent": variable.is_cloud,
             })
 
         return scriptable_dict

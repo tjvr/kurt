@@ -1,5 +1,6 @@
-- stringify() _mouse_, _myself_, _edge_
 - complete scratch20 saving/loading
+- are hidden watchers in actors, or not?
+- stringify() _mouse_, _myself_, _edge_
 - examples/ sb(2)
 - converting
 	- scripts
