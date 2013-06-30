@@ -36,6 +36,14 @@ WATCHER_MODES = [None,
     'slider',
 ]
 
+CATEGORY_COLORS = {
+    'variables': kurt.Color('#ee7d16'),
+    'motion': kurt.Color('#4a6cd4'),
+    'looks': kurt.Color('#8a55d7'),
+    'sound': kurt.Color('#bb42c3'),
+    'sensing': kurt.Color('#2ca5e2'),
+}
+
 class ZipReader(object):
     def __init__(self, path):
         self.zip_file = zipfile.ZipFile(path)
@@ -121,7 +129,8 @@ class ZipReader(object):
         else:
             target = self.project.get_sprite(wd['target'])
         watcher = kurt.Watcher(target,
-            kurt.Block(command, wd['param']),
+            kurt.Block(command, *(wd['param'].split(',') if wd['param']
+                                                         else [])),
             style=WATCHER_MODES[wd['mode']],
             visible=wd['visible'],
             pos=(wd['x'], wd['y']),
@@ -157,7 +166,7 @@ class ZipReader(object):
         blocks = map(self.load_block, blocks)
         return kurt.Script(blocks, pos=(x, y))
 
-    def load_color(value):
+    def load_color(self, value):
         # convert signed to unsigned 32-bit int
         value = struct.unpack('=I', struct.pack('=i', value))[0]
         # throw away leading ff, if any
@@ -201,9 +210,16 @@ class ZipWriter(object):
         stage_dict = self.save_scriptable(kurt_project.stage)
         project_dict.update(stage_dict)
 
+        # sprites & actors
+        sprites = {}
         for (i, kurt_sprite) in enumerate(kurt_project.sprites):
-            sprite_dict = self.save_scriptable(kurt_sprite, i)
-            project_dict["children"].append(sprite_dict)
+            sprites[kurt_sprite.name] = self.save_scriptable(kurt_sprite, i)
+        for actor in kurt_project.actors:
+            if isinstance(actor, kurt.Sprite):
+                actor = sprites[actor.name]
+            elif isinstance(actor, kurt.Watcher):
+                actor = self.save_watcher(actor)
+            project_dict["children"].append(actor)
 
         self.write_file("project.json", json.dumps(project_dict))
 
@@ -240,6 +256,37 @@ class ZipWriter(object):
             self.image_dicts[image] = image_dict
         return image_dict
 
+    def save_watcher(self, watcher):
+        if watcher.kind == 'list':
+            pass
+
+        tbt = watcher.block.type.translate('scratch20')
+        if tbt.command == 'senseVideoMotion':
+            label = 'video ' + watcher.block.args[0]
+        elif tbt.command == 'timeAndDate':
+            label = watcher.block.args[0]
+        else:
+            label = tbt.text % tuple(watcher.block.args)
+
+        if not isinstance(watcher.target, kurt.Project):
+            label = watcher.target.name + " " + label
+
+        return {
+            'cmd': 'getVar:' if tbt.command == 'readVariable' else tbt.command,
+            'param': ",".join(map(unicode, watcher.block.args))
+                    if watcher.block.args else None,
+            'label': label,
+            'target': ('Stage' if isinstance(watcher.target, kurt.Project)
+                               else watcher.target.name),
+            'mode': WATCHER_MODES.index(watcher.style),
+            'sliderMax': watcher.slider_max,
+            'sliderMin': watcher.slider_min,
+            'visible': watcher.visible,
+            'x': watcher.pos[0],
+            'y': watcher.pos[1],
+            'color': self.save_color(CATEGORY_COLORS[tbt.category]),
+            'isDiscrete': True,
+        }
 
     def save_scriptable(self, kurt_scriptable, i=None):
         is_sprite = isinstance(kurt_scriptable, kurt.Sprite)
@@ -266,7 +313,7 @@ class ZipWriter(object):
                 "scratchY": 0,
                 "scale": 1,
                 "direction": 90,
-                "indexInLibrary": i,
+                "indexInLibrary": i+1,
                 "isDraggable": False,
                 "rotationStyle": "normal",
                 "spriteInfo": {},
