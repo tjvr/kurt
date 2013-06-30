@@ -48,7 +48,7 @@ else:
     sprite = kurt.Sprite(p, "frames")
     p.sprites.append(sprite)
 
-    for image_path in every_other(image_paths):
+    for image_path in image_paths:
         costume = kurt.Costume.load(image_path)
         sprite.costumes.append(costume)
 
