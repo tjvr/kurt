@@ -1,4 +1,15 @@
 - complete scratch20 saving/loading
+	- scripts @done
+	- variables @done
+	- lists @done
+	- watchers @done
+	- simple attributes @done
+		- size
+		- visible
+	- costumes (loading)
+	- scriptComments
+- svgs
+- custom blocks
 - sounds
 - are hidden watchers in actors, or not?
 - stringify() _mouse_, _myself_, _edge_
@@ -26,3 +37,4 @@ features:
 Names I probably shouldn't change:
 	kurt.scripts.Block
 	the Script, Block interfaces
+		- oh well

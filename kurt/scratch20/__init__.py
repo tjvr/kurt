@@ -51,6 +51,11 @@ class ZipReader(object):
         self.project = kurt.Project()
         self.list_watchers = []
 
+        # info
+        self.project.tempo = self.json['tempoBPM']
+        self.project.notes = self.json['info'].get('comment', u"")
+        self.project.author = self.json['info'].get('author', u"")
+
         # stage
         self.project.stage = self.load_scriptable(self.json, is_stage=True)
 
@@ -102,7 +107,10 @@ class ZipReader(object):
                     pos=(ld['x'], ld['y'])))
 
         if not is_stage:
-            pass
+            scriptable.position = (sd['scratchX'], sd['scratchY'])
+            scriptable.direction = sd['direction']
+            scriptable.rotation_style = str(sd['rotationStyle'])
+            scriptable.is_draggable = sd['isDraggable']
 
         return scriptable
 
@@ -169,19 +177,19 @@ class ZipWriter(object):
 
         self.json = {
             "penLayerMD5": "279467d0d49e152706ed66539b577c00.png",
-            "info": {},
             "tempoBPM": project.tempo,
             "children": [],
-
             "info": {
-                "flashVersion": "MAC 11,7,700,203",
-                "projectID": "10442014",
+                "comment": project.notes,
+                "author": project.author,
                 "scriptCount": sum(len(s.scripts)
                     for s in [project.stage] + project.sprites),
                 "spriteCount": len(project.sprites),
-                "userAgent": "",
-                "videoOn": False,
                 "hasCloudData": False, # TODO
+                "videoOn": False,
+                "userAgent": "",
+                "flashVersion": "",
+                "projectID": "",
             },
             "videoAlpha": 0.5,
         }
@@ -274,15 +282,15 @@ class ZipWriter(object):
 
         if is_sprite:
             sd.update({
-                "scratchX": 0,
-                "scratchY": 0,
-                "scale": 1,
-                "direction": 90,
                 "indexInLibrary": i+1,
-                "isDraggable": False,
-                "rotationStyle": "normal",
-                "spriteInfo": {},
+                "scratchX": scriptable.position[0],
+                "scratchY": scriptable.position[1],
+                "direction": scriptable.direction,
+                "rotationStyle": scriptable.rotation_style,
+                "isDraggable": scriptable.is_draggable,
                 "visible": True,
+                "scale": 1,
+                "spriteInfo": {},
             })
 
         target = scriptable if is_sprite else scriptable.project

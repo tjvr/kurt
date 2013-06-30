@@ -181,13 +181,13 @@ class Project(object):
         self.lists = {}
         """:class:`dict` of global :class:`Lists <List>` by name."""
 
-        self.tempo = 60
-        """The tempo in BPM used for note blocks."""
-
         self.thumbnail = None
         """A screenshot of the project. May be displayed in project browser."""
 
-        self.notes = "Made with Kurt\nhttp://github.com/blob8108/kurt"
+        self.tempo = 60
+        """The tempo in BPM used for note blocks."""
+
+        self.notes = u"Made with Kurt\nhttp://github.com/blob8108/kurt"
         """Notes about the project, aka project comments.
 
         Displayed on the website next to the project.
