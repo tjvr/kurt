@@ -1494,11 +1494,12 @@ class Block(object):
         for arg in self.args:
             insert = inserts.pop(0) if inserts else None
             if insert and insert.shape in ('number', 'number-menu'):
-                try:
-                    arg = float(arg)
-                    arg = int(arg) if int(arg) == arg else arg
-                except ValueError:
-                    pass
+                if isinstance(arg, basestring):
+                    try:
+                        arg = float(arg)
+                        arg = int(arg) if int(arg) == arg else arg
+                    except ValueError:
+                        pass
             args.append(arg)
         self.args = args
         self.comment = unicode(self.comment)
