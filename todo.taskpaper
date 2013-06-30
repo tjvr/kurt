@@ -7,8 +7,7 @@
 		- size @done
 		- visible @done
 	- comments @done
-	- costumes (loading)
-- don't change path on save()
+	- costumes (loading) @done
 - svgs
 - custom blocks
 - sounds
@@ -17,17 +16,18 @@
 		- stop
 	- watcher blocks
 
+- don't change path on save()
 - drop guess_format?
 - are hidden watchers in actors, or not?
 - stringify() _mouse_, _myself_, _edge_
 - examples/ sb(2)
 - remove inserts from stringify?
 
+- pen layer?
+
 decide:
 	- Script.pos vs Sprite.position
 	- must make_blocks() be a method?
-question:
-	- Does json need open("rb")?
 optimise:
 	- don't convert scratch14 images to pil
 	- clean up scratch14

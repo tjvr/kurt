@@ -1746,7 +1746,7 @@ class Image(object):
         pil_image = PIL.Image.new("RGBA", (480, 360))
         Image(pil_image)
 
-    Loading from file::
+    Loading from file path::
 
         Image.load("path/to/image.jpg")
 
@@ -1771,7 +1771,7 @@ class Image(object):
             self._pil_image = contents
         else:
             self._contents = contents
-            self._format = Image._image_format(format)
+            self._format = Image.image_format(format)
 
     # Properties
 
@@ -1819,7 +1819,7 @@ class Image(object):
         eg ``".png"``
 
         """
-        return Image._image_extension(self.format)
+        return Image.image_extension(self.format)
 
     @property
     def size(self):
@@ -1849,7 +1849,7 @@ class Image(object):
 
         image = Image(None)
         image._path = path
-        image._format = Image._image_format(extension)
+        image._format = Image.image_format(extension)
 
         return image
 
@@ -1864,7 +1864,7 @@ class Image(object):
 
         """
         for format in formats:
-            format = Image._image_format(format)
+            format = Image.image_format(format)
             if self.format == format:
                 return self
         else:
@@ -1899,7 +1899,7 @@ class Image(object):
             raise ValueError, "name is required"
 
         if extension:
-            format = Image._image_format(extension)
+            format = Image.image_format(extension)
         else:
             format = self.format
             filename = name + self.extension
@@ -1922,7 +1922,7 @@ class Image(object):
     # Static methods
 
     @staticmethod
-    def _image_format(format_or_extension):
+    def image_format(format_or_extension):
         if format_or_extension:
             format = format_or_extension.lstrip(".").upper()
             if format == "JPG":
@@ -1930,7 +1930,7 @@ class Image(object):
             return format
 
     @staticmethod
-    def _image_extension(format_or_extension):
+    def image_extension(format_or_extension):
         if format_or_extension:
             extension = format_or_extension.lstrip(".").lower()
             if extension == "jpeg":

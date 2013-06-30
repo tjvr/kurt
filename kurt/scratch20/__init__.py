@@ -30,6 +30,8 @@ from kurt.plugin import Kurt, KurtPlugin
 from kurt.scratch20.blocks import make_block_types
 
 
+SOUND_FORMATS = ['.wav']
+
 WATCHER_MODES = [None,
     'normal',
     'large',
@@ -68,6 +70,18 @@ class ZipReader(object):
         self.json = json.load(self.zip_file.open("project.json"))
         self.project = kurt.Project()
         self.list_watchers = []
+        self.loaded_images = {}
+
+        # files
+        self.image_filenames = {}
+        for filename in self.zip_file.namelist():
+            if filename == 'project.json':
+                continue
+            (name, extension) = os.path.splitext(filename)
+            if extension in SOUND_FORMATS:
+                pass # TODO: sounds
+            else:
+                self.image_filenames[int(name)] = filename
 
         # info
         self.project.tempo = self.json['tempoBPM']
@@ -95,6 +109,15 @@ class ZipReader(object):
 
         self.project.actors += self.list_watchers
 
+    def read_image(self, file_id):
+        if file_id not in self.loaded_images:
+            filename = self.image_filenames[file_id]
+            (_, extension) = os.path.splitext(filename)
+            contents = self.zip_file.open(filename).read()
+            _format = kurt.Image.image_format(extension)
+            self.loaded_images[file_id] = kurt.Image(contents, _format)
+        return self.loaded_images[file_id]
+
     def finish(self):
         self.zip_file.close()
 
@@ -106,6 +129,14 @@ class ZipReader(object):
                     sd["objName"])
         else:
             return self.load_watcher(sd)
+
+        # costumes
+        for cd in sd.get("costumes", []):
+            scriptable.costumes.append(kurt.Costume(
+                cd['costumeName'],
+                self.read_image(cd['baseLayerID']),
+                (cd['rotationCenterX'], cd['rotationCenterY']),
+            ))
 
         # vars & lists
         target = self.project if is_stage else scriptable
@@ -260,13 +291,14 @@ class ZipWriter(object):
         if image not in self.image_dicts:
             image_id = len(self.image_dicts)
             image = image.convert("SVG", "JPEG", "PNG")
-            filename = str(image_id) + (image.extension or ".png")
+            ext = (image.extension or ".png")
+            filename = str(image_id) + ext
             self.write_file(filename, image.contents)
 
             self.image_dicts[image] = {
                 "baseLayerID": image_id, # -1 for download
                 "bitmapResolution": 1,
-                "baseLayerMD5": hashlib.md5(image.contents).hexdigest(),
+                "baseLayerMD5": hashlib.md5(image.contents).hexdigest() + ext,
             }
         return self.image_dicts[image]
 
