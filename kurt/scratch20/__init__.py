@@ -176,8 +176,9 @@ class ZipWriter(object):
             "info": {
                 "flashVersion": "MAC 11,7,700,203",
                 "projectID": "10442014",
-                "scriptCount": 0,
-                "spriteCount": 0,
+                "scriptCount": sum(len(s.scripts)
+                    for s in [project.stage] + project.sprites),
+                "spriteCount": len(project.sprites),
                 "userAgent": "",
                 "videoOn": False,
                 "hasCloudData": False, # TODO
@@ -349,6 +350,7 @@ class ZipWriter(object):
         # convert unsigned to signed 32-bit int
         value = struct.unpack('=i', struct.pack('=I', value))[0]
         return value
+
 
 class Scratch20Plugin(KurtPlugin):
     name = "scratch20"
