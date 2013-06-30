@@ -209,10 +209,10 @@ def load_lists(v14_lists, kurt_project, kurt_target):
 
         kurt_watcher = kurt.Watcher(kurt_target,
                 kurt.Block("contentsOfList:", v14_list.name))
-        kurt_watcher.visible = bool(v14_list.owner)
+        kurt_watcher.is_visible = bool(v14_list.owner)
 
         (x, y, w, h) = v14_list.bounds.value
-        if not kurt_watcher.visible:
+        if not kurt_watcher.is_visible:
             x -= 534
             y -= 71
         kurt_watcher.pos = (x, y)
@@ -227,7 +227,7 @@ def save_lists(kurt_target, kurt_project, v14_morph, v14_project):
 
         if not kurt_list.watcher:
             kurt_watcher = kurt.Watcher(kurt_target,
-                    kurt.Block("contentsOfList:", name), visible=False)
+                    kurt.Block("contentsOfList:", name), is_visible=False)
 
         pos = kurt_list.watcher.pos
         if pos:
@@ -236,13 +236,13 @@ def save_lists(kurt_target, kurt_project, v14_morph, v14_project):
             (x, y) = (375, 10)
             # TODO: stack them properly
 
-        if not kurt_list.watcher.visible:
+        if not kurt_list.watcher.is_visible:
             x += 534
             y += 71
         v14_list.bounds = Rectangle([x, y, x+95, y+115])
 
         v14_list.target = v14_morph
-        if kurt_list.watcher.visible:
+        if kurt_list.watcher.is_visible:
             v14_list.owner = v14_project.stage
             v14_project.stage.submorphs.append(v14_list)
 
@@ -314,9 +314,11 @@ def load_scriptable(kurt_scriptable, v14_scriptable):
     # for sprites:
     if isinstance(kurt_scriptable, kurt.Sprite):
         kurt_scriptable.name = v14_scriptable.name
-        kurt_scriptable.direction = v14_scriptable.rotationDegrees
+        kurt_scriptable.direction = v14_scriptable.rotationDegrees + 90
         kurt_scriptable.rotation_style = v14_scriptable.rotationStyle.value
+        kurt_scriptable.size = v14_scriptable.scalePoint.x * 100.0
         kurt_scriptable.is_draggable = v14_scriptable.draggable
+        kurt_scriptable.is_visible = (v14_scriptable.flags == 0)
 
         # bounds
         (x, y, right, bottom) = v14_scriptable.bounds.value
@@ -373,9 +375,10 @@ def save_scriptable(kurt_scriptable, v14_scriptable, v14_project):
     # sprite
     if isinstance(kurt_scriptable, kurt.Sprite):
         v14_scriptable.name = kurt_scriptable.name
-        v14_scriptable.rotationDegrees = kurt_scriptable.direction
+        v14_scriptable.rotationDegrees = kurt_scriptable.direction - 90
         v14_scriptable.rotationStyle = Symbol(kurt_scriptable.rotation_style)
         v14_scriptable.draggable = kurt_scriptable.is_draggable
+        v14_scriptable.flags = 0 if kurt_scriptable.is_visible else 1
 
         # bounds
         (x, y) = kurt_scriptable.position
@@ -494,14 +497,14 @@ class Scratch14Plugin(KurtPlugin):
         for kurt_actor in kurt_project.actors:
             if kurt_actor in kurt_project.sprites:
                 v14_project.stage.submorphs.append(
-                    v14_project.sprites[kurt_actor.name]
+                    v14_project.get_sprite(kurt_actor.name)
                 )
                 continue
 
             if isinstance(kurt_actor, kurt.Watcher):
                 kurt_watcher = kurt_actor
 
-                if kurt_watcher.kind == 'list' or not kurt_watcher.visible:
+                if kurt_watcher.kind == 'list' or not kurt_watcher.is_visible:
                     continue
 
                 v14_watcher = WatcherMorph()

@@ -4,10 +4,12 @@
 	- lists @done
 	- watchers @done
 	- simple attributes @done
-		- size
-		- visible
+		- size @done
+		- visible @done
 	- costumes (loading)
 	- scriptComments
+	- drop guess_format?
+- don't change path on save()
 - svgs
 - custom blocks
 - sounds

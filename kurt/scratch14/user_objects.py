@@ -396,31 +396,6 @@ class Sprite(ScriptableScratchMorph):
         self.images = value
 
 
-class SpriteCollection(OrderedCollection):
-    """Provides indexing by sprite name as well as index"""
-    # TODO: use OrderedDict?
-    def __getitem__(self, item):
-        try:
-            index = int(item)
-        except ValueError:
-            for sprite in self.value:
-                if sprite.name == item:
-                    return sprite
-        return self.value[item]
-
-    def __repr__(self):
-        return repr(self.value)
-
-    def __contains__(self, item):
-        if item in self.value:
-            return True
-        for sprite in self.value:
-            if sprite.name == item:
-                return True
-        return False
-
-
-
 class Stage(ScriptableScratchMorph):
     """The project stage. Contains project contents including sprites and media.
     Main attributes:
@@ -449,7 +424,7 @@ class Stage(ScriptableScratchMorph):
         self.zoom = 1.0
         self.hPan =  0
         self.vPan =  0
-        self.sprites = SpriteCollection()
+        self.sprites = []
         self.sceneStates = {}
 
         image = Image(
@@ -478,7 +453,7 @@ class Stage(ScriptableScratchMorph):
 
     def built(self):
         ScriptableScratchMorph.built(self)
-        self.sprites = SpriteCollection(self.sprites)
+        self.sprites = list(self.sprites)
 
     def _encode_field(self, name, value):
         value = ScriptableScratchMorph._encode_field(self, name, value)

@@ -103,14 +103,16 @@ class ZipReader(object):
             target.lists[name] = kurt.List(ld['contents'],
                     ld['isPersistent'])
             self.list_watchers.append(kurt.Watcher(target,
-                    kurt.Block("contentsOfList:", name), visible=ld['visible'],
-                    pos=(ld['x'], ld['y'])))
+                kurt.Block("contentsOfList:", name), is_visible=ld['visible'],
+                pos=(ld['x'], ld['y'])))
 
         if not is_stage:
             scriptable.position = (sd['scratchX'], sd['scratchY'])
             scriptable.direction = sd['direction']
             scriptable.rotation_style = str(sd['rotationStyle'])
             scriptable.is_draggable = sd['isDraggable']
+            scriptable.is_visible = sd['visible']
+            scriptable.size = sd['scale'] * 100.0
 
         return scriptable
 
@@ -124,7 +126,7 @@ class ZipReader(object):
             kurt.Block(command, *(wd['param'].split(',') if wd['param']
                                                          else [])),
             style=WATCHER_MODES[wd['mode']],
-            visible=wd['visible'],
+            is_visible=wd['visible'],
             pos=(wd['x'], wd['y']),
         )
         watcher.slider_min = wd['sliderMin']
@@ -260,7 +262,7 @@ class ZipWriter(object):
             'mode': WATCHER_MODES.index(watcher.style),
             'sliderMax': watcher.slider_max,
             'sliderMin': watcher.slider_min,
-            'visible': watcher.visible,
+            'visible': watcher.is_visible,
             'x': watcher.pos[0],
             'y': watcher.pos[1],
             'color': self.save_color(CATEGORY_COLORS[tbt.category]),
@@ -288,8 +290,8 @@ class ZipWriter(object):
                 "direction": scriptable.direction,
                 "rotationStyle": scriptable.rotation_style,
                 "isDraggable": scriptable.is_draggable,
-                "visible": True,
-                "scale": 1,
+                "visible": scriptable.is_visible,
+                "scale": scriptable.size * 0.01,
                 "spriteInfo": {},
             })
 
@@ -304,13 +306,13 @@ class ZipWriter(object):
 
         for (name, _list) in target.lists.items():
             watcher = _list.watcher or kurt.Watcher(target,
-                        kurt.Block("contentsOfList:", name), visible=False)
+                        kurt.Block("contentsOfList:", name), is_visible=False)
 
             sd["lists"].append({
                 "listName": name,
                 "contents": _list.items,
                 "isPersistent": _list.is_cloud,
-                "visible": watcher.visible,
+                "visible": watcher.is_visible,
                 "x": watcher.pos[0],
                 "y": watcher.pos[1],
                 "width": 120,

@@ -622,11 +622,22 @@ class Sprite(Scriptable, Actor):
 
         """
 
+        self.size = 100.0
+        """The scale factor of the sprite in percent. Defaults to 100."""
+
         self.is_draggable = False
         """True if the sprite can be dragged using the mouse in the
         player/presentation mode.
 
         """
+
+        self.is_visible = True
+        """Whether the sprite is shown on the stage. False if the sprite is
+        hidden.
+
+        """
+
+
 
     def _normalize(self):
         Scriptable._normalize(self)
@@ -645,7 +656,7 @@ class Watcher(Actor):
 
     """
 
-    def __init__(self, target, block, style="normal", visible=True, pos=None):
+    def __init__(self, target, block, style="normal", is_visible=True, pos=None):
         Actor.__init__(self)
 
         self.target = target
@@ -690,7 +701,7 @@ class Watcher(Actor):
 
         """
 
-        self.visible = bool(visible)
+        self.is_visible = bool(is_visible)
         """Whether the watcher is displayed on the screen.
 
         Some formats won't save hidden watchers, and so their position won't be
@@ -744,8 +755,8 @@ class Watcher(Actor):
                 self.__class__.__name__, self.target, self.block)
         if self.style != "normal":
             r += ", style=%r" % self.style
-        if not self.visible:
-            r += ", visible=False"
+        if not self.is_visible:
+            r += ", is_visible=False"
         if self.pos:
             r += ", pos=%s" % repr(self.pos)
         r += ")"
