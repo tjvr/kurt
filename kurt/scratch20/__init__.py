@@ -52,9 +52,12 @@ class ZipReader(object):
 
         self.project = kurt.Project()
 
+        self.list_watchers = []
+
         # stage
         self.project.stage = self.load_scriptable(project_dict, is_stage=True)
 
+        # sprites
         actors = []
         for child_dict in project_dict['children']:
             if 'objName' in child_dict:
@@ -69,6 +72,8 @@ class ZipReader(object):
             if not isinstance(actor, kurt.Sprite):
                 actor = self.load_watcher(actor)
             self.project.actors.append(actor)
+
+        self.project.actors += self.list_watchers
 
         self.project_dict = project_dict
 
@@ -100,7 +105,7 @@ class ZipReader(object):
             name = ld['listName']
             target.lists[name] = kurt.List(ld['contents'],
                     ld['isPersistent'])
-            self.project.actors.append(kurt.Watcher(kurt_scriptable,
+            self.list_watchers.append(kurt.Watcher(target,
                     kurt.Block("contentsOfList:", name), visible=ld['visible'],
                     pos=(ld['x'], ld['y'])))
 
@@ -219,7 +224,9 @@ class ZipWriter(object):
                 actor = sprites[actor.name]
             elif isinstance(actor, kurt.Watcher):
                 actor = self.save_watcher(actor)
-            project_dict["children"].append(actor)
+
+            if actor:
+                project_dict["children"].append(actor)
 
         self.write_file("project.json", json.dumps(project_dict))
 
@@ -258,7 +265,7 @@ class ZipWriter(object):
 
     def save_watcher(self, watcher):
         if watcher.kind == 'list':
-            pass
+            return
 
         tbt = watcher.block.type.translate('scratch20')
         if tbt.command == 'senseVideoMotion':
@@ -329,6 +336,21 @@ class ZipWriter(object):
                 "name": name,
                 "value": variable.value,
                 "isPersistent": variable.is_cloud,
+            })
+
+        for (name, _list) in target.lists.items():
+            watcher = _list.watcher or kurt.Watcher(target,
+                        kurt.Block("contentsOfList:", name), visible=False)
+
+            scriptable_dict["lists"].append({
+                "listName": name,
+                "contents": _list.items,
+                "isPersistent": _list.is_cloud,
+                "visible": watcher.visible,
+                "x": watcher.pos[0],
+                "y": watcher.pos[1],
+                "width": 120,
+                "height": 117,
             })
 
         return scriptable_dict
