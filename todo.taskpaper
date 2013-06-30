@@ -1,5 +1,5 @@
-- refactor scratch20
 - complete scratch20 saving/loading
+- sounds
 - are hidden watchers in actors, or not?
 - stringify() _mouse_, _myself_, _edge_
 - examples/ sb(2)

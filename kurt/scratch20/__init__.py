@@ -47,25 +47,22 @@ CATEGORY_COLORS = {
 class ZipReader(object):
     def __init__(self, path):
         self.zip_file = zipfile.ZipFile(path)
-
-        project_dict = json.load(self.zip_file.open("project.json"))
-
+        self.json = json.load(self.zip_file.open("project.json"))
         self.project = kurt.Project()
-
         self.list_watchers = []
 
         # stage
-        self.project.stage = self.load_scriptable(project_dict, is_stage=True)
+        self.project.stage = self.load_scriptable(self.json, is_stage=True)
 
         # sprites
         actors = []
-        for child_dict in project_dict['children']:
-            if 'objName' in child_dict:
-                sprite = self.load_scriptable(child_dict)
+        for cd in self.json['children']:
+            if 'objName' in cd:
+                sprite = self.load_scriptable(cd)
                 self.project.sprites.append(sprite)
                 actors.append(sprite)
             else:
-                actors.append(child_dict)
+                actors.append(cd)
 
         # watchers
         for actor in actors:
@@ -75,33 +72,28 @@ class ZipReader(object):
 
         self.project.actors += self.list_watchers
 
-        self.project_dict = project_dict
-
     def finish(self):
         self.zip_file.close()
 
-    def load_scriptable(self, scriptable_dict, is_stage=False):
+    def load_scriptable(self, sd, is_stage=False):
         if is_stage:
-            kurt_scriptable = kurt.Stage(self.project)
-        elif 'objName' in scriptable_dict:
-            kurt_scriptable = kurt.Sprite(self.project,
-                    scriptable_dict["objName"])
+            scriptable = kurt.Stage(self.project)
+        elif 'objName' in sd:
+            scriptable = kurt.Sprite(self.project,
+                    sd["objName"])
         else:
-            return self.load_watcher(scriptable_dict)
+            return self.load_watcher(sd)
 
-        #for costume_dict in scriptable_dict["costumes"]:
-        #    kurt_scriptable.costumes.append(self.load_costume(costume_dict))
+        for script_array in sd.get("scripts", []):
+            scriptable.scripts.append(self.load_script(script_array))
 
-        for script_array in scriptable_dict.get("scripts", []):
-            kurt_scriptable.scripts.append(self.load_script(script_array))
+        target = self.project if is_stage else scriptable
 
-        target = self.project if is_stage else kurt_scriptable
-
-        for vd in scriptable_dict.get("variables", []):
+        for vd in sd.get("variables", []):
             var = kurt.Variable(vd['value'], vd['isPersistent'])
             target.variables[vd['name']] = var
 
-        for ld in scriptable_dict.get("lists", []):
+        for ld in sd.get("lists", []):
             name = ld['listName']
             target.lists[name] = kurt.List(ld['contents'],
                     ld['isPersistent'])
@@ -112,22 +104,9 @@ class ZipReader(object):
         if not is_stage:
             pass
 
-        return kurt_scriptable
+        return scriptable
 
     def load_watcher(self, wd):
-        {u'cmd': u'getVar:',
-         u'color': -821731,
-         u'isDiscrete': True,
-         u'label': u'x',
-         u'mode': 1,
-         u'param': u'x',
-         u'sliderMax': 100,
-         u'sliderMin': 0,
-         u'target': u'Stage',
-         u'visible': False,
-         u'x': 10,
-         u'y': 10}
-
         command = 'readVariable' if wd['cmd'] == 'getVar:' else wd['cmd']
         if wd['target'] == 'Stage':
             target = self.project
@@ -176,25 +155,22 @@ class ZipReader(object):
         value = struct.unpack('=I', struct.pack('=i', value))[0]
         # throw away leading ff, if any
         value &= 0x00ffffff
-        # extract RGB values
         return kurt.Color(
             (value & 0xff0000) >> 16,
             (value & 0x00ff00) >> 8,
             (value & 0x0000ff),
         )
 
-    def load_costume(self, costume_dict):
-        return None #kurt.Costume()
-
 
 class ZipWriter(object):
-    def __init__(self, path, kurt_project):
+    def __init__(self, path, project):
         self.zip_file = zipfile.ZipFile(path, "w")
+        self.image_dicts = {}
 
-        project_dict = {
+        self.json = {
             "penLayerMD5": "279467d0d49e152706ed66539b577c00.png",
             "info": {},
-            "tempoBPM": kurt_project.tempo,
+            "tempoBPM": project.tempo,
             "children": [],
 
             "info": {
@@ -209,28 +185,20 @@ class ZipWriter(object):
             "videoAlpha": 0.5,
         }
 
-        self.image_dicts = {}
-        self.highest_image_id = 0
-
-        stage_dict = self.save_scriptable(kurt_project.stage)
-        project_dict.update(stage_dict)
-
-        # sprites & actors
+        self.json.update(self.save_scriptable(project.stage))
         sprites = {}
-        for (i, kurt_sprite) in enumerate(kurt_project.sprites):
-            sprites[kurt_sprite.name] = self.save_scriptable(kurt_sprite, i)
-        for actor in kurt_project.actors:
+        for (i, sprite) in enumerate(project.sprites):
+            sprites[sprite.name] = self.save_scriptable(sprite, i)
+        for actor in project.actors:
             if isinstance(actor, kurt.Sprite):
                 actor = sprites[actor.name]
             elif isinstance(actor, kurt.Watcher):
                 actor = self.save_watcher(actor)
 
             if actor:
-                project_dict["children"].append(actor)
+                self.json["children"].append(actor)
 
-        self.write_file("project.json", json.dumps(project_dict))
-
-        self.project_dict = project_dict
+        self.write_file("project.json", json.dumps(self.json))
 
     def finish(self):
         self.zip_file.close()
@@ -245,23 +213,18 @@ class ZipWriter(object):
         self.zip_file.writestr(zi, contents)
 
     def write_image(self, image):
-        if image in self.image_dicts:
-            image_dict = self.image_dicts[image]
-        else:
-            image_id = self.highest_image_id
-            self.highest_image_id += 1
-
+        if image not in self.image_dicts:
+            image_id = len(self.image_dicts)
             image = image.convert("SVG", "JPEG", "PNG")
             filename = str(image_id) + (image.extension or ".png")
             self.write_file(filename, image.contents)
 
-            image_dict = {
-                "baseLayerID": image_id, #-1 for download
+            self.image_dicts[image] = {
+                "baseLayerID": image_id, # -1 for download
                 "bitmapResolution": 1,
                 "baseLayerMD5": hashlib.md5(image.contents).hexdigest(),
             }
-            self.image_dicts[image] = image_dict
-        return image_dict
+        return self.image_dicts[image]
 
     def save_watcher(self, watcher):
         if watcher.kind == 'list':
@@ -295,29 +258,21 @@ class ZipWriter(object):
             'isDiscrete': True,
         }
 
-    def save_scriptable(self, kurt_scriptable, i=None):
-        is_sprite = isinstance(kurt_scriptable, kurt.Sprite)
+    def save_scriptable(self, scriptable, i=None):
+        is_sprite = isinstance(scriptable, kurt.Sprite)
 
-        scriptable_dict = {
-            "objName": kurt_scriptable.name,
-            "currentCostumeIndex": kurt_scriptable.costume_index or 0,
-            "scripts": [],
-            "costumes": [],
+        sd = {
+            "objName": scriptable.name,
+            "currentCostumeIndex": scriptable.costume_index or 0,
+            "scripts": [self.save_script(s) for s in scriptable.scripts],
+            "costumes": [self.save_costume(c) for c in scriptable.costumes],
             "sounds": [],
             "variables": [],
             "lists": [],
         }
 
-        for kurt_script in kurt_scriptable.scripts:
-            script_array = self.save_script(kurt_script)
-            scriptable_dict["scripts"].append(script_array)
-
-        for kurt_costume in kurt_scriptable.costumes:
-            costume_dict = self.save_costume(kurt_costume)
-            scriptable_dict["costumes"].append(costume_dict)
-
         if is_sprite:
-            scriptable_dict.update({
+            sd.update({
                 "scratchX": 0,
                 "scratchY": 0,
                 "scale": 1,
@@ -329,10 +284,10 @@ class ZipWriter(object):
                 "visible": True,
             })
 
-        target = kurt_scriptable if is_sprite else kurt_scriptable.project
+        target = scriptable if is_sprite else scriptable.project
 
         for (name, variable) in target.variables.items():
-            scriptable_dict["variables"].append({
+            sd["variables"].append({
                 "name": name,
                 "value": variable.value,
                 "isPersistent": variable.is_cloud,
@@ -342,7 +297,7 @@ class ZipWriter(object):
             watcher = _list.watcher or kurt.Watcher(target,
                         kurt.Block("contentsOfList:", name), visible=False)
 
-            scriptable_dict["lists"].append({
+            sd["lists"].append({
                 "listName": name,
                 "contents": _list.items,
                 "isPersistent": _list.is_cloud,
@@ -353,7 +308,7 @@ class ZipWriter(object):
                 "height": 117,
             })
 
-        return scriptable_dict
+        return sd
 
     def save_block(self, block):
         command = block.type.translate("scratch20").command
@@ -378,15 +333,15 @@ class ZipWriter(object):
         (x, y) = script.pos or (10, 10)
         return [x, y, map(self.save_block, script.blocks)]
 
-    def save_costume(self, kurt_costume):
-        costume_dict = self.write_image(kurt_costume.image)
-        (rx, ry) = kurt_costume.rotation_center
-        costume_dict.update({
-            "costumeName": kurt_costume.name,
+    def save_costume(self, costume):
+        cd = self.write_image(costume.image)
+        (rx, ry) = costume.rotation_center
+        cd.update({
+            "costumeName": costume.name,
             "rotationCenterX": rx,
             "rotationCenterY": ry,
         })
-        return costume_dict
+        return cd
 
     def save_color(self, color):
         # build RGB values
@@ -394,7 +349,6 @@ class ZipWriter(object):
         # convert unsigned to signed 32-bit int
         value = struct.unpack('=i', struct.pack('=I', value))[0]
         return value
-
 
 class Scratch20Plugin(KurtPlugin):
     name = "scratch20"
@@ -406,14 +360,14 @@ class Scratch20Plugin(KurtPlugin):
 
     def load(self, path):
         zl = ZipReader(path)
-        zl.project._original = zl.project_dict
+        zl.project._original = zl.json
         zl.finish()
         return zl.project
 
-    def save(self, path, kurt_project):
-        zw = ZipWriter(path, kurt_project)
+    def save(self, path, project):
+        zw = ZipWriter(path, project)
         zw.finish()
-        return zw.project_dict
+        return zw.json
 
 
 
