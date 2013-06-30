@@ -1,50 +1,11 @@
-
-# Comment/Script superclass?
-# -> meh.
 import kurt
-from kurt import BlockType
 
 import itertools
 
 
-categories14 = set([
-    'motion',
-    'looks',
-    'sound',
-    'pen',
-    'control',
-    'sensing',
-    'operators',
-    'variables',
-    'list',
-    'motor',
-
-    'obsolete number blocks', 
-    'obsolete sound blocks',
-    'obsolete sprite looks blocks', 
-    'obsolete sprite motion blocks', 
-    'obsolete image effects'
-])
-
-flags14 = {
-    '-': '',
-    'b': 'boolean',
-    'c': 'cblock',
-    'r': 'reporter',
-    'E': 'hat',
-    'K': 'hat',
-    'M': 'hat',
-    'S': 'hat',
-    's': 'special',
-    't': '', # timed blocks, all stack
-}
-
-kurt.blocks_by_cmd['doReturn'][0].shape = "cap"
-
 
 def strip_text(block):
-    text = "".join(filter(lambda p: p[0] != "%", block.parts))
-    return text.lower().replace(" ", "")
+    return kurt.BlockType._strip_text(block.type.text)
 
 
 plugin_specials = {
@@ -72,7 +33,7 @@ plugin_flag_classes = {
 plugin_category_classes = {
     "sensor": "purple",
     "wedo": "purple",
-    "midi": "purple", # What colour are the midi blocks, anyway?
+    "midi": "purple",
 }
 
 def scratchblocks2_definitions():
