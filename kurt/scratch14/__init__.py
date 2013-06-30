@@ -500,11 +500,8 @@ class Scratch14Plugin(KurtPlugin):
 
             if isinstance(kurt_actor, kurt.Watcher):
                 kurt_watcher = kurt_actor
-                selector = kurt_watcher.block.type.translate('scratch14').command
-                if selector == 'contentsOfList:':
-                    continue
 
-                if not kurt_watcher.visible:
+                if kurt_watcher.kind == 'list' or not kurt_watcher.visible:
                     continue
 
                 v14_watcher = WatcherMorph()

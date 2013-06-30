@@ -667,7 +667,9 @@ class Watcher(Actor):
         """
 
         self.style = str(style)
-        """How the watcher should appear. Valid values:
+        """How the watcher should appear.
+
+        Valid values:
 
         ``'normal'``
             The name of the data is displayed next to its value. The only
@@ -706,12 +708,36 @@ class Watcher(Actor):
 
     def _normalize(self):
         assert self.style in ("normal", "large", "slider")
+        if self.value:
+            self.value.watcher = self
+
+    @property
+    def kind(self):
+        """The type of value to watch, based on :attr:`block`.
+
+        One of ``variable``, ``list``, or ``block``.
+
+        ``block`` watchers watch the value of a reporter block.
+
+        """
         if self.block.type.has_command('readVariable'):
-            v = self.target.variables[self.block.args[0]]
-            v.watcher = self
+            return 'variable'
         elif self.block.type.has_command('contentsOfList:'):
-            l = self.target.lists[self.block.args[0]]
-            l.watcher = self
+            return 'list'
+        else:
+            return 'block'
+
+    @property
+    def value(self):
+        """Return the :class:`Variable` or :class:`List` to watch.
+
+        Returns ``None`` if it's a block watcher.
+
+        """
+        if self.kind == 'variable':
+            return self.target.variables[self.block.args[0]]
+        elif self.kind == 'list':
+            return self.target.lists[self.block.args[0]]
 
     def __repr__(self):
         r = "%s.%s(%r, %r" % (self.__class__.__module__,
