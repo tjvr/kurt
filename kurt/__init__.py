@@ -129,6 +129,7 @@ class Project(object):
 
         p = kurt.Project.load("tests/game.sb")
         p.convert("scratch20")
+        # []
         p.save()
         # 'tests/game.sb2'
 
@@ -373,7 +374,6 @@ class Project(object):
         return result if debug else path
 
     def _save(self, path):
-        list(self._normalize())
         return self._plugin.save(path, self)
 
     def _normalize(self):
@@ -1606,7 +1606,7 @@ class Block(object):
     def copy(self):
         """Return a new Block instance with the same attributes."""
         args = []
-        for arg in args:
+        for arg in self.args:
             if isinstance(arg, Block):
                 arg = arg.copy()
             elif isinstance(arg, list):
