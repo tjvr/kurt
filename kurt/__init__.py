@@ -416,8 +416,9 @@ class Project(object):
         # convert scripts
         def convert_block(block):
             # convert block
-            if 'obsolete' in block.type.translate(plugin).category:
-                raise UnsupportedBlock, block.type
+            if 'obsolete' in block.type.translate(self._plugin).category:
+                raise UnsupportedBlock("%r is obsolete in %s" %
+                        (block.type, self._plugin.display_name))
 
             # convert args
             args = []
@@ -1377,12 +1378,12 @@ class BlockType(BaseBlockType):
 
         """
         if plugin:
-            if isinstance(plugin, kurt.plugin.KurtPlugin):
-                plugin = plugin.name
-            if plugin in self._translations:
-                return self._translations[plugin]
+            plugin = kurt.plugin.Kurt.get_plugin(plugin)
+            if plugin.name in self._translations:
+                return self._translations[plugin.name]
             else:
-                raise UnsupportedBlock("%r doesn't have %r" % (plugin, self))
+                raise UnsupportedBlock("%s doesn't have %r" %
+                        (plugin.display_name, self))
         else:
             return self._translations.values()[0]
 
