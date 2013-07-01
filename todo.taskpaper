@@ -9,13 +9,14 @@
 	- comments @done
 	- costumes (loading) @done
 - svgs @done
+- converting @done
+	- scripts @done
+		- stop @done
+		- forever if @done
 - custom blocks
 - sounds
 
-- converting
-	- scripts
-		- stop
-	- watcher blocks
+- check for blocktypes with an obsolete or only one translation
 
 - are hidden watchers in actors, or not?
 - stringify() _mouse_, _myself_, _edge_

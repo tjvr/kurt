@@ -20,7 +20,7 @@
 import re
 
 import kurt
-from kurt.plugin import Kurt, KurtPlugin
+from kurt.plugin import Kurt, KurtPlugin, block_workaround
 
 from kurt.scratch14.objtable import *
 from kurt.scratch14.files import *
@@ -557,3 +557,19 @@ class Scratch14Plugin(KurtPlugin):
 
 
 Kurt.register(Scratch14Plugin())
+
+
+
+#-- Block workarounds --#
+
+# 1.4 -> 2.0
+block_workaround('stop script', kurt.Block('stop', 'this script'))
+block_workaround('stop all', kurt.Block('stop', 'all'))
+block_workaround('forever if',
+    lambda block: kurt.Block('forever', [kurt.Block('if', *block.args)]))
+
+# 2.0 -> 1.4
+block_workaround('stop', lambda block: {
+    'this script': kurt.Block('stop script'),
+    'all': kurt.Block('stop all'),
+}.get(block.args[0], None))

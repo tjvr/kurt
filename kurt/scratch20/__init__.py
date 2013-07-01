@@ -198,6 +198,7 @@ class ZipReader(object):
         return watcher
 
     def load_block(self, block_array):
+        block_array = list(block_array)
         command = block_array.pop(0)
         block_type = kurt.BlockType.get(command)
 

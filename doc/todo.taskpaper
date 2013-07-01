@@ -5,3 +5,4 @@
 plugin writing:
 	- global variables&lists go on *Project*, not the Stage
 	- actors vs sprites
+	- make sure obsolete blocks go last

@@ -307,6 +307,7 @@ MATCH_COMMANDS = {
     'drum:duration:elapsed:from:': 'playDrum',
     '\\\\': '%', # modulo
     'midiInstrument:': 'instrument:',
+    'nextBackground': 'nextScene',
 }
 
 

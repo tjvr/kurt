@@ -416,13 +416,28 @@ class Project(object):
         # convert scripts
         def convert_block(block):
             # convert block
-            if 'obsolete' in block.type.translate(self._plugin).category:
-                raise UnsupportedBlock("%r is obsolete in %s" %
-                        (block.type, self._plugin.display_name))
+            try:
+                tbt = block.type.translate(self._plugin)
+                if 'obsolete' in tbt.category:
+                    raise UnsupportedBlock("%r is obsolete in %s" %
+                            (block.type, self._plugin.display_name))
+            except UnsupportedBlock, ub:
+                ub.message += "; from block %r" % block
+                ub.args = (ub.message,)
+                if block.type._workaround:
+                    block = block.type._workaround(block)
+                    if not block:
+                        raise
+                else:
+                    raise
 
             # convert args
             args = []
             for arg in block.args:
+                if isinstance(arg, Block):
+                    arg = convert_block(arg)
+                elif isinstance(arg, list):
+                    arg = map(convert_block, arg)
                 args.append(arg)
             block.args = args
 
@@ -1358,6 +1373,8 @@ class BlockType(BaseBlockType):
         self._translations = OrderedDict(translations)
         """Stores :class:`TranslatedBlockType` objects for each plugin name."""
 
+        self._workaround = None
+
     def _add_translation(self, tb):
         """Add the given TranslatedBlockType to :attr:`_translations`.
 
@@ -1463,6 +1480,9 @@ class BlockType(BaseBlockType):
 
     def __ne__(self, other):
         return not self == other
+
+    def _add_workaround(self, workaround):
+        self._workaround = workaround
 
 
 class TranslatedBlockType(BaseBlockType):

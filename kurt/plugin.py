@@ -322,3 +322,16 @@ def _workaround(project):
     project.stage.lists = {}
 
 del _workaround
+
+
+
+#-- Convert Blocks --#
+
+def block_workaround(bt, workaround):
+    if isinstance(workaround, kurt.Block):
+        w = workaround
+        workaround = lambda block: w.copy()
+    else:
+        assert callable(workaround)
+    bt = kurt.BlockType.get(bt)
+    bt._add_workaround(workaround)
