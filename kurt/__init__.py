@@ -199,8 +199,6 @@ class Project(object):
         self.author = u""
         """The username of the project's author, eg. ``'blob8108'``."""
 
-        self._normalize()
-
     def __repr__(self):
         return "<%s.%s()>" % (self.__class__.__module__,
                 self.__class__.__name__)
@@ -266,6 +264,40 @@ class Project(object):
         project._normalize()
 
         return project
+
+    def copy(self):
+        """Return a new Project instance, deep-copying all the attributes."""
+        p = Project()
+        p.name = self.name
+        p.path = self.path
+        p._plugin = self._plugin
+        p.stage = self.stage.copy()
+        p.stage.project = p
+
+        for sprite in self.sprites:
+            s = sprite.copy()
+            s.project = p
+            p.sprites.append(s)
+
+        for actor in self.actors:
+            if isinstance(actor, Sprite):
+                p.actors.append(p.get_sprite(actor.name))
+            else:
+                a = actor.copy()
+                if isinstance(a, Watcher):
+                    if isinstance(a.target, Stage):
+                        a.target = p.stage
+                    else:
+                        a.target = p.get_sprite(a.target.name)
+                p.actors.append(a)
+
+        p.variables = dict((n, v.copy()) for (n, v) in self.variables.items())
+        p.lists = dict((n, l.copy()) for (n, l) in self.lists.items())
+        p.thumbnail = self.thumbnail.copy() if self.thumbnail else None
+        p.tempo = self.tempo
+        p.notes = self.notes
+        p.author = self.author
+        return p
 
     def convert(self, format):
         """Convert the project in-place to a different file format.
@@ -508,6 +540,18 @@ class Scriptable(object):
         for script in self.scripts:
             script._normalize()
 
+    def copy(self, o=None):
+        """Return a new instance, deep-copying all the attributes."""
+        if o is None: o = self.__class__(self.project)
+        o.scripts = [s.copy() for s in self.scripts]
+        o.variables = dict((n, v.copy()) for (n, v) in self.variables.items())
+        o.lists = dict((n, l.copy()) for (n, l) in self.lists.items())
+        o.costumes = [c.copy() for c in self.costumes]
+        o.sounds = [s.copy() for s in self.sounds]
+        o.costume_index = self.costume_index
+        o.volume = self.volume
+        return o
+
     @property
     def costume_index(self):
         """The index of :attr:`costume` in :attr:`costumes`.
@@ -637,11 +681,21 @@ class Sprite(Scriptable, Actor):
 
         """
 
-
-
     def _normalize(self):
         Scriptable._normalize(self)
         assert self.rotation_style in ("normal", "leftRight", "none")
+
+    def copy(self):
+        """Return a new instance, deep-copying all the attributes."""
+        o = self.__class__(self.project, self.name)
+        Scriptable.copy(self, o)
+        o.direction = tuple(self.position)
+        o.direction = self.direction
+        o.rotation_style = self.rotation_style
+        o.size = self.size
+        o.is_draggable = self.is_draggable
+        o.is_visible = self.is_visible
+        return o
 
     def __repr__(self):
         return "<%s.%s(%r)>" % (self.__class__.__module__,
@@ -656,7 +710,8 @@ class Watcher(Actor):
 
     """
 
-    def __init__(self, target, block, style="normal", is_visible=True, pos=None):
+    def __init__(self, target, block, style="normal", is_visible=True,
+            pos=None):
         Actor.__init__(self)
 
         self.target = target
@@ -721,6 +776,17 @@ class Watcher(Actor):
         assert self.style in ("normal", "large", "slider")
         if self.value:
             self.value.watcher = self
+
+    def copy(self):
+        """Return a new instance with the same attributes."""
+        o = self.__class__(self.target,
+                self.block.copy(),
+                self.style,
+                self.is_visible,
+                self.pos)
+        o.slider_min = self.slider_min
+        o.slider_max = self.slider_max
+        return o
 
     @property
     def kind(self):
@@ -795,6 +861,10 @@ class Variable(object):
         self.watcher = None
         """The :class:`Watcher` instance displaying this Variable's value."""
 
+    def copy(self):
+        """Return a new instance with the same attributes."""
+        return self.__class__(self.value, self.is_cloud)
+
     def __repr__(self):
         r = "%s.%s(%r" % (self.__class__.__module__, self.__class__.__name__,
                 self.value)
@@ -834,6 +904,10 @@ class List(object):
 
     def _normalize(self):
         self.items = map(unicode, self.items)
+
+    def copy(self):
+        """Return a new instance with the same attributes."""
+        return self.__class__(self.items, self.is_cloud)
 
     def __repr__(self):
         r = "<%s.%s(%i items)>" % (self.__class__.__module__,
@@ -1515,6 +1589,17 @@ class Block(object):
         self.args = args
         self.comment = unicode(self.comment)
 
+    def copy(self):
+        """Return a new Block instance with the same attributes."""
+        args = []
+        for arg in args:
+            if isinstance(arg, Block):
+                arg = arg.copy()
+            elif isinstance(arg, list):
+                arg = [b.copy() for b in arg]
+            args.append(arg)
+        return Block(self.type, *args)
+
     def __eq__(self, other):
         return (
             isinstance(other, Block) and
@@ -1556,10 +1641,6 @@ class Block(object):
             s = s[:i] + comment + s[i:]
         return s
 
-    def copy(self):
-        """Return a new Block instance with the same attributes."""
-        return Block(self.type, *self.args)
-
 
 class Script(object):
     """A single sequence of blocks. Each :class:`Scriptable` can have many
@@ -1589,6 +1670,10 @@ class Script(object):
         self.blocks = list(self.blocks)
         for block in self.blocks:
             block._normalize()
+
+    def copy(self):
+        """Return a new instance with the same attributes."""
+        return self.__class__([b.copy() for b in self.blocks], tuple(self.pos))
 
     def __eq__(self, other):
         return (
@@ -1646,6 +1731,9 @@ class Comment(object):
 
         """
 
+    def copy(self):
+        return self.__class__(self.text, tuple(self.pos))
+
     def __repr__(self):
         r = "%s.%s(%r" % (self.__class__.__module__,
                 self.__class__.__name__, self.text)
@@ -1687,6 +1775,9 @@ class Costume(object):
         self.image = image
         """An :class:`Image` instance containing the raw image data."""
 
+    def copy(self):
+        """Return a new instance with the same attributes."""
+        return Costume(self.name, self.image, self.rotation_center)
 
     @classmethod
     def load(self, path):
@@ -1733,6 +1824,7 @@ class Costume(object):
         if name in ('width', 'height', 'size'):
             return getattr(self.image, name)
         raise AttributeError, "%r object has no attribute %r" % (self, name)
+
 
 class Image(object):
     """The contents of an image file.
