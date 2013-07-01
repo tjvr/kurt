@@ -470,6 +470,7 @@ class Scratch20Plugin(KurtPlugin):
     name = "scratch20"
     display_name = "Scratch 2.0"
     extension = ".sb2"
+    features = ["Vector Images"]
 
     def make_blocks(self):
         return make_block_types()

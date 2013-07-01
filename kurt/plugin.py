@@ -94,14 +94,11 @@ class KurtPlugin(object):
     """The extension used by this format, with leading dot.
 
     Used by :attr:`Project.load` to recognise its files.
-    """
-
-    has_stage_specific_variables = False
-    """Whether the Project can have stage-specific variables and lists, in
-    addition to global variables and lists (which are stored on the
-    :class:`Project`).
 
     """
+
+    features = []
+    """A list of the :class:`Features <Feature>` that the plugin supports."""
 
     def __init__(self):
         self.blocks = self.make_blocks()
@@ -182,6 +179,8 @@ class Kurt(object):
         * :attr:`Project.convert` is called with the format as a parameter
 
         """
+        plugin.features = map(Feature.get, plugin.features)
+
         cls.plugins[plugin.name] = plugin
 
         new_blocks = filter(None, plugin.blocks)
@@ -215,6 +214,9 @@ class Kurt(object):
         :returns: :class:`KurtPlugin`
 
         """
+        if isinstance(name, KurtPlugin):
+            return name
+
         if 'extension' in kwargs:
             kwargs['extension'] = kwargs['extension'].lower()
         if name:
@@ -258,3 +260,65 @@ class Kurt(object):
                     break
         return matches
 
+
+
+#-- Features --#
+
+class Feature(object):
+    """A format feature that a plugin supports."""
+
+    FEATURES = {}
+
+    @classmethod
+    def get(cls, name):
+        if isinstance(name, Feature):
+            return name
+        return cls.FEATURES[name]
+
+    def __init__(self, name, description):
+        self.name = name
+        self.description = description
+        Feature.FEATURES[name] = self
+
+    def __repr__(self):
+        return "<Feature(%s)>" % self.name
+
+    def __eq__(self, other):
+        if isinstance(other, basestring):
+            return self.name == other
+        return self is other
+
+    def workaround(self, project):
+        pass
+
+    def __call__(self, f):
+        self.workaround = f
+
+
+@Feature("Vector Images",
+        """Allow vector format (SVG) image files for costumes.""")
+def _workaround(project):
+    """Replace vector images with fake ones."""
+    RED = (255, 0, 0)
+    PLACEHOLDER = kurt.Image.new(RED, (32, 32))
+    for scriptable in [project.stage] + project.sprites:
+        for costume in scriptable.costumes:
+            if costume.image.format == "SVG":
+                yield "%s - %s" % (scriptable.name, costume.name)
+                costume.image = PLACEHOLDER
+
+@Feature("Stage-specific Variables",
+        """Can have stage-specific variables and lists, in addition to global
+        variables and lists (which are stored on the :class:`Project`).""")
+def _workaround(project):
+    """Make Stage-specific variables global (move them to Project)."""
+    for (name, var) in project.stage.variables.items():
+        yield "variable %s" % name
+    for (name, _list) in project.stage.lists.items():
+        yield "list %s" % name
+    project.variables.update(project.stage.variables)
+    project.lists.update(project.stage.lists)
+    project.stage.variables = {}
+    project.stage.lists = {}
+
+del _workaround

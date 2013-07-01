@@ -255,14 +255,10 @@ class Project(object):
                 raise ValueError, "Unknown format %r" % format
 
         project = plugin.load(path)
-
+        project.convert(plugin)
         project.path = path
-        project._plugin = plugin
         if not project.name:
-            project.name = name # use filename
-
-        project._normalize()
-
+            project.name = name
         return project
 
     def copy(self):
@@ -302,107 +298,91 @@ class Project(object):
     def convert(self, format):
         """Convert the project in-place to a different file format.
 
-        Returns self.
+        Returns a list of :class:`UnsupportedFeature` objects, which may give
+        warnings about the conversion.
 
         :param format: :attr:`KurtFileFormat.name` eg. ``"scratch14"``.
 
         :raises: :class:`ValueError` if the format doesn't exist.
 
         """
+        self._plugin = kurt.plugin.Kurt.get_plugin(format)
+        return list(self._normalize())
 
-        if isinstance(format, kurt.plugin.KurtPlugin):
-            plugin = format
-        else:
-            plugin = kurt.plugin.Kurt.get_plugin(name=format)
-
-        if plugin == self._plugin:
-            return # No point converting
-
-        self._normalize()
-
-        # TODO
-
-        self._plugin = plugin
-
-        return self
-
-    def save(self, path=None, guess_format=True, debug=False):
+    def save(self, path=None, debug=False):
         """Save project to file.
 
-        :param path: Path or URL. If path is not given, the original path given
-                     to :attr:`load()` is used.
+        :param path: Path or URL. If path is not given, the :attr:`path`
+                     attribute is used, usually the original path given to
+                     :attr:`load()`.
 
-                     The extension, if any, will be removed, and the extension
-                     of the current file format added.
+                     If `path` has the extension of an existing plugin, the
+                     project will be converted using :attr:`convert`.
+                     Otherwise, the extension will be replaced with the
+                     extension of the current plugin.
+
+                     (Note that log output for the conversion will be printed
+                     to stdout. If you want to deal with the output, call
+                     :attr:`convert` directly.)
 
                      If the path ends in a folder instead of a file, the
                      filename is based on the project's :attr:`name`.
 
-                     Subsequent calls to :attr:`save()` with no path parameter
-                     will save to the new path.
+        :param debug: If true, return debugging information from the format
+                      plugin instead of the path.
 
-        :param guess_format: If a `path` is given with the extension of an
-                             existing plugin, the project will be converted
-                             using :attr:`convert`. You can suppress this
-                             behaviour using `guess_format=False` :param debug:
-                             If true, return debugging information from the
-                             format plugin instead of the path.
-
-        :raises: :py:class:`ValueError` if there's no path or name, or you
-                 forgot to :attr:`convert()` before saving.
+        :raises: :py:class:`ValueError` if there's no path or name.
 
         :returns: path to the saved file.
 
         """
 
-        given_path = False
-        if path is None:
-            path = self.path
+        p = self.copy()
+        p.path = path or self.path
 
-            if path is None:
-                raise ValueError, "path is required"
-        else:
-            given_path = True
+        # require path
+        if not p.path:
+            raise ValueError, "path is required"
 
-        (folder, filename) = os.path.split(path)
+        # split path
+        (folder, filename) = os.path.split(p.path)
         (name, extension) = os.path.splitext(filename)
 
-        # convert if given path with extension
-        if given_path:
-            if extension:
-                try:
-                    plugin = kurt.plugin.Kurt.get_plugin(extension=extension)
-                except ValueError:
-                    pass
-                else:
-                    self.convert(plugin)
-
-        if self._plugin is None:
+        # get plugin from extension
+        plugin = p._plugin
+        if path:
+            try:
+                plugin = kurt.plugin.Kurt.get_plugin(extension=extension)
+            except ValueError:
+                pass
+        if not plugin:
             raise ValueError, "must convert project to a format before saving"
 
-        extension = self._plugin.extension
-
+        # build output path
+        extension = plugin.extension
         if not name:
             name = _clean_filename(self.name)
             if not name:
                 raise ValueError, "name is required"
-
         filename = name + extension
         path = os.path.join(folder, filename)
-        self.path = path
 
-        self._normalize()
-        result = self._plugin.save(path, self)
+        for m in p.convert(plugin):
+            print m
+        result = p._save(path)
+        return result if debug else path
 
-        if debug:
-            return result
-        else:
-            return path
+    def _save(self, path):
+        list(self._normalize())
+        return self._plugin.save(path, self)
 
     def _normalize(self):
-        """Convert the project to a standardised form.
+        """Convert the project to a standardised form for the current plugin.
 
-        Called after loading & before saving.
+        Called after loading, before saving, and when converting to a new
+        format.
+
+        Yields UnsupportedFeature instances.
 
         """
 
@@ -433,12 +413,50 @@ class Project(object):
         # notes - line endings
         self.notes = self.notes.replace("\r\n", "\n").replace("\r", "\n")
 
-        # global variables & lists
-        if self._plugin and not self._plugin.has_stage_specific_variables:
-            self.variables.update(self.stage.variables)
-            self.lists.update(self.stage.lists)
-            self.stage.variables = {}
-            self.stage.lists = {}
+        # convert scripts
+        def convert_block(block):
+            # convert block
+            if 'obsolete' in block.type.translate(plugin).category:
+                raise UnsupportedBlock, block.type
+
+            # convert args
+            args = []
+            for arg in block.args:
+                args.append(arg)
+            block.args = args
+
+            return block
+
+        for scriptable in [self.stage] + self.sprites:
+            for script in scriptable.scripts:
+                script.blocks = map(convert_block, script.blocks)
+
+        # workaround unsupported features
+        for feature in kurt.plugin.Feature.FEATURES.values():
+            if feature not in self._plugin.features:
+                for x in feature.workaround(self):
+                    yield UnsupportedFeature(feature, x)
+
+
+class UnsupportedFeature(object):
+    """The plugin doesn't support this Feature.
+
+    Output once by Project.convert for each occurence of the feature.
+
+    """
+    def __init__(self, feature, obj):
+        self.feature = kurt.plugin.Feature.get(feature)
+        self.obj = obj
+
+    def __repr__(self):
+        return "<%s.%s(%s)>" % (self.__class__.__module__,
+                self.__class__.__name__, unicode(self))
+
+    def __str__(self):
+        return "UnsupportedFeature: %s" % unicode(self)
+
+    def __unicode__(self):
+        return u"%r: %r" % (self.feature.name, self.obj)
 
 
 
@@ -459,6 +477,16 @@ class UnsupportedBlock(Exception):
 
     Raised by :attr:`Block.translate` when it can't find a
     :class:`TranslatedBlockType` for the given plugin.
+
+    """
+    pass
+
+
+class VectorImageError(Exception):
+    """Tried to construct a raster image from a vector format image file.
+
+    You shouldn't usally get this error, because Feature("Vector Images") will
+    give a warning instead when the Project is converted.
 
     """
     pass
@@ -533,8 +561,7 @@ class Scriptable(object):
                 self.costume = self.costumes[0]
             else:
                 BLACK = (0, 0, 0)
-                self.costume = Costume("blank", Image(PIL.Image.new("RGB",
-                    (1, 1), BLACK)))
+                self.costume = Costume("blank", Image.new((1, 1), BLACK))
 
         # scripts
         for script in self.scripts:
@@ -615,8 +642,7 @@ class Stage(Scriptable):
 
     def _normalize(self):
         if not self.costume and not self.costumes:
-            self.costume = Costume("blank", Image(PIL.Image.new("RGB",
-                self.SIZE, self.COLOR)))
+            self.costume = Costume("blank", Image.new(self.SIZE, self.COLOR))
         Scriptable._normalize(self)
 
 
@@ -1492,19 +1518,6 @@ class TranslatedBlockType(BaseBlockType):
         return not self == other
 
 
-class BlockWorkaround(object):
-    def __init__(self, workaround):
-        if isinstance(workaround, Block):
-            w = workaround
-            self.workaround = lambda block: workaround.copy()
-        else:
-            assert callable(workaround)
-            self.workaround = workaround
-
-    def run(self, block):
-        return self.workaround(block)
-
-
 class Block(object):
     """A statement in a graphical programming language. Blocks can connect
     together to form sequences of commands, which are stored in a
@@ -1871,6 +1884,8 @@ class Image(object):
     def pil_image(self):
         """A :class:`PIL.Image.Image` instance containing the image data."""
         if not self._pil_image:
+            if self._format == "SVG":
+                raise VectorImageError("can't rasterise vector images")
             self._pil_image = PIL.Image.open(StringIO(self.contents))
         return self._pil_image
 
@@ -2006,6 +2021,11 @@ class Image(object):
             image.pil_image.save(path, format)
 
         return path
+
+    @classmethod
+    def new(self, fill, size):
+        """Return a new Image instance filled with a color."""
+        return Image(PIL.Image.new("RGB", size, fill))
 
     def resize(self, size):
         """Return a new Image instance with the given size."""

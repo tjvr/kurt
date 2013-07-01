@@ -8,16 +8,15 @@
 		- visible @done
 	- comments @done
 	- costumes (loading) @done
-- svgs
+- svgs @done
 - custom blocks
 - sounds
+
 - converting
 	- scripts
 		- stop
 	- watcher blocks
 
-- don't change path on save()
-- drop guess_format?
 - are hidden watchers in actors, or not?
 - stringify() _mouse_, _myself_, _edge_
 - examples/ sb(2)
