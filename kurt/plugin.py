@@ -289,7 +289,7 @@ class Feature(object):
         return self is other
 
     def workaround(self, project):
-        pass
+        if False: yield
 
     def __call__(self, f):
         self.workaround = f
@@ -320,6 +320,9 @@ def _workaround(project):
     project.lists.update(project.stage.lists)
     project.stage.variables = {}
     project.stage.lists = {}
+
+Feature("Custom Blocks", """Blocks accept :class:`CustomBlockType` objects for
+        their :attr:`type`.""")
 
 del _workaround
 

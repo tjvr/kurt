@@ -417,14 +417,21 @@ class Project(object):
         def convert_block(block):
             # convert block
             try:
-                tbt = block.type.translate(self._plugin)
-                if 'obsolete' in tbt.category:
-                    raise BlockNotSupported("%r is obsolete in %s" %
-                            (block.type, self._plugin.display_name))
+                if isinstance(block.type, CustomBlockType):
+                    if "Custom Blocks" not in self._plugin.features:
+                        raise BlockNotSupported(
+                                "%s doesn't support custom blocks"
+                                % self._plugin.display_name)
+
+                else: # BlockType
+                    tbt = block.type.translate(self._plugin)
+                    if 'obsolete' in tbt.category:
+                        raise BlockNotSupported("%r is obsolete in %s" %
+                                (block.type, self._plugin.display_name))
             except BlockNotSupported, err:
-                err.message += "; from block %r" % block
+                err.message += ". Caused by: %r" % block
                 err.args = (err.message,)
-                if block.type._workaround:
+                if getattr(block.type, '_workaround', None):
                     block = block.type._workaround(block)
                     if not block:
                         raise
@@ -449,7 +456,7 @@ class Project(object):
 
         # workaround unsupported features
         for feature in kurt.plugin.Feature.FEATURES.values():
-            if feature not in self._plugin.features:
+            if feature not in self._plugin.features and feature.workaround:
                 for x in feature.workaround(self):
                     yield UnsupportedFeature(feature, x)
 
@@ -1075,6 +1082,7 @@ class Insert(object):
         'boolean': '<%s>',
         'stack': '\n\t%s\n',
         'inline': '%s',
+        'block': '{%s}',
     }
 
     KIND_OPTIONS = {
@@ -1484,7 +1492,7 @@ class BlockType(BaseBlockType):
           corresponding BlockType.
 
         """
-        if isinstance(block_type, BlockType):
+        if isinstance(block_type, (BlockType, CustomBlockType)):
             return block_type
 
         if isinstance(block_type, TranslatedBlockType):
@@ -1689,7 +1697,9 @@ class Block(object):
 
     def __repr__(self):
         string = "%s.%s(%s, " % (self.__class__.__module__,
-                self.__class__.__name__, repr(self.type.translate().command))
+                self.__class__.__name__,
+                repr(self.type.translate().command if isinstance(self.type,
+                    BlockType) else self.type))
         for arg in self.args:
             if isinstance(arg, Block):
                 string = string.rstrip("\n")

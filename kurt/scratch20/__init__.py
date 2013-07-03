@@ -222,7 +222,7 @@ class ZipReader(object):
 
         if command == 'call': # CustomBlockType call
             cb = self.custom_blocks[block_array.pop(0)]
-            return kurt.Block(command, cb, *block_array)
+            return kurt.Block(cb, *block_array)
         else:
             block_type = kurt.BlockType.get(command)
 
@@ -444,6 +444,10 @@ class ZipWriter(object):
         return sd
 
     def save_block(self, block):
+        if isinstance(block.type, kurt.CustomBlockType):
+            spec = make_spec(block.type.parts)
+            return ['call', spec] + block.args
+
         command = block.type.translate("scratch20").command
 
         if command == 'procDef':
@@ -451,10 +455,6 @@ class ZipWriter(object):
             spec = make_spec(cb.parts)
             input_names = [i.name for i in cb.inserts]
             return ['procDef', spec, input_names, cb.defaults, cb.is_atomic]
-        elif command == 'call':
-            cb = block.args[0]
-            spec = make_spec(cb.parts)
-            return ['call', spec] + block.args[1:]
 
         args = []
         inserts = list(block.type.inserts)
@@ -506,7 +506,10 @@ class Scratch20Plugin(KurtPlugin):
     name = "scratch20"
     display_name = "Scratch 2.0"
     extension = ".sb2"
-    features = ["Vector Images"]
+    features = [
+        "Custom Blocks",
+        "Vector Images",
+    ]
 
     def make_blocks(self):
         return make_block_types()
