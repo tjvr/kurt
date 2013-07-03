@@ -1050,7 +1050,7 @@ class Color(object):
 
 
 
-#-- Scripts --#
+#-- BlockTypes --#
 
 class Insert(object):
     """The specification for an argument to a :class:`BlockType`."""
@@ -1233,7 +1233,7 @@ class Insert(object):
             if self.shape == 'stack':
                 value = value.replace("\n", "\n\t")
 
-            return Insert.SHAPE_FMTS[self.shape] % (value,)
+            return Insert.SHAPE_FMTS.get(self.shape, '%s') % (value,)
 
     def options(self, scriptable=None):
         """Return a list of valid options to a menu insert, given a
@@ -1344,6 +1344,27 @@ class BaseBlockType(object):
         """Default values for block inserts. (See :attr:`Block.args`.)"""
         return [i.default for i in self.inserts]
 
+    @property
+    def stripped_text(self):
+        """The :attr:`text`, with spaces and inserts removed.
+
+        Used by :class:`BlockType.get` to look up blocks.
+
+        """
+        return BaseBlockType._strip_text(
+                self.text % tuple((i.default if i.shape == 'inline' else '%s')
+                                  for i in self.inserts))
+
+    @staticmethod
+    def _strip_text(text):
+        """Returns text with spaces and inserts removed."""
+        text = re.sub(r'[ ,?:]|%s', "", text.lower())
+        for chr in "-%":
+            new_text = text.replace(chr, "")
+            if new_text:
+                text = new_text
+        return text.lower()
+
     def __repr__(self):
         return "<%s.%s(%r shape=%r)>" % (self.__class__.__module__,
                 self.__class__.__name__,
@@ -1364,6 +1385,13 @@ class BaseBlockType(object):
             fmt = "{%s}"
 
         return fmt % r
+
+    def has_insert(self, shape):
+        """Returns True if any of the inserts have the given shape."""
+        for insert in self.inserts:
+            if insert.shape == shape:
+                return True
+        return False
 
 
 class BlockType(BaseBlockType):
@@ -1416,23 +1444,6 @@ class BlockType(BaseBlockType):
             if tb.command == command:
                 return True
         return False
-
-    def has_insert(self, shape):
-        """Returns True if any of the inserts have the given shape."""
-        for insert in self.inserts:
-            if insert.shape == shape:
-                return True
-        return False
-
-    @staticmethod
-    def _strip_text(text):
-        """Returns text with spaces and inserts removed."""
-        text = re.sub(r'[ ,?:]|%s', "", text.lower())
-        for chr in "-%":
-            new_text = text.replace(chr, "")
-            if new_text:
-                text = new_text
-        return text.lower()
 
     @property
     def shape(self):
@@ -1545,6 +1556,9 @@ class TranslatedBlockType(BaseBlockType):
         return not self == other
 
 
+
+#-- Scripts --#
+
 class Block(object):
     """A statement in a graphical programming language. Blocks can connect
     together to form sequences of commands, which are stored in a
@@ -1613,7 +1627,7 @@ class Block(object):
         self._normalize()
 
     def _normalize(self):
-        assert isinstance(self.type, BlockType)
+        self.type = BlockType.get(self.type)
         inserts = list(self.type.inserts)
         args = []
         for arg in self.args:

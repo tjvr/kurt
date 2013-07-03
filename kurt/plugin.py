@@ -255,7 +255,7 @@ class Kurt(object):
         matches = []
         for block in cls.blocks:
             for tb in block._translations.values():
-                if kurt.BlockType._strip_text(tb.text) == text:
+                if tb.stripped_text == text:
                     matches.append(block)
                     break
         return matches
