@@ -419,11 +419,11 @@ class Project(object):
             try:
                 tbt = block.type.translate(self._plugin)
                 if 'obsolete' in tbt.category:
-                    raise UnsupportedBlock("%r is obsolete in %s" %
+                    raise BlockNotSupported("%r is obsolete in %s" %
                             (block.type, self._plugin.display_name))
-            except UnsupportedBlock, ub:
-                ub.message += "; from block %r" % block
-                ub.args = (ub.message,)
+            except BlockNotSupported, err:
+                err.message += "; from block %r" % block
+                err.args = (err.message,)
                 if block.type._workaround:
                     block = block.type._workaround(block)
                     if not block:
@@ -487,8 +487,14 @@ class UnknownFormat(Exception):
     """
     pass
 
+class UnknownBlock(Exception):
+    """A :class:`Block` with the given command or type cannot be found.
 
-class UnsupportedBlock(Exception):
+    Raised by :attr:`BlockType.get`.
+
+    """
+
+class BlockNotSupported(Exception):
     """The plugin doesn't support this Block.
 
     Raised by :attr:`Block.translate` when it can't find a
@@ -1399,7 +1405,7 @@ class BlockType(BaseBlockType):
             if plugin.name in self._translations:
                 return self._translations[plugin.name]
             else:
-                raise UnsupportedBlock("%s doesn't have %r" %
+                raise BlockNotSupported("%s doesn't have %r" %
                         (plugin.display_name, self))
         else:
             return self._translations.values()[0]
@@ -1469,7 +1475,7 @@ class BlockType(BaseBlockType):
         elif blocks:
             return blocks[0]
 
-        raise ValueError, "unknown block type %r" % block_type
+        raise UnknownBlock, repr(block_type)
 
     def __eq__(self, other):
         if isinstance(other, BlockType):
