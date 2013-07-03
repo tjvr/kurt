@@ -1241,7 +1241,7 @@ class Insert(object):
         return not self == other
 
     def stringify(self, value=None):
-        if value is None:
+        if value is None or (value is False and self.shape == "boolean"):
             value = self.default
             if value is None:
                 value = ""
