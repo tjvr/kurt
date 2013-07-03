@@ -300,7 +300,7 @@ class Feature(object):
 def _workaround(project):
     """Replace vector images with fake ones."""
     RED = (255, 0, 0)
-    PLACEHOLDER = kurt.Image.new(RED, (32, 32))
+    PLACEHOLDER = kurt.Image.new((32, 32), RED)
     for scriptable in [project.stage] + project.sprites:
         for costume in scriptable.costumes:
             if costume.image.format == "SVG":

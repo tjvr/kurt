@@ -12,7 +12,6 @@ import sys
 import os
 
 import midiparse as midi
-import PIL
 
 # try and find kurt directory
 path_to_file = os.path.join(os.getcwd(), __file__)
@@ -52,7 +51,6 @@ else:
 
     p = kurt.Project()
     sprite = kurt.Sprite(p, "midi")
-    sprite.costume = kurt.Costume("b", kurt.Image(PIL.Image.new("RGB", (1, 1))))
 
     p.sprites.append(sprite)
 
