@@ -546,6 +546,9 @@ class Scriptable(object):
 
         """
 
+        self.custom_blocks = {}
+        """Scripts for custom blocks, indexed by :class:`CustomBlockType`."""
+
         self.variables = {}
         """:class:`dict` of :class:`Variables <Variable>` by name."""
 
@@ -1105,7 +1108,7 @@ class Insert(object):
         'videoState': ['off', 'on', 'on-flipped'],
     }
 
-    def __init__(self, shape, kind=None, default=None):
+    def __init__(self, shape, kind=None, default=None, name=None):
         self.shape = shape
         """What kind of values this argument accepts.
 
@@ -1145,6 +1148,9 @@ class Insert(object):
 
         ``'inline'``
             Not actually an insert -- used for variable and list reporters.
+
+        ``'block'``
+            Used for the "define ..." hat block.
 
         """
 
@@ -1196,6 +1202,13 @@ class Insert(object):
         self.default = default
         """The default value for the insert."""
 
+        self.name = name
+        """The name of the parameter to a :class:`CustomBlockType`.
+
+        Not used for :class:`BlockTypes <BlockType>`.
+
+        """
+
     def __repr__(self):
         r = "%s.%s(%r" % (self.__class__.__module__,
                 self.__class__.__name__, self.shape)
@@ -1203,6 +1216,8 @@ class Insert(object):
             r += ", %r" % self.kind
         if self.default != Insert.SHAPE_DEFAULTS.get(self.shape, None):
             r += ", default=%r" % self.default
+        if self.name:
+            r += ", name=%r" % self.name
         r += ")"
         return r
 
@@ -1554,6 +1569,14 @@ class TranslatedBlockType(BaseBlockType):
 
     def __ne__(self, other):
         return not self == other
+
+
+class CustomBlockType(BaseBlockType):
+    def __init__(self, shape, parts):
+        BaseBlockType.__init__(self, shape, parts)
+
+        self.is_atomic = False
+        """True if the block should run without screen refresh."""
 
 
 

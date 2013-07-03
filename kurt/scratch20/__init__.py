@@ -27,7 +27,7 @@ import struct
 import kurt
 from kurt.plugin import Kurt, KurtPlugin
 
-from kurt.scratch20.blocks import make_block_types
+from kurt.scratch20.blocks import make_block_types, custom_block, make_spec
 
 
 SOUND_FORMATS = ['.wav']
@@ -71,6 +71,7 @@ class ZipReader(object):
         self.project = kurt.Project()
         self.list_watchers = []
         self.loaded_images = {}
+        self.custom_blocks = {}
 
         # files
         self.image_filenames = {}
@@ -153,10 +154,21 @@ class ZipReader(object):
                 kurt.Block("contentsOfList:", name), is_visible=ld['visible'],
                 pos=(ld['x'], ld['y'])))
 
-        # scripts
+        # custom blocks first
         for script_array in sd.get("scripts", []):
-            scriptable.scripts.append(self.load_script(script_array))
+            if script_array[2] and script_array[2][0] == 'procDef':
+                script_array = self.load_script(script_array)
+            scriptable.scripts.append(script_array)
 
+        # scripts
+        scripts = []
+        for script in scriptable.scripts:
+            if not isinstance(script, kurt.Script):
+                script = self.load_script(script)
+            scripts.append(script)
+        scriptable.scripts = scripts
+
+        # comments
         blocks_by_id = []
         for script in scriptable.scripts:
             for block in list(get_blocks_by_id(script)):
@@ -200,7 +212,19 @@ class ZipReader(object):
     def load_block(self, block_array):
         block_array = list(block_array)
         command = block_array.pop(0)
-        block_type = kurt.BlockType.get(command)
+
+        if command == 'procDef': # CustomBlockType definition
+            (spec, input_names, defaults, is_atomic) = block_array
+            cb = custom_block(spec, input_names, defaults)
+            cb.is_atomic = is_atomic
+            self.custom_blocks[spec] = cb
+            return kurt.Block(command, cb)
+
+        if command == 'call': # CustomBlockType call
+            cb = self.custom_blocks[block_array.pop(0)]
+            return kurt.Block(command, cb, *block_array)
+        else:
+            block_type = kurt.BlockType.get(command)
 
         inserts = list(block_type.inserts)
         args = []
@@ -421,6 +445,17 @@ class ZipWriter(object):
 
     def save_block(self, block):
         command = block.type.translate("scratch20").command
+
+        if command == 'procDef':
+            cb = block.args[0]
+            spec = make_spec(cb.parts)
+            input_names = [i.name for i in cb.inserts]
+            return ['procDef', spec, input_names, cb.defaults, cb.is_atomic]
+        elif command == 'call':
+            cb = block.args[0]
+            spec = make_spec(cb.parts)
+            return ['call', spec] + block.args[1:]
+
         args = []
         inserts = list(block.type.inserts)
         for arg in block.args:

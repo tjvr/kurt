@@ -68,27 +68,41 @@ INSERT_SHAPES = {
 
     # special
     '%x': 'inline',
+    '%Z': 'block',
 }
-
+SHAPE_INSERTS = dict(map(reversed, INSERT_SHAPES.items()))
 
 INSERT_RE = re.compile(r'(%.(?:\.[A-z]+)?)')
 
 
+def parse_spec(spec, defaults):
+    for part in filter(None, INSERT_RE.split(spec)):
+        if INSERT_RE.match(part):
+            default = defaults.pop(0) if defaults else None
+            part = kurt.Insert(INSERT_SHAPES[part[:2]], part[3:] or None,
+                    default=default)
+        yield part
+
+def make_spec(parts):
+    spec = ""
+    for part in parts:
+        if isinstance(part, kurt.Insert):
+            insert = part
+            part = SHAPE_INSERTS[insert.shape]
+            if insert.kind:
+                part += "." + insert.kind
+        spec += part
+    return spec
+
 def blockify(blockspec):
     if len(blockspec) > 1:
-        (text, flag, category_id, command) = blockspec[:4]
+        (spec, flag, category_id, command) = blockspec[:4]
         defaults = blockspec[4:]
 
         shape = SHAPE_FLAGS[flag]
         category = CATEGORY_IDS[category_id]
 
-        parts = []
-        for part in filter(None, INSERT_RE.split(text)):
-            if INSERT_RE.match(part):
-                default = defaults.pop(0) if defaults else None
-                part = kurt.Insert(INSERT_SHAPES[part[:2]], part[3:] or None,
-                        default=default)
-            parts.append(part)
+        parts = list(parse_spec(spec, defaults))
 
         if "c" in flag:
             parts += [kurt.Insert("stack")]
@@ -100,26 +114,34 @@ def blockify(blockspec):
     else:
         return None
 
-
 def make_block_types():
     global commands
 
     # Add extras
-    for spec in extras:
-        if len(spec) > 1:
-            (flag, text, command) = spec[:3]
-            commands.append([text, flag, 20, command] + spec[3:])
+    for block in extras:
+        if len(block) > 1:
+            (flag, spec, command) = block[:3]
+            commands.append([spec, flag, 20, command] + block[3:])
         else:
-            commands.append(spec)
+            commands.append(block)
 
     # Add not-actually-blocks
     commands += [
         ['%x.var', 'r', 9, 'readVariable', 'var'],
         ['%x.list', 'r', 12, "contentsOfList:", 'list'],
-        ['%x', 'r', 10, "getParam"],
+        ['%x', 'r', 10, 'getParam', 'param'],
+        ['define %Z', 'h', 10, 'procDef'],
+        ['%Z', ' ', 10, 'call'],
     ]
 
     # Blockify
     return map(blockify, commands)
 
+def custom_block(spec, input_names, defaults):
+    input_names = list(input_names)
+    parts = list(parse_spec(spec, defaults))
+    for part in parts:
+        if isinstance(part, kurt.Insert):
+            part.name = input_names.pop(0)
+    return kurt.CustomBlockType("stack", parts)
 
