@@ -2129,9 +2129,8 @@ class Image(object):
 #-- Import submodules --#
 
 import kurt.plugin
+import kurt.text
 
 import kurt.scratch20
 import kurt.scratch14
-
-import kurt.text
 
