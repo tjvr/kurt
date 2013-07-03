@@ -1442,8 +1442,8 @@ class BlockType(BaseBlockType):
         assert len(self.inserts) == len(tb.inserts)
         assert [i.shape for i in self.inserts] == [i.shape for i in tb.inserts]
         assert [i.kind for i in self.inserts] == [i.kind for i in tb.inserts]
-        if tb._plugin not in self._translations:
-            self._translations[tb._plugin] = tb
+        if tb.plugin not in self._translations:
+            self._translations[tb.plugin] = tb
 
     def translate(self, plugin=None):
         """Return a :class:`TranslatedBlockType` for the given plugin name.
@@ -1503,11 +1503,15 @@ class BlockType(BaseBlockType):
             return block
 
         blocks = kurt.plugin.Kurt.blocks_by_text(block_type)
-        if len(blocks) > 1:
-            raise ValueError("ambigious block text %r, use one of %r instead" %
-                    (block_type, [b.translate().command for b in blocks]))
-        elif blocks:
+        for block in blocks: # check the blocks' commands map to unique blocks
+            if kurt.plugin.Kurt.block_by_command(
+                    block.translate().command) != blocks[0]:
+                raise ValueError(
+                        "ambigious block text %r, use one of %r instead" %
+                        (block_type, [b.translate().command for b in blocks]))
+        else:
             return blocks[0]
+        return blocks[0]
 
         raise UnknownBlock, repr(block_type)
 
@@ -1539,7 +1543,7 @@ class TranslatedBlockType(BaseBlockType):
     def __init__(self, plugin, category, shape, command, parts, match=None):
         BaseBlockType.__init__(self, shape, parts)
 
-        self._plugin = plugin
+        self.plugin = plugin
         """The format plugin the block belongs to."""
 
         self.command = command

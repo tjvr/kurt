@@ -14,9 +14,8 @@
 		- stop @done
 		- forever if @done
 - custom blocks @done
+- check for blocktypes with an obsolete or only one translation @done
 - sounds
-
-- check for blocktypes with an obsolete or only one translation
 
 - are hidden watchers in actors, or not?
 - stringify() _mouse_, _myself_, _edge_

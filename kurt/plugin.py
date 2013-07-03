@@ -185,10 +185,10 @@ class Kurt(object):
 
         new_blocks = filter(None, plugin.blocks)
         for tb in new_blocks:
-            for other in cls.blocks:
-                if (other.has_command(tb.command) or
-                        other.has_command(tb._match)):
-                    other._add_translation(tb)
+            for bt in cls.blocks:
+                if (bt.has_command(tb.command) or
+                        bt.has_command(tb._match)):
+                    bt._add_translation(tb)
                     break
             else:
                 if tb._match:
