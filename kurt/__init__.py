@@ -53,6 +53,7 @@ Media files use the following classes:
 * :class:`Costume`
 * :class:`Image`
 * :class:`Sound`
+* :class:`Waveform`
 
 File Formats
 ------------
@@ -1887,7 +1888,7 @@ class Costume(object):
         """Save the costume to an image file at the given path.
 
         Uses :attr:`Image.save`, but if the path ends in a folder instead of a
-        file, the filename is based on the project's :attr:`name`.
+        file, the filename is based on the costume's :attr:`name`.
 
         The image format is guessed from the extension. If path has no
         extension, the image's :attr:`format` is used.
@@ -1899,7 +1900,6 @@ class Costume(object):
         if not filename:
             filename = _clean_filename(self.name)
             path = os.path.join(folder, filename)
-
         return self.image.save(path)
 
     def resize(self, size):
@@ -1934,10 +1934,10 @@ class Image(object):
 
         Image.load("path/to/image.jpg")
 
-    Images should be considered to be immutable. If you want to modify an
-    image, get a :class:`PIL.Image.Image` instance from :attr:`pil_image`,
-    modify that, and use it to construct a new Image. Modifying images in-place
-    may break things.
+    Images are immutable. If you want to modify an image, get a
+    :class:`PIL.Image.Image` instance from :attr:`pil_image`, modify that, and
+    use it to construct a new Image. Modifying images in-place may break
+    things.
 
     The reason for having multiple constructors is so that kurt can implement
     lazy loading of image data -- in many cases, a PIL image will never need to
@@ -2127,6 +2127,127 @@ class Image(object):
             if extension == "jpeg":
                 extension = "jpg"
             return "." + extension
+
+
+
+#-- Sounds --#
+
+class Sound(object):
+    """A sound a :class:`Scriptable` can play.
+
+    The raw sound data is stored in :attr:`waveform`.
+
+    """
+
+    def __init__(self, name, waveform):
+        self.name = name
+        """Name used by scripts to refer to this Sound."""
+
+        self.waveform = waveform
+        """A :class:`Waveform` instance containing the raw sound data."""
+
+    def copy(self):
+        """Return a new instance with the same attributes."""
+        return Sound(self.name, self.waveform)
+
+    @classmethod
+    def load(self, path):
+        """Load sound from wave file.
+
+        Uses :attr:`Waveform.load`, but will set the Waveform's name based on
+        the sound filename.
+
+        """
+        (folder, filename) = os.path.split(path)
+        (name, extension) = os.path.splitext(filename)
+        return Sound(name, Waveform.load(path))
+
+    def save(self, path):
+        """Save the sound to a wave file at the given path.
+
+        Uses :attr:`Waveform.save`, but if the path ends in a folder instead of
+        a file, the filename is based on the project's :attr:`name`.
+
+        :returns: Path to the saved file.
+
+        """
+        (folder, filename) = os.path.split(path)
+        if not filename:
+            filename = _clean_filename(self.name)
+            path = os.path.join(folder, filename)
+        return self.waveform.save(path)
+
+    def __repr__(self):
+        return "<%s.%s name=%r at 0x%X>" % (self.__class__.__module__,
+                self.__class__.__name__, self.name, id(self))
+
+
+class Waveform(object):
+    """The contents of a wave file. Only WAV format files are supported.
+
+    Constructing from raw file contents::
+
+        Sound(file_contents)
+
+    Loading from file path::
+
+        Sound.load("path/to/sound.wav")
+
+    Waveforms are immutable.
+
+    """
+
+    extension = ".wav"
+
+    def __init__(self, contents):
+        self._path = None
+        self._contents = contents
+
+    # Properties
+
+    @property
+    def contents(self):
+        """The raw file contents as a string."""
+        if not self._contents:
+            if self._path:
+                # Read file into memory so we don't run out of file descriptors
+                f = open(self._path, "rb")
+                self._contents = f.read()
+                f.close()
+        return self._contents
+
+    # Methods
+
+    @classmethod
+    def load(cls, path):
+        """Load Waveform from file."""
+        assert os.path.exists(path), "No such file: %r" % path
+
+        (folder, filename) = os.path.split(path)
+        (name, extension) = os.path.splitext(filename)
+
+        wave = Waveform(None)
+        wave._path = path
+        return wave
+
+    def save(self, path):
+        """Save waveform to file path as a WAV file.
+
+        :returns: Path to the saved file.
+
+        """
+        (folder, filename) = os.path.split(path)
+        (name, extension) = os.path.splitext(filename)
+
+        if not name:
+            raise ValueError, "name is required"
+
+        path = os.path.join(folder, name + self.extension)
+        f = open(path, "wb")
+        f.write(self.contents)
+        f.close()
+
+        return path
 
 
 

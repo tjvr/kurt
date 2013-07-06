@@ -16,6 +16,7 @@
 - custom blocks @done
 - check for blocktypes with an obsolete or only one translation @done
 - sounds
+- images with text
 
 - are hidden watchers in actors, or not?
 - stringify() _mouse_, _myself_, _edge_
