@@ -88,6 +88,7 @@ except ImportError:
     from StringIO import StringIO
 
 import PIL.Image
+import wave
 
 
 
@@ -2201,9 +2202,12 @@ class Waveform(object):
 
     extension = ".wav"
 
-    def __init__(self, contents):
+    def __init__(self, contents, rate=None, sample_count=None):
         self._path = None
         self._contents = contents
+
+        self._rate = rate
+        self._sample_count = sample_count
 
     # Properties
 
@@ -2217,6 +2221,28 @@ class Waveform(object):
                 self._contents = f.read()
                 f.close()
         return self._contents
+
+    @property
+    def _wave(self):
+        """Return a wave.Wave_read instance from the ``wave`` module."""
+        return wave.open(StringIO(self.contents))
+
+    @property
+    def rate(self):
+        """The sampling rate of the sound."""
+        if self._rate:
+            return self._rate
+        else:
+            return wave.open(StringIO(self.contents)).getframerate()
+
+    @property
+    def sample_count(self):
+        """The number of samples in the sound."""
+        if self._sample_count:
+            return self._sample_count
+        else:
+            return wave.open(StringIO(self.contents)).getnframes()
+
 
     # Methods
 

@@ -71,16 +71,18 @@ class ZipReader(object):
         self.project = kurt.Project()
         self.list_watchers = []
         self.loaded_images = {}
+        self.loaded_sounds = {}
         self.custom_blocks = {}
 
         # files
         self.image_filenames = {}
+        self.sound_filenames = {}
         for filename in self.zip_file.namelist():
             if filename == 'project.json':
                 continue
             (name, extension) = os.path.splitext(filename)
             if extension in SOUND_FORMATS:
-                pass # TODO: sounds
+                self.sound_filenames[int(name)] = filename
             else:
                 self.image_filenames[int(name)] = filename
 
@@ -119,6 +121,14 @@ class ZipReader(object):
             self.loaded_images[file_id] = kurt.Image(contents, _format)
         return self.loaded_images[file_id]
 
+    def read_waveform(self, file_id, rate, sample_count):
+        if file_id not in self.loaded_sounds:
+            filename = self.sound_filenames[file_id]
+            contents = self.zip_file.open(filename).read()
+            self.loaded_sounds[file_id] = kurt.Waveform(contents, rate,
+                    sample_count)
+        return self.loaded_sounds[file_id]
+
     def finish(self):
         self.zip_file.close()
 
@@ -133,10 +143,29 @@ class ZipReader(object):
 
         # costumes
         for cd in sd.get("costumes", []):
-            scriptable.costumes.append(kurt.Costume(
-                cd['costumeName'],
-                self.read_image(cd['baseLayerID']),
-                (cd['rotationCenterX'], cd['rotationCenterY']),
+            image = self.read_image(cd['baseLayerID'])
+            rotation_center = (cd['rotationCenterX'], cd['rotationCenterY'])
+
+            if cd['bitmapResolution'] != 1:
+                (w, h) = image.size
+                w /= cd['bitmapResolution']
+                h /= cd['bitmapResolution']
+                image = image.resize((w, h))
+
+                (x, y) = rotation_center
+                x /= cd['bitmapResolution']
+                y /= cd['bitmapResolution']
+                rotation_center = (x, y)
+
+            scriptable.costumes.append(kurt.Costume(cd['costumeName'], image,
+                rotation_center))
+
+        # sounds
+        for snd in sd.get("sounds", []):
+            scriptable.sounds.append(kurt.Sound(
+                snd['soundName'],
+                self.read_waveform(snd['soundID'], snd['rate'],
+                    snd['sampleCount'])
             ))
 
         # vars & lists
@@ -265,6 +294,7 @@ class ZipWriter(object):
     def __init__(self, path, project):
         self.zip_file = zipfile.ZipFile(path, "w")
         self.image_dicts = {}
+        self.waveform_dicts = {}
 
         self.json = {
             "penLayerMD5": "279467d0d49e152706ed66539b577c00.png",
@@ -327,6 +357,22 @@ class ZipWriter(object):
             }
         return self.image_dicts[image]
 
+    def write_waveform(self, waveform):
+        if waveform not in self.waveform_dicts:
+            waveform_id = len(self.waveform_dicts)
+            filename = str(waveform_id) + waveform.extension
+            self.write_file(filename, waveform.contents)
+
+            self.waveform_dicts[waveform] = {
+                "soundID": waveform_id, # -1 for download
+                "md5": hashlib.md5(waveform.contents).hexdigest() + \
+                        waveform.extension,
+                "rate": waveform.rate,
+                "sampleCount": waveform.sample_count,
+                "format": "",
+            }
+        return self.waveform_dicts[waveform]
+
     def save_watcher(self, watcher):
         if watcher.kind == 'list':
             return
@@ -369,7 +415,7 @@ class ZipWriter(object):
                 scriptable.scripts]),
             "scriptComments": [],
             "costumes": [self.save_costume(c) for c in scriptable.costumes],
-            "sounds": [],
+            "sounds": [self.save_sound(c) for c in scriptable.sounds],
             "variables": [],
             "lists": [],
         }
@@ -493,6 +539,13 @@ class ZipWriter(object):
             "rotationCenterY": ry,
         })
         return cd
+
+    def save_sound(self, sound):
+        snd = self.write_waveform(sound.waveform)
+        snd.update({
+            "soundName": sound.name,
+        })
+        return snd
 
     def save_color(self, color):
         # build RGB values
