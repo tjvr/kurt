@@ -283,7 +283,9 @@ class Project(object):
             else:
                 a = actor.copy()
                 if isinstance(a, Watcher):
-                    if isinstance(a.target, Stage):
+                    if isinstance(a.target, Project):
+                        a.target = p
+                    elif isinstance(a.target, Stage):
                         a.target = p.stage
                     else:
                         a.target = p.get_sprite(a.target.name)
