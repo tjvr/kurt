@@ -19,8 +19,8 @@
 - images with text @done
 - examples/ sb(2) @done
 - make_blocks() shouldn't be a method @done
-- are hidden watchers in actors, or not?
-- stringify() _mouse_, _myself_, _edge_
+- change _mouse_, _myself_, _edge_ @done
+- sort scripts correctly
 
 decide:
 	- Script.pos vs Sprite.position
@@ -32,7 +32,6 @@ optimise scratch14:
 	- clean up
 features:
 	- stacking order of actors
-	- sounds
 	- cleanup scratch 2 scripts
 	- fix compiler/decompiler
 	- URL regexes?

@@ -268,10 +268,17 @@ class ZipReader(object):
                 else: # Block
                     arg = self.load_block(arg)
             elif insert:
-                if insert.kind == 'spriteOrStage' and arg == '_stage_':
-                    arg = 'Stage'
-                elif insert.shape == 'color':
+                if insert.shape == 'color':
                     arg = self.load_color(arg)
+                elif insert.kind == 'spriteOrStage' and arg == '_stage_':
+                    arg = 'Stage'
+                elif (insert.kind in ('spriteOrMouse', 'touching')
+                        and arg == '_mouse_'):
+                    arg = 'mouse-pointer'
+                elif insert.kind == 'touching' and arg == '_edge_':
+                    arg = 'edge'
+                elif insert.kind == 'spriteOnly' and arg == '_myself_':
+                    arg = 'myself'
             args.append(arg)
 
         return kurt.Block(block_type, *args)
@@ -519,6 +526,13 @@ class ZipWriter(object):
                 if insert.kind == 'spriteOrStage':
                     if arg == 'Stage':
                         arg = '_stage_'
+                elif (insert.kind in ('spriteOrMouse', 'touching')
+                        and arg == 'mouse-pointer'):
+                    arg = '_mouse_'
+                elif insert.kind == 'touching' and arg == 'edge':
+                    arg = '_edge_'
+                elif insert.kind == 'spriteOnly' and arg == 'myself':
+                    arg = '_myself_'
             args.append(arg)
         return [command] + args
 

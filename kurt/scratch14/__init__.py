@@ -144,8 +144,10 @@ def load_block(block_array):
         elif isinstance(arg, Color):
             arg = kurt.Color(arg.to_8bit())
         elif isinstance(arg, Symbol):
-            if arg.value in ('mouse', 'edge'):
-                arg = '_%s_' % arg.value
+            if arg.value == 'mouse':
+                arg = 'mouse-pointer'
+            elif arg.value == 'edge':
+                arg = 'edge'
             elif arg.value in ('all', 'last', 'any'):
                 arg = 'random' if arg.value == 'any' else arg.value
             else:
@@ -193,8 +195,10 @@ def save_block(kurt_block, v14_project):
                 arg = str(arg) # Won't accept unicode
 
             elif insert.kind in ('spriteOrMouse', 'spriteOrStage', 'touching'):
-                if arg in ('_mouse_', '_edge_'):
-                    arg = Symbol(arg.strip("_"))
+                if arg == 'mouse-pointer':
+                    arg = Symbol('mouse')
+                elif arg == 'edge':
+                    arg = Symbol('edge')
                 elif arg == "Stage":
                     arg = v14_project.stage
                 else:
@@ -561,6 +565,7 @@ class Scratch14Plugin(KurtPlugin):
                 v14_watcher.readout.target = v14_morph
                 v14_watcher.owner = v14_project.stage
 
+                selector = kurt_watcher.block.type.translate('scratch14').command
                 command = 'getVar:' if selector == 'readVariable' else selector
                 v14_watcher.readout.getSelector = Symbol(command)
 
