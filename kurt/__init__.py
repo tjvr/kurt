@@ -1517,9 +1517,9 @@ class BlockType(BaseBlockType):
                 raise ValueError(
                         "ambigious block text %r, use one of %r instead" %
                         (block_type, [b.translate().command for b in blocks]))
-        else:
+
+        if blocks:
             return blocks[0]
-        return blocks[0]
 
         raise UnknownBlock, repr(block_type)
 

@@ -18,12 +18,12 @@
 - sounds @done
 - images with text @done
 - examples/ sb(2) @done
+- make_blocks() shouldn't be a method @done
 - are hidden watchers in actors, or not?
 - stringify() _mouse_, _myself_, _edge_
 
 decide:
 	- Script.pos vs Sprite.position
-	- must make_blocks() be a method?
 optimise scratch14:
 	- don't convert images to pil
 	- optimise image loading

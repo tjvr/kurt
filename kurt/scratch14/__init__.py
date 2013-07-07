@@ -430,9 +430,8 @@ class Scratch14Plugin(KurtPlugin):
     name = "scratch14"
     display_name = "Scratch 1.4"
     extension = ".sb"
-
-    def make_blocks(self):
-        return block_list
+    blocks = block_list
+    features = []
 
     def load(self, path):
         v14_project = ScratchProjectFile(path)

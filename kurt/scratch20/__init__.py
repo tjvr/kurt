@@ -566,9 +566,7 @@ class Scratch20Plugin(KurtPlugin):
         "Custom Blocks",
         "Vector Images",
     ]
-
-    def make_blocks(self):
-        return make_block_types()
+    blocks = make_block_types()
 
     def load(self, path):
         zl = ZipReader(path)
