@@ -603,6 +603,12 @@ class Scriptable(object):
         for script in self.scripts:
             script._normalize()
 
+        # sort scripts by y position
+        have_position = [s for s in self.scripts if s.pos]
+        no_position = [s for s in self.scripts if not s.pos]
+        have_position.sort(key=lambda s: (s.pos[1], s.pos[0]))
+        self.scripts = have_position + no_position
+
     def copy(self, o=None):
         """Return a new instance, deep-copying all the attributes."""
         if o is None: o = self.__class__(self.project)
