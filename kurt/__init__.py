@@ -1218,10 +1218,9 @@ class Insert(object):
 
         """
 
-        if default is None:
-            default = Insert.SHAPE_DEFAULTS.get(shape, None)
-            if callable(default):
-                default = default()
+        default = default or Insert.SHAPE_DEFAULTS.get(shape, None)
+        if callable(default):
+            default = default()
         self.default = default
         """The default value for the insert."""
 
