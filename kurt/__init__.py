@@ -97,7 +97,7 @@ import wave
 def _clean_filename(name):
     """Strip non-alphanumeric characters to makes name safe to be used as
     filename."""
-    return re.sub("[^\w ]", "", name)
+    return re.sub("[^\w .]", "", name)
 
 
 
