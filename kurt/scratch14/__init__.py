@@ -18,8 +18,10 @@
 """A Kurt plugin for Scratch 1.4."""
 
 import re
+import wave
 
 import kurt
+from kurt import StringIO
 from kurt.plugin import Kurt, KurtPlugin, block_workaround
 
 from kurt.scratch14.objtable import *
@@ -71,7 +73,20 @@ def save_image(kurt_costume):
         return Image.from_image(kurt_costume.name, kurt_costume.image.pil_image)
 
 def load_sound(v14_sound):
-    pass
+    contents = StringIO()
+    f = wave.open(contents, 'w')
+    f.setnframes(v14_sound.originalSound.samplesSize)
+    f.setframerate(v14_sound.originalSound.originalSamplingRate)
+    f.setnchannels(1)
+    f.setsampwidth(2) # bytes?
+    samples = v14_sound.originalSound.samples.value
+    frames = ""
+    for i in range(0, len(samples), 2):
+        a = samples[i:i+1]
+        b = samples[i+1:i+2]
+        f.writeframes(b + a)
+    f.close()
+    return kurt.Sound(v14_sound.name, kurt.Waveform(contents.getvalue()))
 
 def save_sound(kurt_sound):
     pass
@@ -301,7 +316,7 @@ def load_scriptable(kurt_scriptable, v14_scriptable):
     kurt_scriptable.variables = dict(map(load_variable,
             v14_scriptable.variables.items()))
     kurt_scriptable.costumes = map(load_image, v14_scriptable.images)
-    # kurt_scriptable.sounds = dict(map(load_sound, v14_scriptable.sounds) # TODO
+    kurt_scriptable.sounds = map(load_sound, v14_scriptable.sounds)
 
     # costume
     costume_index = v14_scriptable.images.index(v14_scriptable.costume)

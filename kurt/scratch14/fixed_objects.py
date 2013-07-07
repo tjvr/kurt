@@ -165,12 +165,23 @@ class ByteArray(FixedObjectByteArray):
         return '<%s(%i bytes)>' % (self.__class__.__name__, len(self.value))
 
 
-class SoundBuffer(FixedObjectByteArray, FixedObjectWithRepeater):
+class SoundBuffer(FixedObjectByteArray):
     classID = 12
     _construct = Struct("",
         UBInt32("length"),
-        MetaRepeater(lambda ctx: ctx.length, UBInt16("items")),
+        construct.String("items", lambda ctx: ctx.length * 2),
     )
+
+    @classmethod
+    def from_value(cls, obj):
+        return cls(obj.items)
+
+    def to_value(self):
+        value = self.value
+        length = (len(value) + 3) / 2
+        value += "\x00" *  (length * 2  -  len(value)) # padding
+        return Container(items = value, length = length)
+
 
 # Bitmap 13 - found later in file
 
@@ -468,7 +479,7 @@ def get_run_length(ctx):
     except AttributeError:
         return ctx._.run_length
 
-class Bitmap(FixedObjectByteArray, FixedObjectWithRepeater):
+class Bitmap(FixedObjectByteArray):
     classID = 13
     _construct = Struct("",
         UBInt32("length"),
