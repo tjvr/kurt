@@ -68,9 +68,10 @@ def save_image(kurt_costume):
             )
             v14_image.size = kurt_costume.image.size
             v14_image.rotationCenter = Point(kurt_costume.rotation_center)
-            return v14_image
-
-        return Image.from_image(kurt_costume.name, kurt_costume.image.pil_image)
+        else:
+            v14_image = Image.from_image(kurt_costume.name, kurt_costume.image.pil_image)
+        v14_image.rotationCenter = Point(kurt_costume.rotation_center)
+        return v14_image
 
 def swap_byte_pairs(data):
     swapped_bytes = ""
