@@ -17,10 +17,9 @@
 - check for blocktypes with an obsolete or only one translation @done
 - sounds @done
 - images with text @done
-
+- examples/ sb(2) @done
 - are hidden watchers in actors, or not?
 - stringify() _mouse_, _myself_, _edge_
-- examples/ sb(2)
 
 decide:
 	- Script.pos vs Sprite.position

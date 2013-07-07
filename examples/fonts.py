@@ -43,7 +43,6 @@ FONT_PATHS = [
     # Add the full path to your font files here, for example:
     "/Library/Fonts/Museo500-Regular.otf",
 
-    # Will make a sprite for each font
 ]
 
 # The list of characters

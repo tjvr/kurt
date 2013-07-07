@@ -2,7 +2,7 @@
 """Load images into a new Scratch project.
 
 Usage:
-    images.py "path/to/images/*.jpg" myproject.sb2
+    images.py "path/to/images/*.jpg" myproject.sb[2]
 
 Example kurt script."""
 
@@ -41,10 +41,11 @@ else:
 
     image_paths = glob.glob(image_pathname)
 
+    #image_paths = list(every_other(image_paths))
+
     sort_nicely(image_paths)
 
     p = kurt.Project()
-
     sprite = kurt.Sprite(p, "frames")
     p.sprites.append(sprite)
 
@@ -52,10 +53,15 @@ else:
         costume = kurt.Costume.load(image_path)
         sprite.costumes.append(costume)
 
-    print "%i costumes" % len(sprite.costumes)
+    sprite.parse("""
+    when green flag clicked
+    forever
+        next costume
+    end
+    """)
 
+    print "%i costumes" % len(sprite.costumes)
     print "Saving"
-    p.convert("scratch14")
     out_path = p.save(project_path)
     print "Output: %r" % out_path
 

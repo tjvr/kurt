@@ -114,7 +114,6 @@ else:
 
     # Save
     print "Saving"
-    p.convert("scratch20")
     p.save(project_path)
 
 
