@@ -135,9 +135,7 @@ def load_block(block_array):
     new_args = []
     for arg in args:
         if isinstance(arg, list):
-            #if len(arg) == 0:
-            #    arg = Block.from_array([''])
-            if isinstance(arg[0], Symbol):
+            if arg and isinstance(arg[0], Symbol):
                 arg = load_block(arg)
             else:
                 arg = map(load_block, arg)
@@ -607,6 +605,7 @@ block_workaround('stop script', kurt.Block('stop', 'this script'))
 block_workaround('stop all', kurt.Block('stop', 'all'))
 block_workaround('forever if',
     lambda block: kurt.Block('forever', [kurt.Block('if', *block.args)]))
+block_workaround('loud?', kurt.Block('>', kurt.Block('loudness'), 30))
 
 # 2.0 -> 1.4
 block_workaround('stop', lambda block: {

@@ -308,6 +308,7 @@ MATCH_COMMANDS = {
     '\\\\': '%', # modulo
     'midiInstrument:': 'instrument:',
     'nextBackground': 'nextScene',
+    'showBackground:': 'startScene',
 }
 
 
@@ -333,6 +334,7 @@ def blockify(block):
 
     match = MATCH_COMMANDS.get(block.command, None)
 
+    # c & e blocks
     if block.command == "doIfElse":
         parts += [kurt.Insert("stack"), "else", kurt.Insert("stack")]
     elif block.flag == "c":
@@ -341,10 +343,13 @@ def blockify(block):
     tb = kurt.TranslatedBlockType("scratch14", block.category, shape,
             block.command, parts, match=match)
 
+    # fix insert kinds
     if block.command == 'getAttribute:of:':
         tb.inserts[1].kind = 'spriteOrStage'
     elif block.command == 'touching:':
         tb.inserts[0].kind = 'touching'
+    elif block.command == 'showBackground:':
+        tb.inserts[0].kind = 'backdrop'
 
     return tb
 
