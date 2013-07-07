@@ -72,6 +72,14 @@ def save_image(kurt_costume):
 
         return Image.from_image(kurt_costume.name, kurt_costume.image.pil_image)
 
+def swap_byte_pairs(data):
+    swapped_bytes = ""
+    for i in range(0, len(data), 2):
+        a = data[i:i+1]
+        b = data[i+1:i+2]
+        swapped_bytes += b + a
+    return swapped_bytes
+
 def load_sound(v14_sound):
     contents = StringIO()
     f = wave.open(contents, 'w')
@@ -79,17 +87,30 @@ def load_sound(v14_sound):
     f.setframerate(v14_sound.originalSound.originalSamplingRate)
     f.setnchannels(1)
     f.setsampwidth(2) # bytes?
-    samples = v14_sound.originalSound.samples.value
-    frames = ""
-    for i in range(0, len(samples), 2):
-        a = samples[i:i+1]
-        b = samples[i+1:i+2]
-        f.writeframes(b + a)
+    f.writeframes(swap_byte_pairs(v14_sound.originalSound.samples.value))
     f.close()
     return kurt.Sound(v14_sound.name, kurt.Waveform(contents.getvalue()))
 
 def save_sound(kurt_sound):
-    pass
+    switch_with_unknown_purpose = False
+
+    ss = SampledSound()
+    ss.samplesSize = ss.initialCount = kurt_sound.waveform.sample_count
+    ss.originalSamplingRate = ss.scaledIncrement = kurt_sound.waveform.rate
+    if switch_with_unknown_purpose:
+        ss.scaledIncrement *= 2
+    else:
+        ss.initialCount *= 2
+
+    f = wave.open(StringIO(kurt_sound.waveform.contents))
+    data = swap_byte_pairs(f.readframes(kurt_sound.waveform.sample_count))
+    f.close()
+    ss.samples = SoundBuffer(data)
+
+    v14_sound = Sound()
+    v14_sound.name = kurt_sound.name
+    v14_sound.originalSound = ss
+    return v14_sound
 
 def load_block(block_array):
     args = list(block_array)
@@ -379,7 +400,7 @@ def save_scriptable(kurt_scriptable, v14_scriptable, v14_project):
     v14_scriptable.variables = dict(map(save_variable,
         kurt_scriptable.variables.items()))
     v14_scriptable.images = map(save_image, kurt_scriptable.costumes)
-    #v14_scriptable.sounds = map(save_sound, kurt_scriptable.sounds) # TODO
+    v14_scriptable.sounds = map(save_sound, kurt_scriptable.sounds)
 
     if kurt_scriptable.costume:
         costume_index = kurt_scriptable.costumes.index(kurt_scriptable.costume)

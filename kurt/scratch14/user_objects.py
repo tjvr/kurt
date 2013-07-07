@@ -244,6 +244,10 @@ class SampledSound(UserObject):
         "originalSamplingRate", "samplesSize", "scaledIncrement",
         "scaledInitialIndex")
 
+    def set_defaults(self):
+        self.envelopes = []
+        self.scaledVol = 32768
+
 class ImageMorph(BaseMorph):
     classID = 110
     _fields = Morph._fields + ("form", "transparency")
@@ -911,7 +915,10 @@ class Sound(ScratchMedia):
     _fields = ScratchMedia._fields + ("originalSound", "volume", "balance",
         "compressedSampleRate", "compressedBitsPerSample", "compressedData")
 
-
+    def set_defaults(self):
+        self.name = ''
+        self.balance = 50
+        self.volume = 100
 
 
 class KeyEventHatMorph(BaseMorph):
