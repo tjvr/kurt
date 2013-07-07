@@ -714,7 +714,7 @@ class Sprite(Scriptable, Actor):
 
         """
 
-        self.direction = 0.0
+        self.direction = 90.0
         """The angle in degrees the sprite is rotated to."""
 
         self.rotation_style = "normal"
