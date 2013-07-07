@@ -456,7 +456,8 @@ class Project(object):
 
         for scriptable in [self.stage] + self.sprites:
             for script in scriptable.scripts:
-                script.blocks = map(convert_block, script.blocks)
+                if isinstance(script, Script):
+                    script.blocks = map(convert_block, script.blocks)
 
         # workaround unsupported features
         for feature in kurt.plugin.Feature.FEATURES.values():

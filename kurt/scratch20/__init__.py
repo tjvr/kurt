@@ -188,17 +188,17 @@ class ZipReader(object):
 
         # custom blocks first
         for script_array in sd.get("scripts", []):
-            if script_array[2] and script_array[2][0] == 'procDef':
-                script_array = self.load_script(script_array)
-            scriptable.scripts.append(script_array)
+            if script_array[2]:
+                block_array = script_array[2][0]
+                if block_array[0] == 'procDef':
+                    (_, spec, input_names, defaults, is_atomic) = block_array
+                    cb = custom_block(spec, input_names, defaults)
+                    cb.is_atomic = is_atomic
+                    self.custom_blocks[spec] = cb
 
         # scripts
-        scripts = []
-        for script in scriptable.scripts:
-            if not isinstance(script, kurt.Script):
-                script = self.load_script(script)
-            scripts.append(script)
-        scriptable.scripts = scripts
+        for script_array in sd.get("scripts", []):
+            scriptable.scripts.append(self.load_script(script_array))
 
         # comments
         blocks_by_id = []
@@ -246,15 +246,11 @@ class ZipReader(object):
         command = block_array.pop(0)
 
         if command == 'procDef': # CustomBlockType definition
-            (spec, input_names, defaults, is_atomic) = block_array
-            cb = custom_block(spec, input_names, defaults)
-            cb.is_atomic = is_atomic
-            self.custom_blocks[spec] = cb
-            return kurt.Block(command, cb)
+            spec = block_array[0]
+            return kurt.Block('procDef', self.custom_blocks[spec])
 
         if command == 'call': # CustomBlockType call
-            cb = self.custom_blocks[block_array.pop(0)]
-            return kurt.Block(cb, *block_array)
+            block_type = self.custom_blocks[block_array.pop(0)]
         else:
             block_type = kurt.BlockType.get(command)
 
