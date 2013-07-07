@@ -102,7 +102,12 @@ def save_sound(kurt_sound):
     else:
         ss.initialCount *= 2
 
-    f = wave.open(StringIO(kurt_sound.waveform.contents))
+    try:
+        f = wave.open(StringIO(kurt_sound.waveform.contents))
+    except wave.Error, err:
+        err.message += "\nInvalid wave file: %s" % kurt_sound
+        err.args = (err.message,)
+        raise
     data = swap_byte_pairs(f.readframes(kurt_sound.waveform.sample_count))
     f.close()
     ss.samples = SoundBuffer(data)

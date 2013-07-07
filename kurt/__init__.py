@@ -2246,7 +2246,12 @@ class Waveform(object):
     @property
     def _wave(self):
         """Return a wave.Wave_read instance from the ``wave`` module."""
-        return wave.open(StringIO(self.contents))
+        try:
+            return wave.open(StringIO(self.contents))
+        except wave.Error, err:
+            err.message += "\nInvalid wave file: %s" % self
+            err.args = (err.message,)
+            raise
 
     @property
     def rate(self):
@@ -2254,7 +2259,7 @@ class Waveform(object):
         if self._rate:
             return self._rate
         else:
-            return wave.open(StringIO(self.contents)).getframerate()
+            return self._wave.getframerate()
 
     @property
     def sample_count(self):
@@ -2262,7 +2267,7 @@ class Waveform(object):
         if self._sample_count:
             return self._sample_count
         else:
-            return wave.open(StringIO(self.contents)).getnframes()
+            return self._wave.getnframes()
 
 
     # Methods
