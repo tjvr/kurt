@@ -598,6 +598,7 @@ class Scriptable(object):
             else:
                 BLACK = (0, 0, 0)
                 self.costume = Costume("blank", Image.new((1, 1), BLACK))
+                self.costumes = [self.costume]
 
         # scripts
         for script in self.scripts:
