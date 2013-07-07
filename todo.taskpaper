@@ -21,16 +21,16 @@
 - are hidden watchers in actors, or not?
 - stringify() _mouse_, _myself_, _edge_
 - examples/ sb(2)
-- remove inserts from stringify?
-
-- pen layer?
 
 decide:
 	- Script.pos vs Sprite.position
 	- must make_blocks() be a method?
-optimise:
-	- don't convert scratch14 images to pil
-	- clean up scratch14
+optimise scratch14:
+	- don't convert images to pil
+	- optimise image loading
+	- compress images when saving
+	- optimise sounds
+	- clean up
 features:
 	- stacking order of actors
 	- sounds
