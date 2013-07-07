@@ -157,6 +157,9 @@ class ZipReader(object):
                 y /= cd['bitmapResolution']
                 rotation_center = (x, y)
 
+            if 'text' in cd:
+                image = image.paste(self.read_image(cd['textLayerID']))
+
             scriptable.costumes.append(kurt.Costume(cd['costumeName'], image,
                 rotation_center))
 
