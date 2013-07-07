@@ -672,6 +672,10 @@ class Stage(Scriptable):
         """Alias for :attr:`costumes`."""
         return self.costumes
 
+    @backgrounds.setter
+    def backgrounds(self, value):
+        self.costumes = value
+
     def __repr__(self):
         return "<%s.%s()>" % (self.__class__.__module__,
                 self.__class__.__name__)
