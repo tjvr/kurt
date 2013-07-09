@@ -1599,6 +1599,21 @@ class TranslatedBlockType(BaseBlockType):
 
 
 class CustomBlockType(BaseBlockType):
+    """A user-specified :class:`BlockType`.
+
+    The script defining the custom block starts with::
+
+        kurt.Block("procDef", <CustomBlockType>)
+
+    And the scripts definining the block follow.
+
+    The same CustomBlockType instance can then be used in a block in another
+    script::
+
+        kurt.Block(<CustomBlocktype>, [args ...,])
+
+    """
+
     def __init__(self, shape, parts):
         BaseBlockType.__init__(self, shape, parts)
 
