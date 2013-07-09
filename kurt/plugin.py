@@ -177,7 +177,7 @@ class Kurt(object):
             for bt in cls.blocks:
                 if (bt.has_command(tb.command) or
                         bt.has_command(tb._match)):
-                    bt._add_translation(tb)
+                    bt._add_translation(plugin.name, tb)
                     break
             else:
                 if tb._match:

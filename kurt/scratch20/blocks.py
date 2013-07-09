@@ -109,8 +109,7 @@ def blockify(blockspec):
         elif "e" in flag:
             parts += [kurt.Insert("stack"), "else", kurt.Insert("stack")]
 
-        return kurt.TranslatedBlockType("scratch20", category, shape, command,
-                parts)
+        return kurt.TranslatedBlockType(category, shape, command, parts)
     else:
         return None
 

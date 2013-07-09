@@ -1442,12 +1442,15 @@ class BlockType(BaseBlockType):
     """
 
     def __init__(self, translations):
+        if isinstance(translations, basestring):
+            raise ValueError("Invalid argument. Did you mean `BlockType.get`?")
+
         self._translations = OrderedDict(translations)
         """Stores :class:`TranslatedBlockType` objects for each plugin name."""
 
         self._workaround = None
 
-    def _add_translation(self, tb):
+    def _add_translation(self, plugin, tb):
         """Add the given TranslatedBlockType to :attr:`_translations`.
 
         If the plugin already exists, replace the existing translation.
@@ -1457,8 +1460,8 @@ class BlockType(BaseBlockType):
         assert len(self.inserts) == len(tb.inserts)
         assert [i.shape for i in self.inserts] == [i.shape for i in tb.inserts]
         assert [i.kind for i in self.inserts] == [i.kind for i in tb.inserts]
-        if tb.plugin not in self._translations:
-            self._translations[tb.plugin] = tb
+        if plugin not in self._translations:
+            self._translations[plugin] = tb
 
     def translate(self, plugin=None):
         """Return a :class:`TranslatedBlockType` for the given plugin name.
@@ -1555,11 +1558,8 @@ class TranslatedBlockType(BaseBlockType):
 
     """
 
-    def __init__(self, plugin, category, shape, command, parts, match=None):
+    def __init__(self, category, shape, command, parts, match=None):
         BaseBlockType.__init__(self, shape, parts)
-
-        self.plugin = plugin
-        """The format plugin the block belongs to."""
 
         self.command = command
         """The method name from the source code, used to identify the block.
@@ -1588,11 +1588,6 @@ class TranslatedBlockType(BaseBlockType):
         registered first.
 
         """
-
-    def __eq__(self, other):
-        if isinstance(other, TranslatedBlockType):
-            if self.plugin == other.plugin and self.command == other.command:
-                return True
 
     def __ne__(self, other):
         return not self == other

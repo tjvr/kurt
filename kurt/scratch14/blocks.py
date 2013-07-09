@@ -340,8 +340,8 @@ def blockify(block):
     elif block.flag == "c":
         parts += [kurt.Insert("stack")]
 
-    tb = kurt.TranslatedBlockType("scratch14", block.category, shape,
-            block.command, parts, match=match)
+    tb = kurt.TranslatedBlockType(block.category, shape, block.command, parts,
+            match=match)
 
     # fix insert kinds
     if block.command == 'getAttribute:of:':
