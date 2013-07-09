@@ -16,7 +16,7 @@ setup(name = 'kurt',
       install_requires = ['construct == 2.0.6', 'pillow >= 2.0', 'PLY'],
       keywords = ['scratch'],
       license = 'LGPL',
-      packages = ['kurt', 'kurt.scratchblocks', 'kurt.scratch14',
+      packages = ['kurt', 'kurt.text', 'kurt.scratch14',
           'kurt.scratch20'],
       scripts = glob.glob('util/*'),
       classifiers = [
