@@ -1441,11 +1441,11 @@ class BlockType(BaseBlockType):
 
     """
 
-    def __init__(self, translations):
-        if isinstance(translations, basestring):
+    def __init__(self, translation):
+        if isinstance(translation, basestring):
             raise ValueError("Invalid argument. Did you mean `BlockType.get`?")
 
-        self._translations = OrderedDict(translations)
+        self._translations = OrderedDict([(translation.format, translation)])
         """Stores :class:`TranslatedBlockType` objects for each plugin name."""
 
         self._workaround = None
@@ -1477,7 +1477,11 @@ class BlockType(BaseBlockType):
                 raise BlockNotSupported("%s doesn't have %r" %
                         (plugin.display_name, self))
         else:
-            return self._translations.values()[0]
+            return self.translations[0]
+
+    @property
+    def translations(self):
+        return self._translations.values()
 
     def has_command(self, command):
         """Returns True if any of the translations have the given command."""
@@ -1560,6 +1564,9 @@ class TranslatedBlockType(BaseBlockType):
 
     def __init__(self, category, shape, command, parts, match=None):
         BaseBlockType.__init__(self, shape, parts)
+
+        self.format = None
+        """The format plugin the block belongs to."""
 
         self.command = command
         """The method name from the source code, used to identify the block.
@@ -2323,4 +2330,3 @@ import kurt.text
 
 import kurt.scratch20
 import kurt.scratch14
-

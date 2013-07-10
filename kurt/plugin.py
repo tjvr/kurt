@@ -171,18 +171,23 @@ class Kurt(object):
         # make features
         plugin.features = map(Feature.get, plugin.features)
 
+        # fix blocks
+        for tbt in plugin.blocks:
+            if tbt:
+                tbt.format = plugin.name
+
         # add blocks
         new_blocks = filter(None, plugin.blocks)
-        for tb in new_blocks:
+        for tbt in new_blocks:
             for bt in cls.blocks:
-                if (bt.has_command(tb.command) or
-                        bt.has_command(tb._match)):
-                    bt._add_translation(plugin.name, tb)
+                if (bt.has_command(tbt.command) or
+                        bt.has_command(tbt._match)):
+                    bt._add_translation(plugin.name, tbt)
                     break
             else:
-                if tb._match:
-                    raise ValueError, "Couldn't match %r" % tb._match
-                cls.blocks.append(kurt.BlockType([(plugin.name, tb)]))
+                if tbt._match:
+                    raise ValueError, "Couldn't match %r" % tbt._match
+                cls.blocks.append(kurt.BlockType(tbt))
 
     @classmethod
     def get_plugin(cls, name=None, **kwargs):
@@ -243,8 +248,8 @@ class Kurt(object):
         text = kurt.BlockType._strip_text(text)
         matches = []
         for block in cls.blocks:
-            for tb in block._translations.values():
-                if tb.stripped_text == text:
+            for tbt in block._translations.values():
+                if tbt.stripped_text == text:
                     matches.append(block)
                     break
         return matches
