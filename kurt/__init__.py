@@ -1303,11 +1303,11 @@ class Insert(object):
 
             if block_plugin or self.shape in 'stack':
                 value = Insert.SHAPE_FMTS.get(self.shape, '%s') % (value,)
-            elif self.shape in 'string':
+            elif self.shape == 'string' or self.kind == 'broadcast':
                 value = unicode(value)
                 if "'" in value:
                     value = '"%s"' % value.replace('"', '\\"')
-                elif '"' in value:
+                else:
                     value = "'%s'" % value.replace("'", "\\'")
             return value
 

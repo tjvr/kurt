@@ -161,7 +161,7 @@ def block_from_parts(parts):
                 arg = arg.type.text
 
             ok = False
-            if insert.shape == "string":
+            if insert.shape == "string" or insert.kind == "broadcast":
                 if isinstance(arg, (int, long, float, complex, str)):
                     arg = unicode(arg)
                 ok = isinstance(arg, (unicode, kurt.Block))
