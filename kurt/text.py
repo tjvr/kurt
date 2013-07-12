@@ -1,6 +1,28 @@
-"""nXIII: If you want to use labels interspersed between arguments (and not
-just named arguments), I wrote a scratchblocks parser that is reasonably
-skilled at determining what you mean without hordes of parentheses.
+# Copyright (C) 2012 Tim Radvan
+#
+# This file is part of Kurt.
+#
+# Kurt is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# Kurt is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Lesser General Public License along
+# with Kurt. If not, see <http://www.gnu.org/licenses/>.
+
+"""Experimental text parser for scripts.
+
+ohe original parser used block plugin syntax, the same as the ``scratchblocks``
+tag used on the Scratch Forums and Wiki. See:
+http://wiki.scratch.mit.edu/wiki/Block_Plugin
+
+This parser supports most of the block plugin syntax. Most notably, using < >
+for boolean shaped blocks is not supported.
 
 """
 
