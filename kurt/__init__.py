@@ -1257,23 +1257,25 @@ class Insert(object):
     def __ne__(self, other):
         return not self == other
 
-    def stringify(self, value=None):
+    def stringify(self, value=None, block_plugin=False):
         if value is None or (value is False and self.shape == "boolean"):
             value = self.default
             if value is None:
                 value = ""
-        if isinstance(value, Block):
-            return value.stringify(in_insert=True) # use block's shape
+        if isinstance(value, Block): # use block's shape
+            return value.stringify(block_plugin, in_insert=True)
         else:
             if hasattr(value, "stringify"):
                 value = value.stringify()
             elif isinstance(value, list):
-                value = "\n".join(block.stringify() for block in value)
+                value = "\n".join(block.stringify(block_plugin) for block in value)
 
             if self.shape == 'stack':
                 value = value.replace("\n", "\n\t")
 
-            return Insert.SHAPE_FMTS.get(self.shape, '%s') % (value,)
+            if block_plugin or self.shape == 'stack':
+                value = Insert.SHAPE_FMTS.get(self.shape, '%s') % (value,)
+            return unicode(value)
 
     def options(self, scriptable=None):
         """Return a list of valid options to a menu insert, given a
@@ -1411,16 +1413,19 @@ class BaseBlockType(object):
                 self.text % tuple(i.stringify(None) for i in self.inserts),
                 self.shape)
 
-    def stringify(self, args=None, in_insert=False):
+    def stringify(self, args=None, block_plugin=False, in_insert=False):
         if args is None: args = self.defaults
         args = list(args)
 
-        r = self.text % tuple(i.stringify(args.pop(0)) for i in self.inserts)
+        r = self.text % tuple(i.stringify(args.pop(0), block_plugin)
+                              for i in self.inserts)
         for insert in self.inserts:
             if insert.shape == 'stack':
                 return r + "end"
 
         fmt = BaseBlockType.SHAPE_FMTS.get(self.shape, "%s")
+        if not block_plugin:
+            fmt = "%s" if fmt == "%s" else "(%s)"
         if in_insert and fmt == "%s":
             fmt = "{%s}"
 
@@ -1757,8 +1762,8 @@ class Block(object):
         string = string.rstrip(" ").rstrip(",")
         return string + ")"
 
-    def stringify(self, in_insert=False):
-        s = self.type.stringify(self.args, in_insert)
+    def stringify(self, block_plugin=False, in_insert=False):
+        s = self.type.stringify(self.args, block_plugin, in_insert)
         if self.comment:
             i = s.index("\n") if "\n" in s else len(s)
             indent = "\n"  +  " " * i  +  " // "
@@ -1820,8 +1825,9 @@ class Script(object):
             r += ", pos=%r" % (self.pos,)
         return r + ")"
 
-    def stringify(self):
-        return "\n".join(block.stringify() for block in self.blocks)
+    def stringify(self, block_plugin=False):
+        return "\n".join(block.stringify(block_plugin)
+                         for block in self.blocks)
 
     # Pretend to be a list
 
