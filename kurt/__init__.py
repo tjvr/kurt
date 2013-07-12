@@ -465,6 +465,25 @@ class Project(object):
                 for x in feature.workaround(self):
                     yield UnsupportedFeature(feature, x)
 
+    def get_broadcasts(self):
+        def get_broadcasts(block):
+            for (arg, insert) in zip(block.args, block.type.inserts):
+                if isinstance(arg, Block):
+                    for b in get_broadcasts(arg):
+                        yield b
+                elif isinstance(arg, list):
+                    for arg_block in arg:
+                        for b in get_broadcasts(arg_block):
+                            yield b
+                elif insert.kind == "broadcast":
+                    yield arg
+
+        for scriptable in [self.stage] + self.sprites:
+            for script in scriptable.scripts:
+                for block in script.blocks:
+                    for b in get_broadcasts(block):
+                        yield b
+
 
 class UnsupportedFeature(object):
     """The plugin doesn't support this Feature.
@@ -1104,8 +1123,12 @@ class Insert(object):
     KIND_OPTIONS = {
         'attribute': ['x position', 'y position', 'direction', 'costume #',
             'size', 'volume'],
+        'backdrop': [],
         'booleanSensor': ['button pressed', 'A connected', 'B connected',
             'C connected', 'D connected'],
+        'broadcast': [],
+        'costume': [],
+        'direction': [],
         'drum': range(1, 18),
         'effect': ['color', 'fisheye', 'whirl', 'pixelate', 'mosaic',
             'brightness', 'ghost'],
@@ -1114,22 +1137,27 @@ class Insert(object):
             'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
             'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'space',
             'left arrow', 'right arrow', 'up arrow', 'down arrow'],
+        'list': [],
         'listDeleteItem': ['last', 'all'],
         'listItem': ['last', 'random'],
         'mathOp': ['abs', 'floor', 'ceiling', 'sqrt', 'sin', 'cos', 'tan',
             'asin', 'acos', 'atan', 'ln', 'log', 'e ^', '10 ^'],
         'motorDirection': ['this way', 'that way', 'reverse'],
+        'note': [],
         'rotationStyle': ['left-right', "don't rotate", 'all around'],
         'sensor': ['slider', 'light', 'sound', 'resistance-A', 'resistance-B',
             'resistance-C', 'resistance-D'],
+        'sound': [],
         'spriteOnly': ['myself'],
         'spriteOrMouse': ['mouse-pointer'],
         'spriteOrStage': ['Stage'],
+        'stageOrThis': ['Stage'], # ? TODO
         'stop': ['all', 'this script', 'other scripts in sprite'],
         'timeAndDate': ['year', 'month', 'date', 'day of week', 'hour',
             'minute', 'second'],
         'touching': ['mouse-pointer', 'edge'],
         'triggerSensor': ['loudness', 'timer', 'video motion'],
+        'var': [],
         'videoMotionType': ['motion', 'direction'],
         'videoState': ['off', 'on', 'on-flipped'],
     }
@@ -1273,15 +1301,21 @@ class Insert(object):
             if self.shape == 'stack':
                 value = value.replace("\n", "\n\t")
 
-            if block_plugin or self.shape == 'stack':
+            if block_plugin or self.shape in 'stack':
                 value = Insert.SHAPE_FMTS.get(self.shape, '%s') % (value,)
-            return unicode(value)
+            elif self.shape in 'string':
+                value = unicode(value)
+                if "'" in value:
+                    value = '"%s"' % value.replace('"', '\\"')
+                elif '"' in value:
+                    value = "'%s'" % value.replace("'", "\\'")
+            return value
 
     def options(self, scriptable=None):
         """Return a list of valid options to a menu insert, given a
         Scriptable for context.
 
-        Mostly complete, excepting 'attribute' and 'broadcast'.
+        Mostly complete, excepting 'attribute'.
 
         """
         options = Insert.KIND_OPTIONS.get(self.kind, [])
@@ -1305,7 +1339,7 @@ class Insert(object):
             elif self.kind == 'attribute':
                 pass # TODO
             elif self.kind == 'broadcast':
-                pass # TODO
+                options += list(set(scriptable.project.get_broadcasts()))
         return options
 
 
