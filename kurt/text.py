@@ -361,6 +361,7 @@ def make_block_tokens():
 def make_menu_tokens():
     global context
     for kind in kurt.Insert.KIND_OPTIONS:
+        if kind == "broadcast": continue
         for o in kurt.Insert(None, kind).options(context):
             yield str(o)
 
