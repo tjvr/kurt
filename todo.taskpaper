@@ -1,6 +1,10 @@
 - put back TranslatedBlockType eq
 - check Insert eq
 - cleanup, remove __todo, blocks2raw
+parser:
+	- custom blocks
+	- block plugin-style booleans
+	- multiple scripts in one input
 optimise scratch14:
 	- don't convert images to pil
 	- optimise image loading
