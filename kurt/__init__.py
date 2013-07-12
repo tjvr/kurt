@@ -1102,6 +1102,8 @@ class Insert(object):
     }
 
     KIND_OPTIONS = {
+        'attribute': ['x position', 'y position', 'direction', 'costume #',
+            'size', 'volume'],
         'booleanSensor': ['button pressed', 'A connected', 'B connected',
             'C connected', 'D connected'],
         'drum': range(1, 18),
@@ -1174,7 +1176,7 @@ class Insert(object):
             Not actually an insert -- used for variable and list reporters.
 
         ``'block'``
-            Used for the "define ..." hat block.
+            Used for the argument to the "define ..." hat block.
 
         """
 
