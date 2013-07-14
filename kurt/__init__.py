@@ -76,7 +76,7 @@ only convert features between a subset of formats.
 
 """
 
-__version__ = '2.0.0'
+__version__ = '2.0.0c1'
 
 from collections import OrderedDict
 import re
