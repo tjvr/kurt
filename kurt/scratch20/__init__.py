@@ -65,8 +65,8 @@ def get_blocks_by_id(this_block):
 
 
 class ZipReader(object):
-    def __init__(self, path):
-        self.zip_file = zipfile.ZipFile(path)
+    def __init__(self, fp):
+        self.zip_file = zipfile.ZipFile(fp, "r")
         self.json = json.load(self.zip_file.open("project.json"))
         self.project = kurt.Project()
         self.list_watchers = []
@@ -297,8 +297,8 @@ class ZipReader(object):
 
 
 class ZipWriter(object):
-    def __init__(self, path, project):
-        self.zip_file = zipfile.ZipFile(path, "w")
+    def __init__(self, fp, project):
+        self.zip_file = zipfile.ZipFile(fp, "w")
         self.image_dicts = {}
         self.waveform_dicts = {}
 
@@ -578,14 +578,14 @@ class Scratch20Plugin(KurtPlugin):
     ]
     blocks = make_block_types()
 
-    def load(self, path):
-        zl = ZipReader(path)
+    def load(self, fp):
+        zl = ZipReader(fp)
         zl.project._original = zl.json
         zl.finish()
         return zl.project
 
-    def save(self, path, project):
-        zw = ZipWriter(path, project)
+    def save(self, fp, project):
+        zw = ZipWriter(fp, project)
         zw.finish()
         return zw.json
 
