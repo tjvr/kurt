@@ -1918,7 +1918,7 @@ class Comment(object):
         """
 
     def copy(self):
-        return self.__class__(self.text, tuple(self.pos))
+        return self.__class__(self.text, tuple(self.pos) if self.pos else None)
 
     def __repr__(self):
         r = "%s.%s(%r" % (self.__class__.__module__,
