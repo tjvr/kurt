@@ -325,6 +325,9 @@ class Project(object):
 
         :param path: Path or file pointer.
 
+                     If you pass a file pointer, you're responsible for closing
+                     it.
+
                      If path is not given, the :attr:`path` attribute is used,
                      usually the original path given to :attr:`load()`.
 
@@ -390,7 +393,8 @@ class Project(object):
         for m in p.convert(plugin):
             print m
         result = p._save(fp)
-        fp.close()
+        if path:
+            fp.close()
         return result if debug else path
 
     def _save(self, fp):
