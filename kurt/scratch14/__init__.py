@@ -441,8 +441,9 @@ class Scratch14Plugin(KurtPlugin):
     blocks = block_list
     features = []
 
-    def load(self, path):
-        v14_project = ScratchProjectFile(path)
+    def load(self, fp):
+        v14_project = ScratchProjectFile(None, load=False)
+        v14_project._load(fp.read())
         kurt_project = kurt.Project()
 
         # project info
@@ -508,7 +509,7 @@ class Scratch14Plugin(KurtPlugin):
         return kurt_project
 
 
-    def save(self, path, kurt_project):
+    def save(self, fp, kurt_project):
         v14_project = ScratchProjectFile.new()
 
         # project info
@@ -594,7 +595,8 @@ class Scratch14Plugin(KurtPlugin):
 
                 v14_project.stage.submorphs.append(v14_watcher)
 
-        v14_project.save(path)
+        data = v14_project._save()
+        fp.write(data)
 
         return v14_project
 

@@ -133,6 +133,7 @@ class ScratchProjectFile(BinaryFile):
         "os-version": "",
         "thumbnail": None,
         "history": "",
+        "name": "",
     }
 
     _construct = Struct("scratch_file",

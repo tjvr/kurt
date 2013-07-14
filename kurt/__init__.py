@@ -232,11 +232,12 @@ class Project(object):
     def load(cls, path, format=None):
         """Load project from file.
 
-        Guesses the appropriate format from the extension.
-
         Use ``format`` to specify the file format to use.
 
-        :param path:   Path or URL.
+        Path can be a file-like object, in which case format is required.
+        Otherwise, can guess the appropriate format from the extension.
+
+        :param path:   Path or file pointer.
         :param format: :attr:`KurtFileFormat.name` eg. ``"scratch14"``.
                        Overrides the extension.
 
@@ -244,24 +245,29 @@ class Project(object):
         :raises: :py:class:`ValueError` if the format doesn't exist.
 
         """
-
-        (folder, filename) = os.path.split(path)
-        (name, extension) = os.path.splitext(filename)
-
-        if format is None:
-            plugin = kurt.plugin.Kurt.get_plugin(extension=extension)
-            if not plugin:
-                raise UnknownFormat(extension)
+        if isinstance(path, basestring):
+            (folder, filename) = os.path.split(path)
+            (name, extension) = os.path.splitext(filename)
+            if format is None:
+                plugin = kurt.plugin.Kurt.get_plugin(extension=extension)
+                if not plugin:
+                    raise UnknownFormat(extension)
+            fp = open(path, "rb")
         else:
-            plugin = kurt.plugin.Kurt.get_plugin(name=format)
-            if not plugin:
-                raise ValueError, "Unknown format %r" % format
+            fp = path
+            assert format, "Format is required"
+            plugin = kurt.plugin.Kurt.get_plugin(format)
 
-        project = plugin.load(path)
+        if not plugin:
+            raise ValueError, "Unknown format %r" % format
+
+        project = plugin.load(fp)
+        fp.close()
         project.convert(plugin)
-        project.path = path
-        if not project.name:
-            project.name = name
+        if isinstance(path, basestring):
+            project.path = path
+            if not project.name:
+                project.name = name
         return project
 
     def copy(self):
@@ -317,9 +323,10 @@ class Project(object):
     def save(self, path=None, debug=False):
         """Save project to file.
 
-        :param path: Path or URL. If path is not given, the :attr:`path`
-                     attribute is used, usually the original path given to
-                     :attr:`load()`.
+        :param path: Path or file pointer.
+
+                     If path is not given, the :attr:`path` attribute is used,
+                     usually the original path given to :attr:`load()`.
 
                      If `path` has the extension of an existing plugin, the
                      project will be converted using :attr:`convert`.
@@ -343,42 +350,51 @@ class Project(object):
         """
 
         p = self.copy()
-        p.path = path or self.path
+        plugin = p._plugin
 
         # require path
-        if not p.path:
+        if not path:
+            path = self.path
+        if not path:
             raise ValueError, "path is required"
 
-        # split path
-        (folder, filename) = os.path.split(p.path)
-        (name, extension) = os.path.splitext(filename)
+        if isinstance(path, basestring):
+            # split path
+            (folder, filename) = os.path.split(path)
+            (name, extension) = os.path.splitext(filename)
 
-        # get plugin from extension
-        plugin = p._plugin
-        if path:
-            try:
-                plugin = kurt.plugin.Kurt.get_plugin(extension=extension)
-            except ValueError:
-                pass
+            # get plugin from extension
+            if path:
+                try:
+                    plugin = kurt.plugin.Kurt.get_plugin(extension=extension)
+                except ValueError:
+                    pass
+
+            # build output path
+            if not name:
+                name = _clean_filename(self.name)
+                if not name:
+                    raise ValueError, "name is required"
+            filename = name + plugin.extension
+            path = os.path.join(folder, filename)
+
+            # open
+            fp = open(path, "wb")
+        else:
+            fp = path
+            path = None
+
         if not plugin:
             raise ValueError, "must convert project to a format before saving"
 
-        # build output path
-        extension = plugin.extension
-        if not name:
-            name = _clean_filename(self.name)
-            if not name:
-                raise ValueError, "name is required"
-        filename = name + extension
-        path = os.path.join(folder, filename)
-
         for m in p.convert(plugin):
             print m
-        result = p._save(path)
+        result = p._save(fp)
+        fp.close()
         return result if debug else path
 
-    def _save(self, path):
-        return self._plugin.save(path, self)
+    def _save(self, fp):
+        return self._plugin.save(fp, self)
 
     def _normalize(self):
         """Convert the project to a standardised form for the current plugin.

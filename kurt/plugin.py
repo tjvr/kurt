@@ -22,14 +22,12 @@ To add support for a new file format, write a new :class:`KurtPlugin` subclass::
     from kurt.plugin import Kurt, KurtPlugin
 
     class MyScratchModPlugin(KurtPlugin):
-        def load(self, path):
-            f = open(path)
+        def load(self, fp):
             kurt_project = kurt.Project()
             # ... set kurt_project attributes ... #
             return kurt_project
 
-        def save(self, path, kurt_project):
-            f = open(path, "w")
+        def save(self, fp, kurt_project):
             # ... save kurt_project attributes to file ...
 
     Kurt.register(MyScratchModPlugin())
@@ -120,24 +118,22 @@ class KurtPlugin(object):
         """
         raise NotImplementedError
 
-    def load(self, path):
+    def load(self, fp):
         """Load a project from a file with this format.
 
         :attr:`Project.path` will be set later. :attr:`Project.name` will be
-        set to the filename of ``path`` if unset.
+        set to the filename of the path to the file if unset.
 
-        The file at ``path`` is not guaranteed to exist.
-
-        :param path: Path to the file, including the plugin's extension.
+        :param fp: A file pointer to the file, opened in binary mode.
         :returns: :class:`Project`
 
         """
         raise NotImplementedError
 
-    def save(self, path, project):
+    def save(self, fp, project):
         """Save a project to a file with this format.
 
-        :param path: Path to the file, including the plugin's extension.
+        :param path: A file pointer to the file, opened in binary mode.
         :param project: a :class:`Project`
 
         """
