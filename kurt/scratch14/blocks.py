@@ -97,109 +97,8 @@ blockspecs = Struct("blockspecs",
 )
 
 
-def parse_blockspec(squeak_code):
-    parsed = blockspecs.parse(squeak_code)
-    categories = parsed.categories
 
-    blocks = []
-    for category in categories:
-        for block in category.blocks:
-            if not block.is_block:
-                continue
-
-            defaults = []
-            for default in block.defaults:
-                default = default.value
-                if isinstance(default, Container):
-                    default = default.value
-                defaults.append(default)
-
-            block = S14BlockType(
-                block.command.value,
-                block.text,
-                block.flag.value,
-                category.name,
-                defaults,
-            )
-            blocks.append(block)
-
-    return blocks
-
-
-
-#-- old BlockType class --#
-
-class S14BlockType:
-    INSERT_RE = re.compile(r'(%.)')
-
-    def __init__(self, command, text, flag='-', category='', defaults=None):
-        self.command = command
-        self.text = text
-        self.flag = flag
-        self.category = category
-        if defaults is None: defaults = []
-        self.defaults = defaults
-
-    def copy(self):
-        return S14BlockType(
-            self.command, self.text, self.flag, self.category, self.defaults[:]
-        )
-
-    def __repr__(self):
-        return '<S14BlockType(%s)>' % self.command
-
-
-
-#-- build lists --#
-
-blocks = (list(parse_blockspec(squeak_blockspecs)) +
-    list(parse_blockspec(squeak_stage_blockspecs)) +
-    list(parse_blockspec(squeak_sprite_blockspecs)) +
-    list(parse_blockspec(squeak_obsolete_blockspecs)))
-
-blocks += [
-    # variable reporters
-    S14BlockType("readVariable", "%x", "r", category="variables",
-       defaults = ['var']),
-    S14BlockType("contentsOfList:", "%X", "r", category="variables",
-        defaults=["list"]),
-
-    # Blocks with different meaning depending on arguments are special-cased
-    # inside load_block/save_block.
-    S14BlockType("whenGreenFlag", "when green flag clicked", "S",
-        category="control", defaults = ["Scratch-StartClicked"]),
-    S14BlockType("whenIReceive", "when I receive %e", "E", category="control",
-        defaults=[""]),
-
-    # changeVariable is special-cased (and isn't in blockspecs)
-    S14BlockType("changeVar:by:", "change %v by %n", category="variables"),
-    S14BlockType("setVar:to:", "set %v to %s", category="variables"),
-
-    # MouseClickEventHatMorph is special-cased as it has an extra argument:
-    # 'when %m clicked'
-    S14BlockType("whenClicked", "when clicked", "M", category="control")
-]
-
-blocks_by_cmd = {}
-for block in blocks:
-    cmd = block.command
-    if cmd not in blocks_by_cmd:
-        blocks_by_cmd[cmd] = []
-    blocks_by_cmd[cmd].append(block)
-
-
-
-#-- various fixes --#
-
-del blocks_by_cmd['EventHatMorph'] # whenGreenFlag / whenIReceive
-del blocks_by_cmd['MouseClickEventHatMorph'] # whenClicked
-
-blocks_by_cmd['KeyEventHatMorph'][0].defaults = ["space"]
-blocks_by_cmd['doIfElse'][0].defaults = [False, None]
-
-
-
-#-- convert to kurt 2 blocks --#
+#-- convert to kurt blocks --#
 
 CATEGORIES = set([
     'motion',
@@ -236,7 +135,7 @@ SHAPE_FLAGS = {
 INSERT_SHAPES = {
     '%b': 'boolean',
     '%n': 'number',
-    '%d': 'number-menu',        # direction ( v)
+    '%d': 'number-menu',   # direction ( v)
     '%s': 'string',        # string [ ]
     '%c': 'color',         # color picker with menu [#hexcode]
     '%C': 'color',         # color [#hexcode]
@@ -264,10 +163,6 @@ INSERT_SHAPES = {
     '%h': 'readonly-menu', # Boolean sensor board selector menu
     '%H': 'readonly-menu', # Numerical sensor board selector menu
     '%W': 'readonly-menu', # motor direction
-
-    # special for kurt
-    '%x': 'inline', # for variable reporters
-    '%X': 'inline', # for list reporters
 }
 
 INSERT_KINDS = {
@@ -296,10 +191,16 @@ INSERT_KINDS = {
     '%h': 'booleanSensor',
     '%H': 'sensor',
     '%W': 'motorDirection',
+}
 
-    # special
-    '%x': 'var',
-    '%X': 'list',
+IGNORE_COMMANDS = [
+    'EventHatMorph',
+    'MouseClickEventHatMorph',
+]
+
+OVERRIDE_DEFAULTS = {
+    'KeyEventHatMorph': ['space'],
+    'doIfElse': [False],
 }
 
 MATCH_COMMANDS = {
@@ -311,47 +212,116 @@ MATCH_COMMANDS = {
     'showBackground:': 'startScene',
 }
 
-
 INSERT_RE = re.compile(r'(%.(?:\.[A-z]+)?)')
 
+def blockify(command, text, flag, category, defaults):
+    if command in IGNORE_COMMANDS:
+        return
 
-def blockify(block):
-    shape = SHAPE_FLAGS[block.flag]
-    if block.text in ('stop script', 'stop all', 'forever', 'forever if %b'):
+    shape = SHAPE_FLAGS[flag]
+    if text in ('stop script', 'stop all', 'forever', 'forever if %b'):
         shape = 'cap'
 
-    defaults = block.defaults
+    defaults = OVERRIDE_DEFAULTS.get(command, defaults)
 
     parts = []
-    for part in filter(None, INSERT_RE.split(block.text)):
+    for part in filter(None, INSERT_RE.split(text)):
         if INSERT_RE.match(part):
             default = defaults.pop(0) if defaults else None
             if isinstance(default, Symbol):
                 default = default.value
-            kind = INSERT_KINDS.get(part, None)
+            kind = INSERT_KINDS.get(part)
             part = kurt.Insert(INSERT_SHAPES[part], kind, default=default)
         parts.append(part)
 
-    match = MATCH_COMMANDS.get(block.command, None)
+    match = MATCH_COMMANDS.get(command)
 
     # c & e blocks
-    if block.command == "doIfElse":
+    if command == "doIfElse":
         parts += [kurt.Insert("stack"), "else", kurt.Insert("stack")]
-    elif block.flag == "c":
+    elif flag == "c":
         parts += [kurt.Insert("stack")]
 
-    tb = kurt.TranslatedBlockType(block.category, shape, block.command, parts,
+    tb = kurt.TranslatedBlockType(category, shape, command, parts,
             match=match)
 
     # fix insert kinds
-    if block.command == 'getAttribute:of:':
+    if command == 'getAttribute:of:':
         tb.inserts[1].kind = 'spriteOrStage'
-    elif block.command == 'touching:':
+    elif command == 'touching:':
         tb.inserts[0].kind = 'touching'
-    elif block.command == 'showBackground:':
+    elif command == 'showBackground:':
         tb.inserts[0].kind = 'backdrop'
 
     return tb
 
+def parse_blockspec(squeak_code):
+    parsed = blockspecs.parse(squeak_code)
+    categories = parsed.categories
 
-block_list = map(blockify, sum(blocks_by_cmd.values(), []))
+    for category in categories:
+        for block in category.blocks:
+            if not block.is_block:
+                continue
+
+            defaults = []
+            for default in block.defaults:
+                default = default.value
+                if isinstance(default, Container):
+                    default = default.value
+                defaults.append(default)
+
+            bt = blockify(
+                block.command.value,
+                block.text,
+                block.flag.value,
+                category.name,
+                defaults,
+            )
+            if bt:
+                yield bt
+
+
+
+#-- build lists --#
+
+block_list = (list(parse_blockspec(squeak_blockspecs)) +
+    list(parse_blockspec(squeak_stage_blockspecs)) +
+    list(parse_blockspec(squeak_sprite_blockspecs)) +
+    list(parse_blockspec(squeak_obsolete_blockspecs)))
+
+block_list += [
+    # variable reporters
+    kurt.TranslatedBlockType('variables', 'reporter', 'readVariable',
+        [kurt.Insert('inline', 'var', default='var')]),
+    kurt.TranslatedBlockType('variables', 'reporter', 'contentsOfList:',
+        [kurt.Insert('inline', 'list', default='list')]),
+
+    # Blocks with different meaning depending on arguments are special-cased
+    # inside load_block/save_block.
+    kurt.TranslatedBlockType('control', 'hat', 'whenGreenFlag',
+        ['when green flag clicked']),
+    kurt.TranslatedBlockType('control', 'hat', 'whenIReceive',
+        ['when I receive ', kurt.Insert('readonly-menu', 'broadcast')]),
+
+    # changeVariable is special-cased (and isn't in blockspecs)
+    kurt.TranslatedBlockType('variables', 'stack', 'changeVar:by:', ['change ',
+        kurt.Insert('readonly-menu', 'var'), ' by ', kurt.Insert('number')]),
+    kurt.TranslatedBlockType('variables', 'stack', 'setVar:to:', ['set ',
+        kurt.Insert('readonly-menu', 'var'), ' to ', kurt.Insert('string')]),
+
+    # MouseClickEventHatMorph is special-cased as it has an extra argument:
+    # 'when %m clicked'
+    kurt.TranslatedBlockType('control', 'hat', 'whenClicked',
+        ['when clicked']),
+]
+
+blocks_by_cmd = {}
+for block in block_list:
+    cmd = block.command
+    if cmd not in blocks_by_cmd:
+        blocks_by_cmd[cmd] = []
+    blocks_by_cmd[cmd].append(block)
+
+block_list = sum(blocks_by_cmd.values(), [])
+
