@@ -1,6 +1,5 @@
 - put back TranslatedBlockType eq
 - check Insert eq
-- cleanup, remove __todo, blocks2raw
 parser:
 	- custom blocks
 	- block plugin-style booleans
