@@ -177,7 +177,7 @@ blocks += [
 
     # MouseClickEventHatMorph is special-cased as it has an extra argument:
     # 'when %m clicked'
-    S14BlockType("whenClicked", "when clicked", "M")
+    S14BlockType("whenClicked", "when clicked", "M", category="control")
 ]
 
 blocks_by_cmd = {}
