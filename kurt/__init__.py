@@ -1124,7 +1124,7 @@ class Insert(object):
         'number': 0,
         'number-menu': 0,
         'stack': [],
-        'color': Color.random,
+        'color': Color('#f00'),
         'inline': 'nil', # Can't be empty
     }
 
@@ -1269,10 +1269,7 @@ class Insert(object):
 
         """
 
-        default = default or Insert.SHAPE_DEFAULTS.get(shape, None)
-        if callable(default):
-            default = default()
-        self.default = default
+        self.default = default or Insert.SHAPE_DEFAULTS.get(shape, None)
         """The default value for the insert."""
 
         self.name = name
