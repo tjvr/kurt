@@ -317,6 +317,76 @@ def save_lists(kurt_target, kurt_project, v14_morph, v14_project):
 
         v14_morph.lists[name] = v14_list
 
+def load_watcher(v14_watcher, v14_project, kurt_project):
+    v14_sprite = v14_watcher.readout.target
+    if v14_sprite == v14_project.stage:
+        kurt_target = kurt_project
+    else:
+        kurt_target = kurt_project.get_sprite(v14_sprite.name)
+
+    command = v14_watcher.readout.getSelector.value
+    command = 'readVariable' if command == 'getVar:' else command
+    if v14_watcher.readout.parameter:
+        kurt_block = kurt.Block(command, v14_watcher.readout.parameter)
+    else:
+        kurt_block = kurt.Block(command)
+
+    kurt_watcher = kurt.Watcher(kurt_target, kurt_block)
+
+    (x, y, right, bottom) = v14_watcher.bounds.value
+    kurt_watcher.pos = (x, y)
+
+    if v14_watcher.isLarge:
+        kurt_watcher.style = "large"
+    elif v14_watcher.scratchSlider:
+        kurt_watcher.style = "slider"
+
+    kurt_watcher.slider_min = v14_watcher.sliderMin
+    kurt_watcher.slider_max = v14_watcher.sliderMax
+
+    return kurt_watcher
+
+def save_watcher(kurt_watcher, kurt_project, v14_project):
+    v14_watcher = WatcherMorph()
+    readout = v14_watcher.readout = v14_watcher.readoutFrame.submorphs[0]
+
+    if kurt_watcher.pos:
+        (x, y) = kurt_watcher.pos
+    else:
+        (x, y) = (10, 10)
+
+    v14_watcher.name = kurt_watcher.block.type.translate('scratch14').text
+
+    if kurt_watcher.target == kurt_project:
+        v14_morph = v14_project.stage
+        v14_watcher.isSpriteSpecfic = False
+    else:
+        v14_morph = v14_project.get_sprite(kurt_watcher.target.name)
+        v14_watcher.name = v14_morph.name + " " + v14_watcher.name
+
+    readout.target = v14_morph
+    v14_watcher.owner = v14_project.stage
+
+    selector = kurt_watcher.block.type.translate('scratch14').command
+    command = 'getVar:' if selector == 'readVariable' else selector
+    readout.getSelector = Symbol(command)
+
+    if kurt_watcher.block.args:
+        readout.parameter = kurt_watcher.block.args[0]
+
+    if kurt_watcher.style == "large":
+        v14_watcher.isLarge = True
+        readout.font_with_size[1] = 14
+    elif kurt_watcher.style == "slider":
+        v14_watcher.scratchSlider = WatcherSliderMorph()
+
+    v14_watcher.sliderMin = kurt_watcher.slider_min
+    v14_watcher.sliderMax = kurt_watcher.slider_max
+
+    v14_watcher.bounds = Rectangle([x, y, x+1, x+1])
+
+    return v14_watcher
+
 def get_blocks_by_id(this_block):
     if isinstance(this_block, kurt.Script):
         for block in this_block.blocks:
@@ -498,41 +568,11 @@ class Scratch14Plugin(KurtPlugin):
 
         # variable watchers
         for v14_morph in v14_project.stage.submorphs:
-            if v14_morph in v14_project.stage.sprites:
-                continue
             if isinstance(v14_morph, WatcherMorph):
-                v14_watcher = v14_morph
-
-                v14_sprite = v14_watcher.readout.target
-                if v14_sprite == v14_project.stage:
-                    kurt_target = kurt_project
-                else:
-                    kurt_target = kurt_project.get_sprite(v14_sprite.name)
-
-                command = v14_watcher.readout.getSelector.value
-                command = 'readVariable' if command == 'getVar:' else command
-                if v14_watcher.readout.parameter:
-                    kurt_block = kurt.Block(command, v14_watcher.readout.parameter)
-                else:
-                    kurt_block = kurt.Block(command)
-
-                kurt_watcher = kurt.Watcher(kurt_target, kurt_block)
-
-                (x, y, right, bottom) = v14_watcher.bounds.value
-                kurt_watcher.pos = (x, y)
-
-                if v14_watcher.isLarge:
-                    kurt_watcher.style = "large"
-                elif v14_watcher.scratchSlider:
-                    kurt_watcher.style = "slider"
-
-                kurt_watcher.slider_min = v14_watcher.sliderMin
-                kurt_watcher.slider_max = v14_watcher.sliderMax
-
-                kurt_project.actors.append(kurt_watcher)
+                kurt_project.actors.append(
+                        load_watcher(v14_morph, v14_project, kurt_project))
 
         # TODO: stacking order of actors.
-        # TODO: cleanup watchers
 
         kurt_project._original = v14_project # DEBUG
 
@@ -576,53 +616,10 @@ class Scratch14Plugin(KurtPlugin):
                 continue
 
             if isinstance(kurt_actor, kurt.Watcher):
-                kurt_watcher = kurt_actor
-
-                if kurt_watcher.kind == 'list' or not kurt_watcher.is_visible:
+                if kurt_actor.kind == 'list' or not kurt_actor.is_visible:
                     continue
-
-                v14_watcher = WatcherMorph()
-                readout = v14_watcher.readout = v14_watcher.readoutFrame.submorphs[0]
-
-                if kurt_watcher.pos:
-                    (x, y) = kurt_watcher.pos
-                else:
-                    (x, y) = (10, 10)
-
-                v14_watcher.name = kurt_watcher.block.type.translate('scratch14').text
-
-                if kurt_watcher.target == kurt_project:
-                    v14_morph = v14_project.stage
-                    v14_watcher.isSpriteSpecfic = False
-                else:
-                    v14_morph = v14_project.get_sprite(kurt_watcher.target.name)
-                    v14_watcher.name = v14_morph.name + " " + v14_watcher.name
-
-                readout.target = v14_morph
-                v14_watcher.owner = v14_project.stage
-
-                selector = kurt_watcher.block.type.translate('scratch14').command
-                command = 'getVar:' if selector == 'readVariable' else selector
-                readout.getSelector = Symbol(command)
-
-                if kurt_watcher.block.args:
-                    readout.parameter = kurt_watcher.block.args[0]
-
-                (w, h) = (63, 21)
-
-                if kurt_watcher.style == "large":
-                    v14_watcher.isLarge = True
-                    readout.font_with_size[1] = 14
-                    (w, h) = (52, 26)
-                elif kurt_watcher.style == "slider":
-                    v14_watcher.scratchSlider = WatcherSliderMorph()
-
-                v14_watcher.sliderMin = kurt_watcher.slider_min
-                v14_watcher.sliderMax = kurt_watcher.slider_max
-
-                v14_watcher.bounds = Rectangle([x, y, x+w, x+h])
-
-                v14_project.stage.submorphs.append(v14_watcher)
+                v14_project.stage.submorphs.append(
+                    save_watcher(kurt_actor, kurt_project, v14_project))
 
         data = v14_project._save()
         fp.write(data)
