@@ -1,5 +1,6 @@
 - put back TranslatedBlockType eq
 - check Insert eq
+- add colon to sprite variable monitors between the sprite name and the variable name (e.g. “cat: hunger level”)
 parser:
 	- custom blocks
 	- block plugin-style booleans
