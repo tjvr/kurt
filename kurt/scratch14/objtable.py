@@ -376,15 +376,3 @@ class InfoTableAdapter(Subconstruct):
 
 InfoTable = InfoTableAdapter(ObjTable)
 
-
-
-ScratchStageMorph = Stage
-ScratchSpriteMorph = Sprite
-ImageMedia = Image
-SoundMedia = Sound
-
-__all__ = [
-    'ObjTable', '_obj_table_entry', '_obj_table_entries',
-    'UserObject', 'FixedObject', 'Field',
-    'ScratchStageMorph', 'ScratchSpriteMorph',
-] + [cls.__name__ for cls in fixed_object_classes + user_object_classes]

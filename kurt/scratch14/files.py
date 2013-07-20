@@ -26,7 +26,7 @@ from construct import Container, Struct, Bytes, Rename
 from construct.text import Literal
 from objtable import ObjTable, InfoTable
 from fixed_objects import Form
-from user_objects import Stage, Image
+from user_objects import ScratchStageMorph, ImageMedia
 
 import os.path
 
@@ -126,14 +126,14 @@ class ScratchProjectFile(BinaryFile):
             "history": "",
             "name": "",
         }
-        self.stage = Stage()
+        self.stage = ScratchStageMorph()
 
     def _load(self, bytes):
         project = self._construct.parse(bytes)
         self.info.update(project.info)
 
         if self.info["thumbnail"] and isinstance(self.info["thumbnail"], Form):
-            self.info["thumbnail"] = Image(
+            self.info["thumbnail"] = ImageMedia(
                 name = "thumbnail",
                 form = self.info["thumbnail"],
             )

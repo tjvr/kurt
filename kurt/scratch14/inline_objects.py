@@ -22,14 +22,17 @@ from construct import Array as MetaRepeater
 # We can't import the name Array, as we use it. -_-
 
 
-### inline fields & Refs ###
+
+### Inline fields & Refs ###
 
 class Ref(object):
     """A reference to an object located in a serialized object table.
-    Used internally for parsing obj_tables.
-    Allows for complex interlinked object networks to be serialized to a list of
-    objects.
+
+    Used internally for parsing object tables. Allows for complex interlinked
+    object networks to be serialized to a list of objects.
+
     Found in UserObjects and certain FixedObjects.
+
     """
     def __init__(self, index):
         """Initialise a reference.
@@ -127,6 +130,13 @@ class FieldAdapter(Adapter):
             return obj.value
 
 
+
+"""Construct for simple inline field values and references.
+
+They are encoded inline and not stored as object table entries. They do not
+contain references (though they may *be* references).
+
+"""
 Field = FieldAdapter(Struct("field",
     Enum(UBInt8("classID"),
         nil = 1,
@@ -159,11 +169,4 @@ Field = FieldAdapter(Struct("field",
         )),
     })
 ))
-Field.__doc__ = """Construct for simple inline field values and references.
-Converts pythonic types - eg None, True, int - to binary data.
-Encoded inline and not stored directly in an object table. Do not contain
-references.
-"""
-
-
 

@@ -36,13 +36,13 @@ from kurt.scratch14.heights import clean_up
 # The main classes used by this submodule are ScratchProjectFile and
 # ScratchSpriteFile classes.
 #
-# Most of the objects, like Stage and Sprite, inherit from :class:`UserObject`.
-# You can use ``.fields.keys()`` to see the available fields on one of these
-# objects.
+# Most of the objects, like ScratchStageMorph and ScratchSpriteMorph, inherit
+# from :class:`UserObject`.  You can use ``.fields.keys()`` to see the
+# available fields on one of these objects.
 #
-# :class:`FixedObjects` have a ``.value`` property to access their value. Inline
-# objects, such as int and bool, are converted to their Pythonic counterparts.
-# Array and Dictionary are converted to list and dict.
+# :class:`FixedObjects` have a ``.value`` property to access their value.
+# Inline objects, such as int and bool, are converted to their Pythonic
+# counterparts.  Array and Dictionary are converted to list and dict.
 
 
 
@@ -129,7 +129,7 @@ class Serializer(object):
 
         # make all sprites (needs to do before we save scripts)
         for kurt_sprite in self.project.sprites:
-            v14_sprite = Sprite(name=kurt_sprite.name)
+            v14_sprite = ScratchSpriteMorph(name=kurt_sprite.name)
             v14_sprite._original = kurt_sprite
             self.v14_project.stage.sprites.append(v14_sprite)
 
@@ -171,9 +171,9 @@ class Serializer(object):
         images = []
         sounds = []
         for media in v14_scriptable.media:
-            if isinstance(media, Sound):
+            if isinstance(media, SoundMedia):
                 sounds.append(media)
-            elif isinstance(media, Image):
+            elif isinstance(media, ImageMedia):
                 images.append(media)
         return (images, sounds)
 
@@ -195,7 +195,7 @@ class Serializer(object):
             image = kurt_costume.image.convert("JPEG", "bitmap")
 
             if image.format == "JPEG":
-                v14_image = Image(
+                v14_image = ImageMedia(
                     name = unicode(kurt_costume.name),
                     jpegBytes = ByteArray(kurt_costume.image.contents),
                 )
@@ -205,7 +205,7 @@ class Serializer(object):
                 (width, height) = pil_image.size
                 rgba_string = pil_image.tostring()
 
-                v14_image = Image(
+                v14_image = ImageMedia(
                     name = unicode(kurt_costume.name),
                     form = Form.from_string(width, height, rgba_string),
                 )
@@ -246,7 +246,7 @@ class Serializer(object):
         f.close()
         ss.samples = SoundBuffer(data)
 
-        v14_sound = Sound()
+        v14_sound = SoundMedia()
         v14_sound.name = kurt_sound.name
         v14_sound.originalSound = ss
         return v14_sound
@@ -289,9 +289,9 @@ class Serializer(object):
                     arg = 'random' if arg.value == 'any' else arg.value
                 else:
                     raise ValueError(arg)
-            elif isinstance(arg, Stage):
+            elif isinstance(arg, ScratchStageMorph):
                 arg = "Stage"
-            elif isinstance(arg, Sprite):
+            elif isinstance(arg, ScratchSpriteMorph):
                 arg = arg.name
             new_args.append(arg)
         return kurt.Block(command, *new_args)

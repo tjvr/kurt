@@ -22,25 +22,11 @@ They support dot notation for accessing fields. Use .fields.keys() to see
 available fields [dir() won't show them.]
 """
 
-from pprint import pformat
-import os
-import StringIO
-from array import array
-
 from construct import Container
-try:
-    import PIL.Image
-except ImportError:
-    PIL = None
 
 from inline_objects import Ref
 from fixed_objects import *
 
-
-def require_pil():
-    if not PIL:
-        raise ValueError, "Missing dependency: " \
-            "PIL library needed for image support"
 
 
 
@@ -291,7 +277,7 @@ class SensorBoardMorph(BaseMorph):
                                   # TODO - I have NO idea what this does.
 
 
-class Sprite(ScriptableScratchMorph):
+class ScratchSpriteMorph(ScriptableScratchMorph):
     """A sprite.
     Main attributes:
         scripts
@@ -319,7 +305,7 @@ class Sprite(ScriptableScratchMorph):
         self.sceneStates = {}
 
 
-class Stage(ScriptableScratchMorph):
+class ScratchStageMorph(ScriptableScratchMorph):
     """The project stage. Contains project contents including sprites and media.
     Main attributes:
         sprites - ordered list of sprites.
@@ -435,7 +421,7 @@ class ScratchMedia(UserObject):
     _fields = ("name",)
 
 
-class Image(ScratchMedia):
+class ImageMedia(ScratchMedia):
     """An image file, used for costumes and backgrounds.
 
     You can't modify image data in-place (excepting `textBox`) -- create a new
@@ -466,7 +452,7 @@ class MovieMedia(ScratchMedia):
     _fields = ScratchMedia._fields + ("fileName", "fade", "fadeColor", "zoom",
         "hPan", "vPan", "msecsPerFrame", "currentFrame", "moviePlaying")
 
-class Sound(ScratchMedia):
+class SoundMedia(ScratchMedia):
     classID = 164
     _fields = ScratchMedia._fields + ("originalSound", "volume", "balance",
         "compressedSampleRate", "compressedBitsPerSample", "compressedData")
