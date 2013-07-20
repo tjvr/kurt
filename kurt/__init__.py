@@ -538,12 +538,14 @@ class UnknownFormat(Exception):
     """
     pass
 
+
 class UnknownBlock(Exception):
     """A :class:`Block` with the given command or type cannot be found.
 
     Raised by :attr:`BlockType.get`.
 
     """
+
 
 class BlockNotSupported(Exception):
     """The plugin doesn't support this Block.
@@ -1653,9 +1655,6 @@ class TranslatedBlockType(BaseBlockType):
         registered first.
 
         """
-
-    def __ne__(self, other):
-        return not self == other
 
 
 class CustomBlockType(BaseBlockType):
