@@ -552,6 +552,7 @@ class Scratch14Plugin(KurtPlugin):
                     continue
 
                 v14_watcher = WatcherMorph()
+                readout = v14_watcher.readout = v14_watcher.readoutFrame.submorphs[0]
 
                 if kurt_watcher.pos:
                     (x, y) = kurt_watcher.pos
@@ -567,26 +568,24 @@ class Scratch14Plugin(KurtPlugin):
                     v14_morph = v14_project.get_sprite(kurt_watcher.target.name)
                     v14_watcher.name = v14_morph.name + " " + v14_watcher.name
 
-                v14_watcher.readout.target = v14_morph
+                readout.target = v14_morph
                 v14_watcher.owner = v14_project.stage
 
                 selector = kurt_watcher.block.type.translate('scratch14').command
                 command = 'getVar:' if selector == 'readVariable' else selector
-                v14_watcher.readout.getSelector = Symbol(command)
+                readout.getSelector = Symbol(command)
 
                 if kurt_watcher.block.args:
-                    v14_watcher.readout.parameter = kurt_watcher.block.args[0]
-
+                    readout.parameter = kurt_watcher.block.args[0]
 
                 (w, h) = (63, 21)
 
                 if kurt_watcher.style == "large":
                     v14_watcher.isLarge = True
-                    v14_watcher.readout.font_with_size[1] = 14
+                    readout.font_with_size[1] = 14
                     (w, h) = (52, 26)
-
                 elif kurt_watcher.style == "slider":
-                    v14_watcher.make_slider(v14_project.stage)
+                    v14_watcher.scratchSlider = WatcherSliderMorph()
 
                 v14_watcher.sliderMin = kurt_watcher.slider_min
                 v14_watcher.sliderMax = kurt_watcher.slider_max

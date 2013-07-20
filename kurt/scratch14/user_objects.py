@@ -193,6 +193,7 @@ class BaseMorph(UserObject):
         self.flags = 0
         self.submorphs = []
         self.color = Color(1023, 1023, 1023)
+        self.bounds = Rectangle([0, 0, 1, 1])
 
 class Morph(BaseMorph):
     """Base class for most UserObjects."""
@@ -217,6 +218,10 @@ class AlignmentMorph(RectangleMorph):
     classID = 104
     _fields = RectangleMorph._fields + ("orientation", "centering", "hResizing",
         "vResizing", "inset")
+
+    def set_defaults(self):
+        RectangleMorph.set_defaults(self)
+        self.inset = 0
 
 class StringMorph(BaseMorph):
     classID = 105
@@ -362,7 +367,6 @@ class Sprite(ScriptableScratchMorph):
         self.name = "Sprite1"
         self.color = Color(0, 0, 1023)
         # self.owner - Stage
-        # self.bounds = Rectangle() - default to size of costume?
 
         self.visibility = 100
         self.scalePoint = Point(1.0, 1.0)
@@ -370,18 +374,6 @@ class Sprite(ScriptableScratchMorph):
         self.rotationStyle = Symbol("normal")
         self.draggable = False
         self.sceneStates = {}
-
-    def normalize(self):
-        """Called before saving"""
-        ScriptableScratchMorph.normalize(self)
-
-        if not self.bounds:
-            try:
-                self.bounds = Rectangle(
-                    [0, 0, self.costume.width, self.costume.height])
-            except ValueError:
-                # invalid costume, or maybe JPG
-                self.bounds = Rectangle([0, 0, 100, 100])
 
 
 class Stage(ScriptableScratchMorph):
@@ -507,174 +499,15 @@ class WatcherMorph(AlignmentMorph):
     _version = 5
 
     def set_defaults(self):
-        self.borderColor = Color(594, 582, 582)
-        self.borderWidth = 1
-        self.bounds = Rectangle([10, 10, 73, 31])
+        AlignmentMorph.set_defaults(self)
         self.centering = Symbol('center')
-        self.color = Color(774, 786, 798)
-        self.flags = 0
-        self.hResizing = Symbol('shrinkWrap')
-        self.vResizing = Symbol('shrinkWrap')
-        self.inset = 2
         self.isLarge = False
         self.isSpriteSpecific = False
-        self.orientation = Symbol('vertical')
-        self.owner = None # '<Stage>' -- SET THIS
-        self.properties = None
-        self.scratchSlider = None
-        self.sliderMax = 100
-        self.sliderMin = 0
-        self.unused = None
-
-        self.readout = UpdatingStringMorph(
-            bounds = Rectangle([44, 14, 52, 26]),
-            color = Color(1023, 1023, 1023),
-            contents = u'', # -- SET THIS?
-            emphasis = 0,
-            flags = 0,
-            floatPrecision = 0.1,
-            font_with_size = [Symbol('VerdanaBold'), 10],
-            format = Symbol('default'),
-            getSelector = Symbol('getVar:'),
-            growable = True,
-            owner = None, # self.readoutFrame
-            parameter = None,
-            properties = None,
-            putSelector = None,
-            stepTime = 100,
-            submorphs = [],
-            target = None, # Stage or Sprite -- SET THIS
-        )
-
         self.readoutFrame = WatcherReadoutFrameMorph(
-            borderColor = Color(1023, 1023, 1023),
-            borderWidth = 2,
-            bounds = Rectangle([28, 13, 68, 27]),
-            color = Color(972, 473, 117),
-            flags = 0,
-            owner = None, # self.watcher
-            properties = None,
             submorphs = [
-                self.readout
-            ],
-        )
-
-        self.readout.owner = self.readoutFrame
-
-        self.titleMorph = StringMorph(
-            bounds = Rectangle([16, 14, 24, 26]),
-            color = Color(0, 0, 0),
-            contents = u'???', # -- SET THIS?
-            emphasis = 0,
-            flags = 0,
-            font_with_size = [Symbol('VerdanaBold'), 10],
-            owner = None, # self.watcher
-            properties = None,
-            submorphs = [],
-        )
-
-        self.watcher = AlignmentMorph(
-            borderColor = Color(0, 0, 0),
-            borderWidth = 0,
-            bounds = Rectangle([13, 13, 70, 27]),
-            centering = Symbol('center'),
-            color = TranslucentColor(0, 0, 0, 0),
-            flags = 0,
-            hResizing = Symbol('shrinkWrap'),
-            vResizing = Symbol('shrinkWrap'),
-            inset = 0,
-            orientation = Symbol('horizontal'),
-            owner = self,
-            properties = None,
-        )
-
-        self.watcher.submorphs = [
-            Morph(
-                bounds = Rectangle([13, 18, 16, 21]),
-                color = Color(774, 786, 798),
-                flags = 0,
-                owner = self.watcher,
-                properties = None,
-                submorphs = [],
-            ),
-            self.titleMorph,
-            AlignmentMorph(
-                borderColor = Color(0, 0, 0),
-                borderWidth = 0,
-                bounds = Rectangle([24, 13, 28, 27]),
-                centering = Symbol('topLeft'),
-                color = Color(774, 786, 798),
-                flags = 0,
-                hResizing = Symbol('rigid'),
-                inset = 2,
-                orientation = Symbol('horizontal'),
-                properties = None,
-                submorphs = [],
-                vResizing = Symbol('spaceFill'),
-            ),
-            self.readoutFrame,
-            Morph(
-                bounds = Rectangle([68, 19, 70, 21]),
-                color = Color(774, 786, 798),
-                flags = 0,
-                owner = self.watcher,
-                properties = None,
-                submorphs = [],
-            )
-        ]
-
-        for m in self.watcher.submorphs:
-            m.owner = self.watcher
-
-        self.submorphs = [
-            self.watcher,
-            Morph(
-                bounds = Rectangle([39, 27, 44, 28]),
-                color = TranslucentColor(0, 0, 0, 0),
-                flags = 0,
-                owner = self,
-                properties = None,
-                submorphs = [],
-            )
-        ]
-
-    def make_slider(self, target):
-        self.scratchSlider = slider = WatcherSliderMorph(
-            arguments = [u'slider'],
-            borderColor = Symbol('inset'),
-            borderWidth = 0,
-            bounds = Rectangle([59, 273, 134, 283]),
-            color = Color(512, 512, 512),
-            descending = False,
-            flags = 0,
-            maxVal = 100,
-            minVal = 0,
-            model = None,
-            owner = self,
-            properties = None,
-            setValueSelector = Symbol('setVar:to:'),
-            sliderColor = None,
-            sliderShadow = None,
-            sliderThickness = 0,
-            target = target,
-            truncate = True,
-            value = 0.0,
-        )
-
-        slider.slider = ImageMorph(
-            bounds = Rectangle([59, 273, 69, 283]),
-            color = Color(0, 0, 1023),
-            flags = 0,
-            owner = slider,
-            properties = None,
-            submorphs = [],
-            transparency = 1.0,
-        )
-
-        slider.submorphs = [slider.slider]
-
-        self.submorphs.append(self.scratchSlider)
-
+                UpdatingStringMorph(
+                    font_with_size = [Symbol('VerdanaBold'), 10],
+        )])
 
 class SetterBlockMorph(BaseMorph):
     """unused?"""
@@ -855,7 +688,6 @@ class ScratchListMorph(BorderedMorph):
 
         self.borderColor = Color(594, 582, 582)
         self.borderWidth = 2
-        self.bounds = Rectangle([375, 10, 470, 125]) # ?
         self.color = Color(774, 786, 798)
 
         self.items = []
