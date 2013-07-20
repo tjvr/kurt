@@ -33,7 +33,7 @@ from kurt.scratch14.heights import clean_up
 
 
 
-# The main classes used by this package are ScratchProjectFile and
+# The main classes used by this submodule are ScratchProjectFile and
 # ScratchSpriteFile classes.
 #
 # Most of the objects, like Stage and Sprite, inherit from :class:`UserObject`.
@@ -45,347 +45,6 @@ from kurt.scratch14.heights import clean_up
 # Array and Dictionary are converted to list and dict.
 
 
-
-# kurt_* -- objects from kurt 2.0 api from kurt/__init__.py
-# v14_*  -- objects from this module, kurt.scratch14
-
-def get_media(v14_scriptable):
-    """Return (images, sounds)"""
-    images = []
-    sounds = []
-    for media in v14_scriptable.media:
-        if isinstance(media, Sound):
-            sounds.append(media)
-        elif isinstance(media, Image):
-            images.append(media)
-    return (images, sounds)
-
-def load_image(v14_image):
-    if v14_image:
-        if v14_image.jpegBytes:
-            image = kurt.Image(v14_image.jpegBytes.value, "JPEG")
-            image._size = v14_image.size
-        else:
-            form = v14_image.compositeForm or v14_image.form
-            (width, height, rgba_array) = form.to_array()
-            size = (width, height)
-            pil_image = PIL.Image.fromstring("RGBA", size, rgba_array)
-            image = kurt.Image(pil_image)
-        return kurt.Costume(v14_image.name, image, v14_image.rotationCenter)
-
-def save_image(kurt_costume):
-    if kurt_costume:
-        image = kurt_costume.image.convert("JPEG", "bitmap")
-
-        if image.format == "JPEG":
-            v14_image = Image(
-                name = unicode(kurt_costume.name),
-                jpegBytes = ByteArray(kurt_costume.image.contents),
-            )
-        else:
-            pil_image = kurt_costume.image.pil_image
-            pil_image = pil_image.convert("RGBA")
-            (width, height) = pil_image.size
-            rgba_string = pil_image.tostring()
-
-            v14_image = Image(
-                name = unicode(kurt_costume.name),
-                form = Form.from_string(width, height, rgba_string),
-            )
-
-        v14_image.size = kurt_costume.image.size
-        v14_image.rotationCenter = Point(kurt_costume.rotation_center)
-        return v14_image
-
-def swap_byte_pairs(data):
-    swapped_bytes = ""
-    for i in range(0, len(data), 2):
-        a = data[i:i+1]
-        b = data[i+1:i+2]
-        swapped_bytes += b + a
-    return swapped_bytes
-
-def load_sound(v14_sound):
-    contents = StringIO()
-    f = wave.open(contents, 'w')
-    f.setnframes(v14_sound.originalSound.samplesSize)
-    f.setframerate(v14_sound.originalSound.originalSamplingRate)
-    f.setnchannels(1)
-    f.setsampwidth(2) # bytes?
-    f.writeframes(swap_byte_pairs(v14_sound.originalSound.samples.value))
-    f.close()
-    return kurt.Sound(v14_sound.name, kurt.Waveform(contents.getvalue()))
-
-def save_sound(kurt_sound):
-    switch_with_unknown_purpose = False
-
-    ss = SampledSound()
-    ss.samplesSize = ss.initialCount = kurt_sound.waveform.sample_count
-    ss.originalSamplingRate = ss.scaledIncrement = kurt_sound.waveform.rate
-    if switch_with_unknown_purpose:
-        ss.scaledIncrement *= 2
-    else:
-        ss.initialCount *= 2
-
-    try:
-        f = wave.open(StringIO(kurt_sound.waveform.contents))
-    except wave.Error, err:
-        err.message += "\nInvalid wave file: %s" % kurt_sound
-        err.args = (err.message,)
-        raise
-    data = swap_byte_pairs(f.readframes(kurt_sound.waveform.sample_count))
-    f.close()
-    ss.samples = SoundBuffer(data)
-
-    v14_sound = Sound()
-    v14_sound.name = kurt_sound.name
-    v14_sound.originalSound = ss
-    return v14_sound
-
-def load_block(block_array):
-    args = list(block_array)
-    command = args.pop(0)
-    assert isinstance(command, Symbol)
-    command = command.value
-
-    # special-case blocks with weird arguments
-    if command == 'EventHatMorph':
-        if args[0] == 'Scratch-StartClicked':
-            return kurt.Block('whenGreenFlag')
-        else:
-            return kurt.Block('whenIreceive', args[0])
-    elif command == 'MouseClickEventHatMorph':
-        return kurt.Block('whenClicked')
-    elif command == 'changeVariable':
-        command = args.pop(1).value
-    else:
-        command = command
-
-    # recursively load args
-    new_args = []
-    for arg in args:
-        if isinstance(arg, list):
-            if arg and isinstance(arg[0], Symbol):
-                arg = load_block(arg)
-            else:
-                arg = map(load_block, arg)
-        elif isinstance(arg, Color):
-            arg = kurt.Color(arg.to_8bit())
-        elif isinstance(arg, Symbol):
-            if arg.value == 'mouse':
-                arg = 'mouse-pointer'
-            elif arg.value == 'edge':
-                arg = 'edge'
-            elif arg.value in ('all', 'last', 'any'):
-                arg = 'random' if arg.value == 'any' else arg.value
-            else:
-                raise ValueError(arg)
-        elif isinstance(arg, Stage):
-            arg = "Stage"
-        elif isinstance(arg, Sprite):
-            arg = arg.name
-        new_args.append(arg)
-    return kurt.Block(command, *new_args)
-
-def load_script(script_array):
-    (pos, blocks) = script_array
-
-    # comment?
-    if len(blocks) == 1:
-        block = blocks[0]
-        if block:
-            if (isinstance(block[0], Symbol) and
-                    block[0].value == 'scratchComment'):
-                text = block[1].replace("\r", "\n")
-                comment = kurt.Comment(text, pos)
-                if len(block) > 4:
-                    comment._anchor = block[4]
-                return comment
-
-    # script
-    return kurt.Script(map(load_block, blocks), pos)
-
-def save_block(kurt_block, v14_project):
-    command = kurt_block.type.translate('scratch14').command
-
-    inserts = list(kurt_block.type.inserts)
-    args = []
-    for arg in kurt_block.args:
-        insert = inserts.pop(0) if inserts else None
-        if isinstance(arg, kurt.Block):
-            arg = save_block(arg, v14_project)
-        elif isinstance(arg, list):
-            arg = [save_block(b, v14_project) for b in arg]
-        elif isinstance(arg, kurt.Color):
-            arg = Color.from_8bit(arg)
-        elif insert:
-            if insert.kind in ('mathOp', 'effect', 'key'):
-                arg = str(arg) # Won't accept unicode
-
-            elif insert.kind in ('spriteOrMouse', 'spriteOrStage', 'touching'):
-                if arg == 'mouse-pointer':
-                    arg = Symbol('mouse')
-                elif arg == 'edge':
-                    arg = Symbol('edge')
-                elif arg == "Stage":
-                    arg = v14_project.stage
-                else:
-                    arg = v14_project.get_sprite(arg)
-
-            elif isinstance(arg, basestring):
-                if insert.kind in ('listItem', 'listDeleteItem'):
-                    if arg in ('last', 'all', 'random'):
-                        arg = Symbol('any' if arg == 'random' else arg)
-        args.append(arg)
-
-    # special-case blocks with weird arguments
-    if command == 'whenGreenFlag':
-        command = 'EventHatMorph'
-        args = ['Scratch-StartClicked']
-    elif command == 'whenIReceive':
-        command = 'EventHatMorph'
-        args = [args[0]]
-    elif command == 'whenClicked':
-        command = 'MouseClickEventHatMorph'
-        args = ['Scratch-MouseClickEvent']
-    elif command in ('changeVar:by:', 'setVar:to:'):
-        args = [args[0], Symbol(command), args[1]]
-        command = 'changeVariable'
-
-    return [Symbol(command)] + args
-
-def save_script(kurt_script, v14_project):
-    if isinstance(kurt_script, kurt.Script):
-        pos = kurt_script.pos or (10, 10)
-        blocks = [save_block(b, v14_project) for b in kurt_script.blocks]
-        return [Point(pos), blocks]
-    elif isinstance(kurt_script, kurt.Comment):
-        comment = kurt_script
-        array = [Symbol('scratchComment'), comment.text, True, 112]
-        return [Point(comment.pos), [array]]
-
-def load_variable((name, value)):
-    return (name, kurt.Variable(value))
-
-def save_variable((name, kurt_variable)):
-    return (name, kurt_variable.value)
-
-def load_lists(v14_lists, kurt_project, kurt_target):
-    for v14_list in v14_lists.values():
-        kurt_list = kurt.List(map(unicode, v14_list.items))
-        kurt_target.lists[v14_list.name] = kurt_list
-
-        kurt_watcher = kurt.Watcher(kurt_target,
-                kurt.Block("contentsOfList:", v14_list.name))
-        kurt_watcher.is_visible = bool(v14_list.owner)
-
-        (x, y, w, h) = v14_list.bounds.value
-        if not kurt_watcher.is_visible:
-            x -= 534
-            y -= 71
-        kurt_watcher.pos = (x, y)
-        kurt_project.actors.append(kurt_watcher)
-
-def save_lists(kurt_target, kurt_project, v14_morph, v14_project):
-    for (name, kurt_list) in kurt_target.lists.items():
-        name = unicode(name)
-        v14_list = ScratchListMorph(
-            name = name,
-            items = map(unicode, kurt_list.items),
-        )
-
-        if not kurt_list.watcher:
-            kurt_watcher = kurt.Watcher(kurt_target,
-                    kurt.Block("contentsOfList:", name), is_visible=False)
-
-        pos = kurt_list.watcher.pos
-        if pos:
-            (x, y) = pos
-        else:
-            (x, y) = (375, 10)
-            # TODO: stack them properly
-
-        if not kurt_list.watcher.is_visible:
-            x += 534
-            y += 71
-        v14_list.bounds = Rectangle([x, y, x+95, y+115])
-
-        v14_list.target = v14_morph
-        if kurt_list.watcher.is_visible:
-            v14_list.owner = v14_project.stage
-            v14_project.stage.submorphs.append(v14_list)
-
-        v14_morph.lists[name] = v14_list
-
-def load_watcher(v14_watcher, v14_project, kurt_project):
-    v14_sprite = v14_watcher.readout.target
-    if v14_sprite == v14_project.stage:
-        kurt_target = kurt_project
-    else:
-        kurt_target = kurt_project.get_sprite(v14_sprite.name)
-
-    command = v14_watcher.readout.getSelector.value
-    command = 'readVariable' if command == 'getVar:' else command
-    if v14_watcher.readout.parameter:
-        kurt_block = kurt.Block(command, v14_watcher.readout.parameter)
-    else:
-        kurt_block = kurt.Block(command)
-
-    kurt_watcher = kurt.Watcher(kurt_target, kurt_block)
-
-    (x, y, right, bottom) = v14_watcher.bounds.value
-    kurt_watcher.pos = (x, y)
-
-    if v14_watcher.isLarge:
-        kurt_watcher.style = "large"
-    elif v14_watcher.scratchSlider:
-        kurt_watcher.style = "slider"
-
-    kurt_watcher.slider_min = v14_watcher.sliderMin
-    kurt_watcher.slider_max = v14_watcher.sliderMax
-
-    return kurt_watcher
-
-def save_watcher(kurt_watcher, kurt_project, v14_project):
-    v14_watcher = WatcherMorph()
-    readout = v14_watcher.readout = v14_watcher.readoutFrame.submorphs[0]
-
-    if kurt_watcher.pos:
-        (x, y) = kurt_watcher.pos
-    else:
-        (x, y) = (10, 10)
-
-    v14_watcher.name = kurt_watcher.block.type.translate('scratch14').text
-
-    if kurt_watcher.target == kurt_project:
-        v14_morph = v14_project.stage
-        v14_watcher.isSpriteSpecfic = False
-    else:
-        v14_morph = v14_project.get_sprite(kurt_watcher.target.name)
-        v14_watcher.name = v14_morph.name + " " + v14_watcher.name
-
-    readout.target = v14_morph
-    v14_watcher.owner = v14_project.stage
-
-    selector = kurt_watcher.block.type.translate('scratch14').command
-    command = 'getVar:' if selector == 'readVariable' else selector
-    readout.getSelector = Symbol(command)
-
-    if kurt_watcher.block.args:
-        readout.parameter = kurt_watcher.block.args[0]
-
-    if kurt_watcher.style == "large":
-        v14_watcher.isLarge = True
-        readout.font_with_size[1] = 14
-    elif kurt_watcher.style == "slider":
-        v14_watcher.scratchSlider = WatcherSliderMorph()
-
-    v14_watcher.sliderMin = kurt_watcher.slider_min
-    v14_watcher.sliderMax = kurt_watcher.slider_max
-
-    v14_watcher.bounds = Rectangle([x, y, x+1, x+1])
-
-    return v14_watcher
 
 def get_blocks_by_id(this_block):
     if isinstance(this_block, kurt.Script):
@@ -403,134 +62,562 @@ def get_blocks_by_id(this_block):
                     for b in get_blocks_by_id(block):
                         yield b
 
-def load_scriptable(kurt_scriptable, v14_scriptable):
-    # scripts
-    kurt_scriptable.scripts = map(load_script, v14_scriptable.scripts)
+def swap_byte_pairs(data):
+    swapped_bytes = ""
+    for i in range(0, len(data), 2):
+        a = data[i:i+1]
+        b = data[i+1:i+2]
+        swapped_bytes += b + a
+    return swapped_bytes
 
-    # fix comments
-    comments = []
 
-    blocks_by_id = []
-    # A list of all the blocks in script order but reverse script
-    # blocks order.
-    # Used to determine which block a Comment is anchored to.
-    #
-    # Note that Squeak arrays are 1-based, so index with:
-    #     blocks_by_id[index - 1]
 
-    for script in kurt_scriptable.scripts:
-        if isinstance(script, kurt.Comment):
-            comments.append(script)
-        elif isinstance(script, kurt.Script):
-            for block in reversed(list(get_blocks_by_id(script))):
-                blocks_by_id.append(block)
+# kurt_* -- objects from kurt 2.0 api
+# v14_*  -- objects from this module, kurt.scratch14
 
-    attached_comments = []
-    for comment in comments:
-        if hasattr(comment, '_anchor'):
-            # Attach the comment to the right block from the given scripts.
-            block = blocks_by_id[comment._anchor - 1]
-            block.comment = comment.text
-            attached_comments.append(comment)
+class Serializer(object):
+    """Use one instance of Serializer for each load/save operation."""
 
-    for comment in attached_comments:
-        kurt_scriptable.scripts.remove(comment)
+    def __init__(self, plugin):
+        self.plugin = plugin
 
-    # media
-    kurt_scriptable.variables = dict(map(load_variable,
-            v14_scriptable.variables.items()))
+    def load(self, fp):
+        self.v14_project = ScratchProjectFile()
+        self.v14_project._load(fp.read())
+        self.project = kurt.Project()
 
-    (images, sounds) = get_media(v14_scriptable)
-    kurt_scriptable.costumes = map(load_image, images)
-    kurt_scriptable.sounds = map(load_sound, sounds)
+        # project info
+        self.project.notes = self.v14_project.info['comment']
+        self.project.author = self.v14_project.info['author']
+        self.project.thumbnail = self.load_image(self.v14_project.info['thumbnail'])
 
-    # costume
-    if kurt_scriptable.costumes:
-        index = images.index(v14_scriptable.costume)
-        kurt_scriptable.costume_index = index
+        # stage
+        self.load_scriptable(self.project.stage, self.v14_project.stage)
+        self.load_lists(self.v14_project.stage.lists, self.project)
 
-    # attributes
-    kurt_scriptable.volume = v14_scriptable.volume
-    kurt_scriptable.tempo = v14_scriptable.tempoBPM
+        # global vars
+        self.project.variables = self.project.stage.variables
+        self.project.stage.variables = {}
 
-    # for sprites:
-    if isinstance(kurt_scriptable, kurt.Sprite):
-        kurt_scriptable.name = v14_scriptable.name
-        kurt_scriptable.direction = v14_scriptable.rotationDegrees + 90
-        kurt_scriptable.rotation_style = v14_scriptable.rotationStyle.value
-        kurt_scriptable.size = v14_scriptable.scalePoint.x * 100.0
-        kurt_scriptable.is_draggable = v14_scriptable.draggable
-        kurt_scriptable.is_visible = (v14_scriptable.flags == 0)
+        # sprites
+        for v14_sprite in self.v14_project.stage.sprites:
+            kurt_sprite = kurt.Sprite(self.project, v14_sprite.name)
+            self.load_scriptable(kurt_sprite, v14_sprite)
+            self.load_lists(v14_sprite.lists, kurt_sprite)
+            self.project.sprites.append(kurt_sprite)
 
-        # bounds
-        (x, y, right, bottom) = v14_scriptable.bounds.value
-        (rx, ry) = v14_scriptable.costume.rotationCenter
-        x = x + rx - 240
-        y = 180 - y - ry
-        kurt_scriptable.position = (x, y)
+        # variable watchers
+        for v14_morph in self.v14_project.stage.submorphs:
+            if isinstance(v14_morph, WatcherMorph):
+                self.project.actors.append(
+                        self.load_watcher(v14_morph, self.v14_project, self.project))
 
-def save_scriptable(kurt_scriptable, v14_scriptable, v14_project):
-    clean_up(kurt_scriptable.scripts)
+        # TODO: stacking order of actors.
 
-    v14_scriptable.scripts = [save_script(s, v14_project)
-                              for s in kurt_scriptable.scripts]
+        self.project._original = self.v14_project # DEBUG
 
-    blocks_by_id = []
-    for script in kurt_scriptable.scripts:
-        if isinstance(script, kurt.Script):
-            for block in reversed(list(get_blocks_by_id(script))):
-                blocks_by_id.append(block)
+        return self.project
 
-    def grab_comments(block):
-        if block.comment:
-            (x, y) = v14_scriptable.scripts[-1][0]
-            pos = (x, y + 29)
-            array = save_script(kurt.Comment(block.comment, pos), v14_project)
-            for i in xrange(len(blocks_by_id)):
-                if blocks_by_id[i] is block:
-                    array[1][0].append(i + 1)
-                    break
-            v14_scriptable.scripts.append(array)
+    def save(self, fp, project):
+        self.project = project
+        self.v14_project = ScratchProjectFile()
 
-        for arg in block.args:
+        # project info
+        self.v14_project.info['comment'] = self.project.notes
+        self.v14_project.info['author'] = self.project.author
+        self.v14_project.info['thumbnail'] = self.save_image(self.project.thumbnail)
+
+        # make all sprites (needs to do before we save scripts)
+        for kurt_sprite in self.project.sprites:
+            v14_sprite = Sprite(name=kurt_sprite.name)
+            v14_sprite._original = kurt_sprite
+            self.v14_project.stage.sprites.append(v14_sprite)
+
+        # stage
+        self.save_scriptable(self.project.stage, self.v14_project.stage)
+        self.save_lists(self.project, self.v14_project.stage)
+        for (name, variable) in self.project.variables.items():
+            self.v14_project.stage.variables[name] = variable.value
+        self.v14_project.stage.tempoBPM = self.project.tempo
+
+        # sprites
+        for v14_sprite in self.v14_project.stage.sprites:
+            kurt_sprite = v14_sprite._original
+            self.save_scriptable(kurt_sprite, v14_sprite)
+            self.save_lists(kurt_sprite, v14_sprite)
+            del v14_sprite._original
+
+        # variable watchers
+        for kurt_actor in self.project.actors:
+            if kurt_actor in self.project.sprites:
+                self.v14_project.stage.submorphs.append(
+                    self.v14_project.get_sprite(kurt_actor.name)
+                )
+                continue
+
+            if isinstance(kurt_actor, kurt.Watcher):
+                if kurt_actor.kind == 'list' or not kurt_actor.is_visible:
+                    continue
+                self.v14_project.stage.submorphs.append(
+                    self.save_watcher(kurt_actor))
+
+        data = self.v14_project._save()
+        fp.write(data)
+
+        return self.v14_project
+
+    def get_media(self, v14_scriptable):
+        """Return (images, sounds)"""
+        images = []
+        sounds = []
+        for media in v14_scriptable.media:
+            if isinstance(media, Sound):
+                sounds.append(media)
+            elif isinstance(media, Image):
+                images.append(media)
+        return (images, sounds)
+
+    def load_image(self, v14_image):
+        if v14_image:
+            if v14_image.jpegBytes:
+                image = kurt.Image(v14_image.jpegBytes.value, "JPEG")
+                image._size = v14_image.size
+            else:
+                form = v14_image.compositeForm or v14_image.form
+                (width, height, rgba_array) = form.to_array()
+                size = (width, height)
+                pil_image = PIL.Image.fromstring("RGBA", size, rgba_array)
+                image = kurt.Image(pil_image)
+            return kurt.Costume(v14_image.name, image, v14_image.rotationCenter)
+
+    def save_image(self, kurt_costume):
+        if kurt_costume:
+            image = kurt_costume.image.convert("JPEG", "bitmap")
+
+            if image.format == "JPEG":
+                v14_image = Image(
+                    name = unicode(kurt_costume.name),
+                    jpegBytes = ByteArray(kurt_costume.image.contents),
+                )
+            else:
+                pil_image = kurt_costume.image.pil_image
+                pil_image = pil_image.convert("RGBA")
+                (width, height) = pil_image.size
+                rgba_string = pil_image.tostring()
+
+                v14_image = Image(
+                    name = unicode(kurt_costume.name),
+                    form = Form.from_string(width, height, rgba_string),
+                )
+
+            v14_image.size = kurt_costume.image.size
+            v14_image.rotationCenter = Point(kurt_costume.rotation_center)
+            return v14_image
+
+    def load_sound(self, v14_sound):
+        contents = StringIO()
+        f = wave.open(contents, 'w')
+        f.setnframes(v14_sound.originalSound.samplesSize)
+        f.setframerate(v14_sound.originalSound.originalSamplingRate)
+        f.setnchannels(1)
+        f.setsampwidth(2) # bytes?
+        f.writeframes(swap_byte_pairs(v14_sound.originalSound.samples.value))
+        f.close()
+        return kurt.Sound(v14_sound.name, kurt.Waveform(contents.getvalue()))
+
+    def save_sound(self, kurt_sound):
+        switch_with_unknown_purpose = False
+
+        ss = SampledSound()
+        ss.samplesSize = ss.initialCount = kurt_sound.waveform.sample_count
+        ss.originalSamplingRate = ss.scaledIncrement = kurt_sound.waveform.rate
+        if switch_with_unknown_purpose:
+            ss.scaledIncrement *= 2
+        else:
+            ss.initialCount *= 2
+
+        try:
+            f = wave.open(StringIO(kurt_sound.waveform.contents))
+        except wave.Error, err:
+            err.message += "\nInvalid wave file: %s" % kurt_sound
+            err.args = (err.message,)
+            raise
+        data = swap_byte_pairs(f.readframes(kurt_sound.waveform.sample_count))
+        f.close()
+        ss.samples = SoundBuffer(data)
+
+        v14_sound = Sound()
+        v14_sound.name = kurt_sound.name
+        v14_sound.originalSound = ss
+        return v14_sound
+
+    def load_block(self, block_array):
+        args = list(block_array)
+        command = args.pop(0)
+        assert isinstance(command, Symbol)
+        command = command.value
+
+        # special-case blocks with weird arguments
+        if command == 'EventHatMorph':
+            if args[0] == 'Scratch-StartClicked':
+                return kurt.Block('whenGreenFlag')
+            else:
+                return kurt.Block('whenIreceive', args[0])
+        elif command == 'MouseClickEventHatMorph':
+            return kurt.Block('whenClicked')
+        elif command == 'changeVariable':
+            command = args.pop(1).value
+        else:
+            command = command
+
+        # recursively load args
+        new_args = []
+        for arg in args:
+            if isinstance(arg, list):
+                if arg and isinstance(arg[0], Symbol):
+                    arg = load_block(arg)
+                else:
+                    arg = map(self.load_block, arg)
+            elif isinstance(arg, Color):
+                arg = kurt.Color(arg.to_8bit())
+            elif isinstance(arg, Symbol):
+                if arg.value == 'mouse':
+                    arg = 'mouse-pointer'
+                elif arg.value == 'edge':
+                    arg = 'edge'
+                elif arg.value in ('all', 'last', 'any'):
+                    arg = 'random' if arg.value == 'any' else arg.value
+                else:
+                    raise ValueError(arg)
+            elif isinstance(arg, Stage):
+                arg = "Stage"
+            elif isinstance(arg, Sprite):
+                arg = arg.name
+            new_args.append(arg)
+        return kurt.Block(command, *new_args)
+
+    def load_script(self, script_array):
+        (pos, blocks) = script_array
+
+        # comment?
+        if len(blocks) == 1:
+            block = blocks[0]
+            if block:
+                if (isinstance(block[0], Symbol) and
+                        block[0].value == 'scratchComment'):
+                    text = block[1].replace("\r", "\n")
+                    comment = kurt.Comment(text, pos)
+                    if len(block) > 4:
+                        comment._anchor = block[4]
+                    return comment
+
+        # script
+        return kurt.Script(map(self.load_block, blocks), pos)
+
+    def save_block(self, kurt_block):
+        command = kurt_block.type.translate('scratch14').command
+
+        inserts = list(kurt_block.type.inserts)
+        args = []
+        for arg in kurt_block.args:
+            insert = inserts.pop(0) if inserts else None
             if isinstance(arg, kurt.Block):
-                grab_comments(arg)
+                arg = save_block(arg, self.v14_project)
             elif isinstance(arg, list):
-                map(grab_comments, arg)
+                arg = [save_block(b, self.v14_project) for b in arg]
+            elif isinstance(arg, kurt.Color):
+                arg = Color.from_8bit(arg)
+            elif insert:
+                if insert.kind in ('mathOp', 'effect', 'key'):
+                    arg = str(arg) # Won't accept unicode
 
-    for script in kurt_scriptable.scripts:
-        if isinstance(script, kurt.Script):
-            for block in script.blocks:
-                grab_comments(block)
+                elif insert.kind in ('spriteOrMouse', 'spriteOrStage', 'touching'):
+                    if arg == 'mouse-pointer':
+                        arg = Symbol('mouse')
+                    elif arg == 'edge':
+                        arg = Symbol('edge')
+                    elif arg == "Stage":
+                        arg = self.v14_project.stage
+                    else:
+                        arg = self.v14_project.get_sprite(arg)
 
-    v14_scriptable.variables = dict(map(save_variable,
-        kurt_scriptable.variables.items()))
+                elif isinstance(arg, basestring):
+                    if insert.kind in ('listItem', 'listDeleteItem'):
+                        if arg in ('last', 'all', 'random'):
+                            arg = Symbol('any' if arg == 'random' else arg)
+            args.append(arg)
 
-    images = map(save_image, kurt_scriptable.costumes)
-    v14_scriptable.media = OrderedCollection(
-            images + map(save_sound, kurt_scriptable.sounds))
+        # special-case blocks with weird arguments
+        if command == 'whenGreenFlag':
+            command = 'EventHatMorph'
+            args = ['Scratch-StartClicked']
+        elif command == 'whenIReceive':
+            command = 'EventHatMorph'
+            args = [args[0]]
+        elif command == 'whenClicked':
+            command = 'MouseClickEventHatMorph'
+            args = ['Scratch-MouseClickEvent']
+        elif command in ('changeVar:by:', 'setVar:to:'):
+            args = [args[0], Symbol(command), args[1]]
+            command = 'changeVariable'
 
-    v14_scriptable.costume = images[kurt_scriptable.costume_index]
+        return [Symbol(command)] + args
 
-    v14_scriptable.volume = kurt_scriptable.volume
+    def save_script(self, kurt_script):
+        if isinstance(kurt_script, kurt.Script):
+            pos = kurt_script.pos or (10, 10)
+            blocks = [save_block(b, self.v14_project) for b in kurt_script.blocks]
+            return [Point(pos), blocks]
+        elif isinstance(kurt_script, kurt.Comment):
+            comment = kurt_script
+            array = [Symbol('scratchComment'), comment.text, True, 112]
+            return [Point(comment.pos), [array]]
 
-    # sprite
-    if isinstance(kurt_scriptable, kurt.Sprite):
-        v14_scriptable.owner = v14_project.stage
+    def load_lists(self, v14_lists, kurt_target):
+        for v14_list in v14_lists.values():
+            kurt_list = kurt.List(map(unicode, v14_list.items))
+            kurt_target.lists[v14_list.name] = kurt_list
 
-        v14_scriptable.name = kurt_scriptable.name
-        v14_scriptable.rotationDegrees = kurt_scriptable.direction - 90
-        v14_scriptable.rotationStyle = Symbol(kurt_scriptable.rotation_style)
-        v14_scriptable.draggable = kurt_scriptable.is_draggable
-        v14_scriptable.flags = 0 if kurt_scriptable.is_visible else 1
+            kurt_watcher = kurt.Watcher(kurt_target,
+                    kurt.Block("contentsOfList:", v14_list.name))
+            kurt_watcher.is_visible = bool(v14_list.owner)
 
-        # bounds
-        (x, y) = kurt_scriptable.position
-        (rx, ry) = kurt_scriptable.costume.rotation_center
-        x = x + 240 - rx
-        y = 180 - y - ry
-        (w, h) = kurt_scriptable.costume.image.size
-        v14_scriptable.bounds = Rectangle([x, y, x+w, y+h])
+            (x, y, w, h) = v14_list.bounds.value
+            if not kurt_watcher.is_visible:
+                x -= 534
+                y -= 71
+            kurt_watcher.pos = (x, y)
+            self.project.actors.append(kurt_watcher)
+
+    def save_lists(self, kurt_target, v14_morph):
+        for (name, kurt_list) in kurt_target.lists.items():
+            name = unicode(name)
+            v14_list = ScratchListMorph(
+                name = name,
+                items = map(unicode, kurt_list.items),
+            )
+
+            if not kurt_list.watcher:
+                kurt_watcher = kurt.Watcher(kurt_target,
+                        kurt.Block("contentsOfList:", name), is_visible=False)
+
+            pos = kurt_list.watcher.pos
+            if pos:
+                (x, y) = pos
+            else:
+                (x, y) = (375, 10)
+                # TODO: stack them properly
+
+            if not kurt_list.watcher.is_visible:
+                x += 534
+                y += 71
+            v14_list.bounds = Rectangle([x, y, x+95, y+115])
+
+            v14_list.target = v14_morph
+            if kurt_list.watcher.is_visible:
+                v14_list.owner = self.v14_project.stage
+                self.v14_project.stage.submorphs.append(v14_list)
+
+            v14_morph.lists[name] = v14_list
+
+    def load_watcher(self, v14_watcher):
+        v14_sprite = v14_watcher.readout.target
+        if v14_sprite == self.v14_project.stage:
+            kurt_target = self.project
+        else:
+            kurt_target = self.project.get_sprite(v14_sprite.name)
+
+        command = v14_watcher.readout.getSelector.value
+        command = 'readVariable' if command == 'getVar:' else command
+        if v14_watcher.readout.parameter:
+            kurt_block = kurt.Block(command, v14_watcher.readout.parameter)
+        else:
+            kurt_block = kurt.Block(command)
+
+        kurt_watcher = kurt.Watcher(kurt_target, kurt_block)
+
+        (x, y, right, bottom) = v14_watcher.bounds.value
+        kurt_watcher.pos = (x, y)
+
+        if v14_watcher.isLarge:
+            kurt_watcher.style = "large"
+        elif v14_watcher.scratchSlider:
+            kurt_watcher.style = "slider"
+
+        kurt_watcher.slider_min = v14_watcher.sliderMin
+        kurt_watcher.slider_max = v14_watcher.sliderMax
+
+        return kurt_watcher
+
+    def save_watcher(self, kurt_watcher):
+        v14_watcher = WatcherMorph()
+        readout = v14_watcher.readout = v14_watcher.readoutFrame.submorphs[0]
+
+        if kurt_watcher.pos:
+            (x, y) = kurt_watcher.pos
+        else:
+            (x, y) = (10, 10)
+
+        v14_watcher.name = kurt_watcher.block.type.translate('scratch14').text
+
+        if kurt_watcher.target == self.project:
+            v14_morph = self.v14_project.stage
+            v14_watcher.isSpriteSpecfic = False
+        else:
+            v14_morph = self.v14_project.get_sprite(kurt_watcher.target.name)
+            v14_watcher.name = v14_morph.name + " " + v14_watcher.name
+
+        readout.target = v14_morph
+        v14_watcher.owner = self.v14_project.stage
+
+        selector = kurt_watcher.block.type.translate('scratch14').command
+        command = 'getVar:' if selector == 'readVariable' else selector
+        readout.getSelector = Symbol(command)
+
+        if kurt_watcher.block.args:
+            readout.parameter = kurt_watcher.block.args[0]
+
+        if kurt_watcher.style == "large":
+            v14_watcher.isLarge = True
+            readout.font_with_size[1] = 14
+        elif kurt_watcher.style == "slider":
+            v14_watcher.scratchSlider = WatcherSliderMorph()
+
+        v14_watcher.sliderMin = kurt_watcher.slider_min
+        v14_watcher.sliderMax = kurt_watcher.slider_max
+
+        v14_watcher.bounds = Rectangle([x, y, x+1, x+1])
+
+        return v14_watcher
+
+    def load_scriptable(self, kurt_scriptable, v14_scriptable):
+        # scripts
+        kurt_scriptable.scripts = map(self.load_script, v14_scriptable.scripts)
+
+        # fix comments
+        comments = []
+
+        blocks_by_id = []
+        # A list of all the blocks in script order but reverse script
+        # blocks order.
+        # Used to determine which block a Comment is anchored to.
+        #
+        # Note that Squeak arrays are 1-based, so index with:
+        #     blocks_by_id[index - 1]
+
+        for script in kurt_scriptable.scripts:
+            if isinstance(script, kurt.Comment):
+                comments.append(script)
+            elif isinstance(script, kurt.Script):
+                for block in reversed(list(get_blocks_by_id(script))):
+                    blocks_by_id.append(block)
+
+        attached_comments = []
+        for comment in comments:
+            if hasattr(comment, '_anchor'):
+                # Attach the comment to the right block from the given scripts.
+                block = blocks_by_id[comment._anchor - 1]
+                block.comment = comment.text
+                attached_comments.append(comment)
+
+        for comment in attached_comments:
+            kurt_scriptable.scripts.remove(comment)
+
+        # media
+        for (name, value) in v14_scriptable.variables.items():
+            kurt_scriptable.variables[name] = kurt.Variable(value)
+
+        (images, sounds) = self.get_media(v14_scriptable)
+        kurt_scriptable.costumes = map(self.load_image, images)
+        kurt_scriptable.sounds = map(self.load_sound, sounds)
+
+        # costume
+        if kurt_scriptable.costumes:
+            index = images.index(v14_scriptable.costume)
+            kurt_scriptable.costume_index = index
+
+        # attributes
+        kurt_scriptable.volume = v14_scriptable.volume
+        kurt_scriptable.tempo = v14_scriptable.tempoBPM
+
+        # for sprites:
+        if isinstance(kurt_scriptable, kurt.Sprite):
+            kurt_scriptable.name = v14_scriptable.name
+            kurt_scriptable.direction = v14_scriptable.rotationDegrees + 90
+            kurt_scriptable.rotation_style = v14_scriptable.rotationStyle.value
+            kurt_scriptable.size = v14_scriptable.scalePoint.x * 100.0
+            kurt_scriptable.is_draggable = v14_scriptable.draggable
+            kurt_scriptable.is_visible = (v14_scriptable.flags == 0)
+
+            # bounds
+            (x, y, right, bottom) = v14_scriptable.bounds.value
+            (rx, ry) = v14_scriptable.costume.rotationCenter
+            x = x + rx - 240
+            y = 180 - y - ry
+            kurt_scriptable.position = (x, y)
+
+    def save_scriptable(self, kurt_scriptable, v14_scriptable):
+        clean_up(kurt_scriptable.scripts)
+
+        v14_scriptable.scripts = [save_script(s, self.v14_project)
+                                  for s in kurt_scriptable.scripts]
+
+        blocks_by_id = []
+        for script in kurt_scriptable.scripts:
+            if isinstance(script, kurt.Script):
+                for block in reversed(list(get_blocks_by_id(script))):
+                    blocks_by_id.append(block)
+
+        def grab_comments(block):
+            if block.comment:
+                (x, y) = v14_scriptable.scripts[-1][0]
+                pos = (x, y + 29)
+                array = save_script(kurt.Comment(block.comment, pos), self.v14_project)
+                for i in xrange(len(blocks_by_id)):
+                    if blocks_by_id[i] is block:
+                        array[1][0].append(i + 1)
+                        break
+                v14_scriptable.scripts.append(array)
+
+            for arg in block.args:
+                if isinstance(arg, kurt.Block):
+                    grab_comments(arg)
+                elif isinstance(arg, list):
+                    map(grab_comments, arg)
+
+        for script in kurt_scriptable.scripts:
+            if isinstance(script, kurt.Script):
+                for block in script.blocks:
+                    grab_comments(block)
+
+        for (name, variable) in kurt_scriptable.variables.items():
+            v14_scriptable.variables[name] = variable.value
+
+        images = map(self.save_image, kurt_scriptable.costumes)
+        v14_scriptable.media = OrderedCollection(
+                images + map(self.save_sound, kurt_scriptable.sounds))
+
+        v14_scriptable.costume = images[kurt_scriptable.costume_index]
+
+        v14_scriptable.volume = kurt_scriptable.volume
+
+        # sprite
+        if isinstance(kurt_scriptable, kurt.Sprite):
+            v14_scriptable.owner = self.v14_project.stage
+
+            v14_scriptable.name = kurt_scriptable.name
+            v14_scriptable.rotationDegrees = kurt_scriptable.direction - 90
+            v14_scriptable.rotationStyle = Symbol(kurt_scriptable.rotation_style)
+            v14_scriptable.draggable = kurt_scriptable.is_draggable
+            v14_scriptable.flags = 0 if kurt_scriptable.is_visible else 1
+
+            # bounds
+            (x, y) = kurt_scriptable.position
+            (rx, ry) = kurt_scriptable.costume.rotation_center
+            x = x + 240 - rx
+            y = 180 - y - ry
+            (w, h) = kurt_scriptable.costume.image.size
+            v14_scriptable.bounds = Rectangle([x, y, x+w, y+h])
 
 
 
@@ -540,92 +627,13 @@ class Scratch14Plugin(KurtPlugin):
     extension = ".sb"
     blocks = block_list
     features = []
+    serializer = Serializer
 
     def load(self, fp):
-        v14_project = ScratchProjectFile()
-        v14_project._load(fp.read())
-        kurt_project = kurt.Project()
+        return self.serializer(self).load(fp)
 
-        # project info
-        kurt_project.notes = v14_project.info['comment']
-        kurt_project.author = v14_project.info['author']
-        kurt_project.thumbnail = load_image(v14_project.info['thumbnail'])
-
-        # stage
-        load_scriptable(kurt_project.stage, v14_project.stage)
-        load_lists(v14_project.stage.lists, kurt_project, kurt_project)
-
-        # global vars
-        kurt_project.variables = kurt_project.stage.variables
-        kurt_project.stage.variables = {}
-
-        # sprites
-        for v14_sprite in v14_project.stage.sprites:
-            kurt_sprite = kurt.Sprite(kurt_project, v14_sprite.name)
-            load_scriptable(kurt_sprite, v14_sprite)
-            load_lists(v14_sprite.lists, kurt_project, kurt_sprite)
-            kurt_project.sprites.append(kurt_sprite)
-
-        # variable watchers
-        for v14_morph in v14_project.stage.submorphs:
-            if isinstance(v14_morph, WatcherMorph):
-                kurt_project.actors.append(
-                        load_watcher(v14_morph, v14_project, kurt_project))
-
-        # TODO: stacking order of actors.
-
-        kurt_project._original = v14_project # DEBUG
-
-        return kurt_project
-
-
-    def save(self, fp, kurt_project):
-        v14_project = ScratchProjectFile()
-
-        # project info
-        v14_project.info['comment'] = kurt_project.notes
-        v14_project.info['author'] = kurt_project.author
-        v14_project.info['thumbnail'] = save_image(kurt_project.thumbnail)
-
-        # make all sprites (needs to do before we save scripts)
-        for kurt_sprite in kurt_project.sprites:
-            v14_sprite = Sprite(name=kurt_sprite.name)
-            v14_sprite._original = kurt_sprite
-            v14_project.stage.sprites.append(v14_sprite)
-
-        # stage
-        save_scriptable(kurt_project.stage, v14_project.stage, v14_project)
-        save_lists(kurt_project, kurt_project, v14_project.stage, v14_project)
-        v14_project.stage.variables = dict(map(save_variable,
-            kurt_project.variables.items()))
-        v14_project.stage.tempoBPM = kurt_project.tempo
-
-        # sprites
-        for v14_sprite in v14_project.stage.sprites:
-            kurt_sprite = v14_sprite._original
-            save_scriptable(kurt_sprite, v14_sprite, v14_project)
-            save_lists(kurt_sprite, kurt_project, v14_sprite, v14_project)
-            del v14_sprite._original
-
-        # variable watchers
-        for kurt_actor in kurt_project.actors:
-            if kurt_actor in kurt_project.sprites:
-                v14_project.stage.submorphs.append(
-                    v14_project.get_sprite(kurt_actor.name)
-                )
-                continue
-
-            if isinstance(kurt_actor, kurt.Watcher):
-                if kurt_actor.kind == 'list' or not kurt_actor.is_visible:
-                    continue
-                v14_project.stage.submorphs.append(
-                    save_watcher(kurt_actor, kurt_project, v14_project))
-
-        data = v14_project._save()
-        fp.write(data)
-
-        return v14_project
-
+    def save(self, fp, project):
+        return self.serializer(self).save(fp, project)
 
 
 Kurt.register(Scratch14Plugin())
