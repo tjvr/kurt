@@ -451,7 +451,12 @@ class Serializer(object):
 
     def save_watcher(self, kurt_watcher):
         v14_watcher = WatcherMorph()
-        readout = v14_watcher.readout = v14_watcher.readoutFrame.submorphs[0]
+        readout = v14_watcher.readout = UpdatingStringMorph(
+            font_with_size = [Symbol('VerdanaBold'), 10],
+        )
+        v14_watcher.readoutFrame = WatcherReadoutFrameMorph(
+            submorphs = [v14_watcher.readout]
+        )
 
         if kurt_watcher.pos:
             (x, y) = kurt_watcher.pos

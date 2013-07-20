@@ -32,73 +32,7 @@ import os.path
 
 
 
-class BinaryFile(object):
-    """File(path)
-    Implements a basic file with save() function.
-    Subclasses override _load() and _save()."""
-
-    EXTENSION = None
-
-    def __init__(self, path=None, load=True):
-        """Loads a file.
-        @param path: the path passed to open().
-        """
-        self.path = None
-        if path:
-            if not path.lower().endswith("."+self.EXTENSION.lower()):
-                path += "."+self.EXTENSION
-            self.path = path
-
-            if load:
-                self.load()
-
-    @property
-    def name(self):
-        (folder, name) = os.path.split(self.path)
-        trimmed_name = ''.join(name.split('.')[:-1]) # Trim extension
-        if trimmed_name:
-            name = trimmed_name
-        return name
-
-    def load(self):
-        """Reload the file from disk, replacing any changes in memory.
-        """
-        if not self.path:
-            raise ValueError, "filepath not set."
-
-        f = open(self.path, "rb")
-        bytes = f.read()
-        f.close()
-        self._load(bytes)
-
-    def _load(self, bytes):
-        """Subclasses must override this method.
-        Set the attributes of this file from the given contents.
-        @param bytes: str containing the file contents read from disk.
-        """
-        raise NotImplementedError()
-
-    def save(self, path):
-        """Save the file to disk."""
-        bytes = self._save()
-        if not bytes:
-            print "Can't write zero bytes to file, aborting"
-            return
-
-        f = open(path, 'wb')
-        f.write(bytes)
-        f.flush()
-        f.close()
-
-    def _save(self):
-        """Subclasses must override this method.
-        @return: str containing the bytes to be saved to disk.
-        """
-        raise NotImplementedError()
-
-
-
-class ScratchProjectFile(BinaryFile):
+class ScratchProjectFile(object):
     """Using this interface directly is DEPRECATED -- use kurt.Project instead,
     which provides conversion between multiple formats.
 
@@ -158,7 +92,7 @@ class ScratchProjectFile(BinaryFile):
 
 
 
-class ScratchSpriteFile(BinaryFile):
+class ScratchSpriteFile(object):
     """A Scratch sprite file.
     @param path: path to .sprite file.
 
@@ -166,8 +100,6 @@ class ScratchSpriteFile(BinaryFile):
         stage - the root object of the file (Sprite files actually contain a
                 serialised Stage)
     """
-
-    EXTENSION = "sprite"
 
     def _load(self, bytes):
         self.stage = ObjTable.parse(bytes)

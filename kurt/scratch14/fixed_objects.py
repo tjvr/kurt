@@ -154,7 +154,7 @@ class Symbol(FixedObjectByteArray):
     classID = 10
     _construct = PascalString("value", length_field=UBInt32("length"))
     def __repr__(self):
-        return "<#%s>" % self.value
+        return "Symbol(%r)" % self.value
 
 
 class ByteArray(FixedObjectByteArray):
