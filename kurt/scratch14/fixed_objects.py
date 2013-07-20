@@ -330,13 +330,13 @@ class Color(FixedObject):
 
         return Color(*(x << 2 for x in rgb))
 
-
     @property
     def value(self):
         return (self.r, self.g, self.b)
 
-    def copy(self):
-        return Color(self.r, self.g, self.b)
+    def to_8bit(self):
+        """Returns value with components between 0-255."""
+        return tuple(x >> 2 for x in self.value)
 
     def __repr__(self):
         return "%s(%s)" % (
@@ -344,24 +344,10 @@ class Color(FixedObject):
             repr(self.value).strip("()"),
         )
 
-    def to_8bit(self):
-        """Returns value with components between 0-255."""
-        return tuple(x >> 2 for x in self.value)
-
     def to_rgba_array(self):
         (r, g, b) = self.to_8bit()
         return array('B', (r, g, b, 255))
 
-    def hexcode(self):
-        """Returns the color value in hex/HTML format.
-        eg "ff1056".
-        """
-        hexcode = ""
-        for x in self.to_8bit():
-            part = hex(x)[2:]
-            if len(part) < 2: part = "0" + part
-            hexcode += part
-        return hexcode
 
 
 class TranslucentColor(Color):
@@ -390,9 +376,6 @@ class TranslucentColor(Color):
     def from_value(cls, value):
         return cls(value.r, value.g, value.b, value.alpha)
 
-    def copy(self):
-        return TranslucentColor(self.r, self.g, self.b, self.alpha)
-
     @classmethod
     def from_32bit_raw_argb(cls, raw):
         container = cls._construct_32.parse(raw)
@@ -408,15 +391,6 @@ class TranslucentColor(Color):
     @property
     def value(self):
         return (self.r, self.g, self.b, self.alpha)
-
-    def hexcode(self, include_alpha=True):
-        """Returns the color value in hex/HTML format.
-        eg "ff1056ff".
-        Argument include_alpha: default True.
-        """
-        hexcode = Color.hexcode(self)
-        if not include_alpha: hexcode = hexcode[:-2]
-        return hexcode
 
 
 
@@ -450,14 +424,6 @@ class Point(FixedObject):
     @classmethod
     def from_value(cls, value):
         return cls(value.x, value.y)
-
-    def copy(self):
-        return Point(self.x, self.y)
-
-    @classmethod
-    def from_string(cls, string):
-        (x, y) = string.lstrip("(").rstrip(")").split(",")
-        return cls(float(x), float(y))
 
 class Rectangle(FixedObject):
     classID = 33

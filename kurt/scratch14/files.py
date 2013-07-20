@@ -78,24 +78,14 @@ class BinaryFile(object):
         """
         raise NotImplementedError()
 
-    def save(self, path=None):
-        """Save the file to disk.
-        @param path: (optional) set new destination path. Future saves will go
-                     to the new location.
-        """
-        if path and not path.lower().endswith("."+self.EXTENSION.lower()):
-            path += "."+self.EXTENSION
-        if path:
-            self.path = path
-        if not self.path:
-            raise ValueError, "filepath not set."
-
+    def save(self, path):
+        """Save the file to disk."""
         bytes = self._save()
         if not bytes:
             print "Can't write zero bytes to file, aborting"
             return
 
-        f = open(self.path, 'wb')
+        f = open(path, 'wb')
         f.write(bytes)
         f.flush()
         f.close()
@@ -105,9 +95,6 @@ class BinaryFile(object):
         @return: str containing the bytes to be saved to disk.
         """
         raise NotImplementedError()
-
-    def __repr__(self):
-        return "%s(%s)" % (self.__class__.__name__, repr(self.path))
 
 
 
@@ -120,31 +107,26 @@ class ScratchProjectFile(BinaryFile):
         stage - the stage. Contains contents, including sprites and media.
     """
 
-    EXTENSION = "sb"
-
-    DEFAULT_COMMENT = "Made with Kurt \nhttp://github.com/blob8108/kurt"
-    DEFAULT_INFO = {
-        "comment": DEFAULT_COMMENT,
-        "scratch-version": '1.4 of 30-Jun-09',
-        "language": "en",
-        "author": u"",
-        "isHosting": False,
-        "platform": "",
-        "os-version": "",
-        "thumbnail": None,
-        "history": "",
-        "name": "",
-    }
-
     _construct = Struct("scratch_file",
         Literal("ScratchV02"),
         Rename("info", InfoTable),
         Rename("stage", ObjTable),
     )
 
-    def __init__(self, *args, **kwargs):
-        self.info = self.DEFAULT_INFO.copy()
-        BinaryFile.__init__(self, *args, **kwargs)
+    def __init__(self):
+        self.info = {
+            "comment": "",
+            "scratch-version": '1.4 of 30-Jun-09',
+            "language": "en",
+            "author": u"",
+            "isHosting": False,
+            "platform": "",
+            "os-version": "",
+            "thumbnail": None,
+            "history": "",
+            "name": "",
+        }
+        self.stage = Stage()
 
     def _load(self, bytes):
         project = self._construct.parse(bytes)
@@ -152,13 +134,9 @@ class ScratchProjectFile(BinaryFile):
 
         if self.info["thumbnail"] and isinstance(self.info["thumbnail"], Form):
             self.info["thumbnail"] = Image(
-                name = self.name + " thumbnail",
+                name = "thumbnail",
                 form = self.info["thumbnail"],
             )
-
-        self.info["comment"] = self.info["comment"].replace("\r", "\n")
-
-        #self.info.__doc__ = InfoTable.__doc__
         self.stage = project.stage
 
     def _save(self):
@@ -175,40 +153,11 @@ class ScratchProjectFile(BinaryFile):
         )
         return self._construct.build(project)
 
-    @classmethod
-    def new(cls, path=None):
-        """Returns a new, empty project.
-        Optional path argument.
-        Will not write to disk until you .save()
-        """
-        project = cls(path, load=False)
-        project.stage = Stage()
-        #project.path = path # do this now so project doesn't attempt
-        #                    # to .load() itself
-        return project
-
-    def __getattr__(self, name):
-        if name in self.DEFAULT_INFO:
-            return self.info[name]
-
-    def __setattr__(self, name, value):
-        if name in self.DEFAULT_INFO:
-            self.info[name] = value
-        else:
-            object.__setattr__(self, name, value)
-
-    @property
-    def sprites(self):
-        return self.stage.sprites
-
-    @sprites.setter
-    def sprites(self, value):
-        self.stage.sprites = value
-
     def get_sprite(self, name):
-        for sprite in self.sprites:
+        for sprite in self.stage.sprites:
             if sprite.name == name:
                 return sprite
+
 
 
 class ScratchSpriteFile(BinaryFile):
@@ -218,8 +167,6 @@ class ScratchSpriteFile(BinaryFile):
     Attributes:
         stage - the root object of the file (Sprite files actually contain a
                 serialised Stage)
-        sprite - convenience property for accessing the first (only) sprite in
-                 the file.
     """
 
     EXTENSION = "sprite"
@@ -229,13 +176,4 @@ class ScratchSpriteFile(BinaryFile):
 
     def _save(self):
         return ObjTable.build(self.stage)
-
-    @property
-    def sprite(self):
-        return self.stage.submorphs[0]
-
-
-
-__all__ = ['ScratchProjectFile', 'ScratchSpriteFile']
-
 

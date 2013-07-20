@@ -277,7 +277,7 @@ class ScriptableScratchMorph(BaseMorph):
     def set_defaults(self):
         BaseMorph.set_defaults(self)
 
-        self.scripts = ScriptCollection()
+        self.scripts = []
         self.media = []
         self.costume = None # defaults to first Image in self.media on save
         self.variables = {}
@@ -325,14 +325,6 @@ class ScriptableScratchMorph(BaseMorph):
                 scratch_list = ScratchListMorph(items=scratch_list)
                 self.lists[list_name] = scratch_list
             scratch_list.name = list_name
-
-            # This would show the list watcher on the stage:
-            #scratch_list.target = self
-            #if isinstance(self, Stage):
-            #     scratch_list.owner = self
-            #else:
-            #    scratch_list.owner = self.owner
-
             scratch_list.normalize()
 
     def _encode_field(self, name, value):
@@ -390,14 +382,6 @@ class Sprite(ScriptableScratchMorph):
             except ValueError:
                 # invalid costume, or maybe JPG
                 self.bounds = Rectangle([0, 0, 100, 100])
-
-    @property
-    def costumes(self):
-        return self.images
-
-    @costumes.setter
-    def costumes(self, value):
-        self.images = value
 
 
 class Stage(ScriptableScratchMorph):
@@ -466,23 +450,6 @@ class Stage(ScriptableScratchMorph):
             return OrderedCollection(self.sprites)
         else:
             return value
-
-    @property
-    def background(self):
-        return self.costume
-
-    @background.setter
-    def background(self, value):
-        self.costume = value
-
-    @property
-    def backgrounds(self):
-        return self.images
-
-    @backgrounds.setter
-    def backgrounds(self, value):
-        self.images = value
-
 
 
 class ChoiceArgMorph(BaseMorph):
@@ -671,14 +638,6 @@ class WatcherMorph(AlignmentMorph):
             )
         ]
 
-    @property
-    def name(self):
-        return self.titleMorph.contents
-
-    @name.setter
-    def name(self, value):
-        self.titleMorph.contents = value
-
     def make_slider(self, target):
         self.scratchSlider = slider = WatcherSliderMorph(
             arguments = [u'slider'],
@@ -772,35 +731,6 @@ class Image(ScratchMedia):
         return value
 
     @classmethod
-    def load(cls, path):
-        """Load image file and return an Image."""
-        require_pil()
-
-        (_, name) = os.path.split(path)
-        if "." in name:
-            name_without_extension = ".".join(name.split(".")[:-1])
-        else:
-            name_without_extension = name
-
-        image_file = PIL.Image.open(path) # Doesn't read raster data yet :)
-
-        if image_file.format == "JPEG":
-            f = open(path, "rb")
-            jpegBytes = f.read()
-            f.close()
-
-            image = cls(
-                name = name_without_extension,
-                jpegBytes = ByteArray(jpegBytes),
-            )
-            image.size = image_file.size
-            return image
-
-        else:
-            return cls.from_image(name_without_extension, image_file)
-
-
-    @classmethod
     def from_image(cls, name, image_file):
         """Create Image from a PIL.Image.Image object"""
         name = unicode(name)
@@ -831,26 +761,12 @@ class Image(ScratchMedia):
         image.size = image_file.size
         return image
 
-
     def set_defaults(self):
         ScratchMedia.set_defaults(self)
         self.rotationCenter = Point(0, 0)
 
         self.form_without_text = None
         self.size = None
-
-
-    @property
-    def width(self):
-        (width, height) = self.size
-        return width
-
-
-    @property
-    def height(self):
-        (width, height) = self.size
-        return height
-
 
     def get_image(self):
         """Return a PIL.Image.Image object"""
@@ -862,46 +778,6 @@ class Image(ScratchMedia):
             image = PIL.Image.fromstring("RGBA", size, rgba_array)
 
         return image
-
-
-    def save(self, path, format=None):
-        """Save the image data to an external file.
-        Returns the filename with extension.
-        Arguments:
-            path - absolute/relative path to save to. Doesn't require extension.
-            format - "PNG", "JPEG", etc: passed to PIL.
-        """
-        guessed_from_extension = False
-        (folder, name) = os.path.split(path)
-        if "." in name:
-            format = name.split('.')[-1]
-            format = format.lstrip(".").upper()
-            if format == "JPG": format = "JPEG"
-            guessed_from_extension = True
-
-        if not format:
-            if self.jpegBytes:
-                format = "JPEG"
-            else:
-                format = "PNG"
-
-        if not guessed_from_extension:
-            extension = format.lower()
-            if extension == "jpeg": extension = "jpg"
-            path += "." + extension
-            name += "." + extension
-
-        image = self.get_image()
-        image.save(path, format)
-        return name
-
-    def save_png(self, path):
-        """Deprecated. Use .save(path, "PNG") instead"""
-        self.save(path, "PNG")
-
-    def save_jpg(self, path):
-        """Deprecated. Use .save(path, "JPEG") instead"""
-        self.save(path, "JPEG")
 
 
 class MovieMedia(ScratchMedia):
@@ -993,19 +869,5 @@ class ScratchListMorph(BorderedMorph):
 class ScrollingStringMorph(BaseMorph):
     """unused"""
     classID = 176
-
-
-
-
-
-
-class ScriptCollection(list):
-    """List with pretty-printing."""
-    def __init__(self, scripts=None):
-        if scripts is None: scripts = []
-        self += scripts
-
-    def __repr__(self):
-        return pformat(list(self))
 
 
