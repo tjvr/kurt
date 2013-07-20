@@ -137,7 +137,7 @@ They are encoded inline and not stored as object table entries. They do not
 contain references (though they may *be* references).
 
 """
-Field = FieldAdapter(Struct("field",
+field = FieldAdapter(Struct("field",
     Enum(UBInt8("classID"),
         nil = 1,
         true = 2,

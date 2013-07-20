@@ -17,6 +17,9 @@
 
 """Primitive fixed-format objects - eg String, Dictionary."""
 
+from array import array # used by Form
+from copy import copy
+
 from construct import Container, Struct, Embed, Rename
 from construct import PascalString, UBInt32, SBInt32, UBInt16, UBInt8, Bytes
 from construct import BitStruct, Padding, Bits
@@ -25,14 +28,7 @@ from construct import Array as StrictRepeater, Array as MetaRepeater
 # We can't import the name Array, as we use it. -_-
 import construct
 
-# used by Form
-from array import array
-try:
-    import png
-except ImportError:
-    png = None
-
-from inline_objects import Field
+from inline_objects import field
 
 
 def default_colormap():
@@ -112,7 +108,9 @@ class FixedObject(object):
         return "%s(%s)" % (self.__class__.__name__, self.value)
 
     def copy(self):
-        return self.__class__(self.value)
+        return self.__class__(copy(self.value))
+
+    __copy__ = copy
 
 
 class ContainsRefs: pass
@@ -198,7 +196,7 @@ class UTF8(FixedObjectByteArray):
 class Collection(FixedObjectWithRepeater, ContainsRefs):
     _construct = Struct("",
         UBInt32("length"),
-        MetaRepeater(lambda ctx: ctx.length, Rename("items", Field)),
+        MetaRepeater(lambda ctx: ctx.length, Rename("items", field)),
     )
 
     def __init__(self, value=None):
@@ -247,8 +245,8 @@ class Dictionary(Collection):
     _construct = Struct("dictionary",
         UBInt32("length"),
         MetaRepeater(lambda ctx: ctx.length, Struct("items",
-            Rename("key", Field),
-            Rename("value", Field),
+            Rename("key", field),
+            Rename("value", field),
         )),
     )
 
@@ -300,10 +298,8 @@ class Color(FixedObject):
         UBInt8("alpha"),
     )
 
-    def __init__(self, r, g, b):
-        self.r = r
-        self.g = g
-        self.b = b
+    def __init__(self, value):
+        self.value = value
 
     def __eq__(self, other):
         return (
@@ -314,12 +310,13 @@ class Color(FixedObject):
     def __ne__(self, other):
         return not self == other
 
-    def to_value(self):
-        return Container(r=self.r, g=self.g, b=self.b)
-
     @classmethod
     def from_value(cls, value):
-        return cls(value.r, value.g, value.b)
+        return cls((value.r, value.g, value.b))
+
+    def to_value(self):
+        (r, g, b) = self.value
+        return Container(r=r, g=g, b=b)
 
     @classmethod
     def from_8bit(self, r, g=None, b=None):
@@ -328,11 +325,7 @@ class Color(FixedObject):
         else:
             rgb = (r, g, b)
 
-        return Color(*(x << 2 for x in rgb))
-
-    @property
-    def value(self):
-        return (self.r, self.g, self.b)
+        return Color((x << 2 for x in rgb))
 
     def to_8bit(self):
         """Returns value with components between 0-255."""
@@ -363,18 +356,16 @@ class TranslucentColor(Color):
         UBInt8("b"),
     )
 
-    def __init__(self, r, g, b, alpha):
-        self.r = r
-        self.g = g
-        self.b = b
-        self.alpha = alpha
+    def __init__(self, value):
+        self.value = value
 
     def to_value(self):
-        return Container(r=self.r, g=self.g, b=self.b, alpha=self.alpha)
+        (r, g, b, alpha) = self.value
+        return Container(r=r, g=g, b=b, alpha=alpha)
 
     @classmethod
     def from_value(cls, value):
-        return cls(value.r, value.g, value.b, value.alpha)
+        return cls((value.r, value.g, value.b, value.alpha))
 
     @classmethod
     def from_32bit_raw_argb(cls, raw):
@@ -388,9 +379,6 @@ class TranslucentColor(Color):
     def to_rgba_array(self):
         return array('B', self.to_8bit())
 
-    @property
-    def value(self):
-        return (self.r, self.g, self.b, self.alpha)
 
 
 
@@ -399,8 +387,8 @@ class TranslucentColor(Color):
 class Point(FixedObject):
     classID = 32
     _construct = Struct("",
-        Rename("x", Field),
-        Rename("y", Field),
+        Rename("x", field),
+        Rename("y", field),
     )
 
     def __init__(self, x, y=None):
@@ -427,7 +415,7 @@ class Point(FixedObject):
 
 class Rectangle(FixedObject):
     classID = 33
-    _construct = StrictRepeater(4, Field)
+    _construct = StrictRepeater(4, field)
 
     @classmethod
     def from_value(cls, value):
@@ -547,11 +535,11 @@ class Form(FixedObject, ContainsRefs):
 
     classID = 34
     _construct = Struct("form",
-        Rename("width", Field),
-        Rename("height", Field),
-        Rename("depth", Field),
-        Rename("privateOffset", Field),
-        Rename("bits", Field), # Bitmap
+        Rename("width", field),
+        Rename("height", field),
+        Rename("depth", field),
+        Rename("privateOffset", field),
+        Rename("bits", field), # Bitmap
     )
 
     def __init__(self, **fields):
@@ -704,7 +692,7 @@ class ColorForm(Form):
     classID = 35
     _construct = Struct("",
         Embed(Form._construct),
-        Rename("colors", Field), # Array
+        Rename("colors", field), # Array
     )
 
 

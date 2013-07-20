@@ -19,32 +19,40 @@
 
 import re
 import wave
+from copy import copy
 
 import PIL
+from construct.lib.container import Container, recursion_lock
 
 import kurt
 from kurt import StringIO
 from kurt.plugin import Kurt, KurtPlugin, block_workaround
 
 from kurt.scratch14.objtable import *
-from kurt.scratch14.files import *
 from kurt.scratch14.blocks import block_list
 from kurt.scratch14.heights import clean_up
+from kurt.scratch14.user_objects import make_user_objects, user_objects_by_name
 
-
-
-# The main classes used by this submodule are ScratchProjectFile and
-# ScratchSpriteFile classes.
-#
-# Most of the objects, like ScratchStageMorph and ScratchSpriteMorph, inherit
-# from :class:`UserObject`.  You can use ``.fields.keys()`` to see the
-# available fields on one of these objects.
-#
 # :class:`FixedObjects` have a ``.value`` property to access their value.
 # Inline objects, such as int and bool, are converted to their Pythonic
 # counterparts.  Array and Dictionary are converted to list and dict.
 
 
+
+#-- Hack Container repr to be pretty --#
+
+@recursion_lock("<...>")
+def container_repr(self):
+    d = dict((k, self[k]) for k in self if not k.startswith("_"))
+    r = "\n"
+    for (k, v) in d.items():
+        r += "    %r: %s,\n" % (k, repr(v).replace("\n", "\n    "))
+    return "%s(%s)" % (self.__class__.__name__, r)
+Container.__repr__ = container_repr
+
+
+
+#-- Utils --#
 
 def get_blocks_by_id(this_block):
     if isinstance(this_block, kurt.Script):
@@ -72,6 +80,8 @@ def swap_byte_pairs(data):
 
 
 
+#-- Main class --#
+
 # kurt_* -- objects from kurt 2.0 api
 # v14_*  -- objects from this module, kurt.scratch14
 
@@ -81,67 +91,96 @@ class Serializer(object):
     def __init__(self, plugin):
         self.plugin = plugin
 
+    def UserObject(self, class_name, **attrs):
+        defaults = self.plugin.user_objects[class_name].defaults.copy()
+        defaults = dict((k, copy(v)) for (k, v) in defaults.items())
+        defaults.update(attrs)
+        return Container(class_name=class_name, **defaults)
+
     def load(self, fp):
-        self.v14_project = ScratchProjectFile()
-        self.v14_project._load(fp.read())
         self.project = kurt.Project()
 
+        # parse object table
+        v14_project = scratch_file.parse_stream(fp)
+        self.info = decode_obj_table(v14_project.info, self.plugin)
+        self.stage = decode_obj_table(v14_project.stage, self.plugin)
+
         # project info
-        self.project.notes = self.v14_project.info['comment']
-        self.project.author = self.v14_project.info['author']
-        self.project.thumbnail = self.load_image(self.v14_project.info['thumbnail'])
+        self.project.notes = self.info.get('comment', '')
+        self.project.author = self.info.get('author', '')
+
+        thumbnail = self.info['thumbnail']
+        if thumbnail and isinstance(thumbnail, Form):
+            thumbnail = self.UserObject('ImageMedia',
+                name = 'thumbnail',
+                form = thumbnail,
+            )
+        self.project.thumbnail = self.load_image(thumbnail)
 
         # stage
-        self.load_scriptable(self.project.stage, self.v14_project.stage)
-        self.load_lists(self.v14_project.stage.lists, self.project)
+        self.load_scriptable(self.project.stage, self.stage)
+        self.load_lists(self.stage.lists, self.project)
 
         # global vars
         self.project.variables = self.project.stage.variables
         self.project.stage.variables = {}
 
         # sprites
-        for v14_sprite in self.v14_project.stage.sprites:
+        for v14_sprite in self.stage.sprites:
             kurt_sprite = kurt.Sprite(self.project, v14_sprite.name)
             self.load_scriptable(kurt_sprite, v14_sprite)
             self.load_lists(v14_sprite.lists, kurt_sprite)
             self.project.sprites.append(kurt_sprite)
 
         # variable watchers
-        for v14_morph in self.v14_project.stage.submorphs:
-            if isinstance(v14_morph, WatcherMorph):
-                self.project.actors.append(
-                        self.load_watcher(v14_morph, self.v14_project, self.project))
+        for v14_morph in self.stage.submorphs:
+            if v14_morph.class_name == 'WatcherMorph':
+                self.project.actors.append(self.load_watcher(v14_morph))
 
         # TODO: stacking order of actors.
 
-        self.project._original = self.v14_project # DEBUG
+        self.project._original = (self.info, self.stage) # DEBUG
 
         return self.project
 
     def save(self, fp, project):
         self.project = project
-        self.v14_project = ScratchProjectFile()
+
+        self.stage = self.UserObject("ScratchStageMorph")
 
         # project info
-        self.v14_project.info['comment'] = self.project.notes
-        self.v14_project.info['author'] = self.project.author
-        self.v14_project.info['thumbnail'] = self.save_image(self.project.thumbnail)
+        self.info = {
+            'author': self.project.author,
+            'comment': self.project.notes.replace("\n", "\r"),
+            'thumbnail': self.save_image(self.project.thumbnail).form,
+            'history': '',
+            'language': 'en',
+            'os-version': '',
+            'platform': '',
+            'scratch-version': '1.4 of 30-Jun-09',
+        }
 
-        # make all sprites (needs to do before we save scripts)
+        # make all sprites (need to do before we save scripts)
+        print self.stage.sprites
+
         for kurt_sprite in self.project.sprites:
-            v14_sprite = ScratchSpriteMorph(name=kurt_sprite.name)
+            v14_sprite = self.UserObject("ScratchSpriteMorph",
+                                         name=kurt_sprite.name)
             v14_sprite._original = kurt_sprite
-            self.v14_project.stage.sprites.append(v14_sprite)
+            self.stage.sprites.append(v14_sprite)
+
+        for v14_sprite in self.stage.sprites:
+            print v14_sprite._original
 
         # stage
-        self.save_scriptable(self.project.stage, self.v14_project.stage)
-        self.save_lists(self.project, self.v14_project.stage)
+        self.save_scriptable(self.project.stage, self.stage)
+        self.save_lists(self.project, self.stage)
         for (name, variable) in self.project.variables.items():
-            self.v14_project.stage.variables[name] = variable.value
-        self.v14_project.stage.tempoBPM = self.project.tempo
+            self.stage.variables[name] = variable.value
+        self.stage.tempoBPM = self.project.tempo
 
         # sprites
-        for v14_sprite in self.v14_project.stage.sprites:
+        for v14_sprite in self.stage.sprites:
             kurt_sprite = v14_sprite._original
             self.save_scriptable(kurt_sprite, v14_sprite)
             self.save_lists(kurt_sprite, v14_sprite)
@@ -150,30 +189,38 @@ class Serializer(object):
         # variable watchers
         for kurt_actor in self.project.actors:
             if kurt_actor in self.project.sprites:
-                self.v14_project.stage.submorphs.append(
-                    self.v14_project.get_sprite(kurt_actor.name)
+                self.stage.submorphs.append(
+                    self.get_sprite(kurt_actor.name)
                 )
                 continue
 
             if isinstance(kurt_actor, kurt.Watcher):
                 if kurt_actor.kind == 'list' or not kurt_actor.is_visible:
                     continue
-                self.v14_project.stage.submorphs.append(
+                self.stage.submorphs.append(
                     self.save_watcher(kurt_actor))
 
-        data = self.v14_project._save()
-        fp.write(data)
+        v14_project = Container(
+            info = encode_obj_table(self.info, self.plugin),
+            stage = encode_obj_table(self.stage, self.plugin),
+        )
+        scratch_file.build_stream(v14_project, fp)
 
-        return self.v14_project
+        return v14_project
+
+    def get_sprite(self, name):
+        for sprite in self.stage.sprites:
+            if sprite.name == name:
+                return sprite
 
     def get_media(self, v14_scriptable):
         """Return (images, sounds)"""
         images = []
         sounds = []
         for media in v14_scriptable.media:
-            if isinstance(media, SoundMedia):
+            if media.class_name == 'SoundMedia':
                 sounds.append(media)
-            elif isinstance(media, ImageMedia):
+            elif media.class_name == 'ImageMedia':
                 images.append(media)
         return (images, sounds)
 
@@ -188,14 +235,15 @@ class Serializer(object):
                 size = (width, height)
                 pil_image = PIL.Image.fromstring("RGBA", size, rgba_array)
                 image = kurt.Image(pil_image)
-            return kurt.Costume(v14_image.name, image, v14_image.rotationCenter)
+            return kurt.Costume(v14_image.name, image,
+                                v14_image.rotationCenter)
 
     def save_image(self, kurt_costume):
         if kurt_costume:
             image = kurt_costume.image.convert("JPEG", "bitmap")
 
             if image.format == "JPEG":
-                v14_image = ImageMedia(
+                v14_image = self.UserObject("ImageMedia",
                     name = unicode(kurt_costume.name),
                     jpegBytes = ByteArray(kurt_costume.image.contents),
                 )
@@ -205,7 +253,7 @@ class Serializer(object):
                 (width, height) = pil_image.size
                 rgba_string = pil_image.tostring()
 
-                v14_image = ImageMedia(
+                v14_image = self.UserObject("ImageMedia",
                     name = unicode(kurt_costume.name),
                     form = Form.from_string(width, height, rgba_string),
                 )
@@ -228,7 +276,7 @@ class Serializer(object):
     def save_sound(self, kurt_sound):
         switch_with_unknown_purpose = False
 
-        ss = SampledSound()
+        ss = self.UserObject("SampledSound")
         ss.samplesSize = ss.initialCount = kurt_sound.waveform.sample_count
         ss.originalSamplingRate = ss.scaledIncrement = kurt_sound.waveform.rate
         if switch_with_unknown_purpose:
@@ -246,7 +294,7 @@ class Serializer(object):
         f.close()
         ss.samples = SoundBuffer(data)
 
-        v14_sound = SoundMedia()
+        v14_sound = self.UserObject("SoundMedia")
         v14_sound.name = kurt_sound.name
         v14_sound.originalSound = ss
         return v14_sound
@@ -275,7 +323,7 @@ class Serializer(object):
         for arg in args:
             if isinstance(arg, list):
                 if arg and isinstance(arg[0], Symbol):
-                    arg = load_block(arg)
+                    arg = self.load_block(arg)
                 else:
                     arg = map(self.load_block, arg)
             elif isinstance(arg, Color):
@@ -289,9 +337,9 @@ class Serializer(object):
                     arg = 'random' if arg.value == 'any' else arg.value
                 else:
                     raise ValueError(arg)
-            elif isinstance(arg, ScratchStageMorph):
+            elif getattr(arg, 'class_name', None) == 'ScratchStageMorph':
                 arg = "Stage"
-            elif isinstance(arg, ScratchSpriteMorph):
+            elif getattr(arg, 'class_name', None) == 'ScratchSpriteMorph':
                 arg = arg.name
             new_args.append(arg)
         return kurt.Block(command, *new_args)
@@ -322,24 +370,25 @@ class Serializer(object):
         for arg in kurt_block.args:
             insert = inserts.pop(0) if inserts else None
             if isinstance(arg, kurt.Block):
-                arg = save_block(arg, self.v14_project)
+                arg = self.save_block(arg)
             elif isinstance(arg, list):
-                arg = [save_block(b, self.v14_project) for b in arg]
+                arg = map(self.save_block, arg)
             elif isinstance(arg, kurt.Color):
                 arg = Color.from_8bit(arg)
             elif insert:
                 if insert.kind in ('mathOp', 'effect', 'key'):
                     arg = str(arg) # Won't accept unicode
 
-                elif insert.kind in ('spriteOrMouse', 'spriteOrStage', 'touching'):
+                elif insert.kind in ('spriteOrMouse', 'spriteOrStage',
+                        'touching'):
                     if arg == 'mouse-pointer':
                         arg = Symbol('mouse')
                     elif arg == 'edge':
                         arg = Symbol('edge')
                     elif arg == "Stage":
-                        arg = self.v14_project.stage
+                        arg = self.stage
                     else:
-                        arg = self.v14_project.get_sprite(arg)
+                        arg = self.get_sprite(arg)
 
                 elif isinstance(arg, basestring):
                     if insert.kind in ('listItem', 'listDeleteItem'):
@@ -366,7 +415,7 @@ class Serializer(object):
     def save_script(self, kurt_script):
         if isinstance(kurt_script, kurt.Script):
             pos = kurt_script.pos or (10, 10)
-            blocks = [save_block(b, self.v14_project) for b in kurt_script.blocks]
+            blocks = map(self.save_block, kurt_script.blocks)
             return [Point(pos), blocks]
         elif isinstance(kurt_script, kurt.Comment):
             comment = kurt_script
@@ -375,7 +424,7 @@ class Serializer(object):
 
     def load_lists(self, v14_lists, kurt_target):
         for v14_list in v14_lists.values():
-            kurt_list = kurt.List(map(unicode, v14_list.items))
+            kurt_list = kurt.List(map(unicode, v14_list.list_items))
             kurt_target.lists[v14_list.name] = kurt_list
 
             kurt_watcher = kurt.Watcher(kurt_target,
@@ -392,9 +441,9 @@ class Serializer(object):
     def save_lists(self, kurt_target, v14_morph):
         for (name, kurt_list) in kurt_target.lists.items():
             name = unicode(name)
-            v14_list = ScratchListMorph(
+            v14_list = self.UserObject("ScratchListMorph",
                 name = name,
-                items = map(unicode, kurt_list.items),
+                list_items = map(unicode, kurt_list.items),
             )
 
             if not kurt_list.watcher:
@@ -415,14 +464,14 @@ class Serializer(object):
 
             v14_list.target = v14_morph
             if kurt_list.watcher.is_visible:
-                v14_list.owner = self.v14_project.stage
-                self.v14_project.stage.submorphs.append(v14_list)
+                v14_list.owner = self.stage
+                self.stage.submorphs.append(v14_list)
 
             v14_morph.lists[name] = v14_list
 
     def load_watcher(self, v14_watcher):
         v14_sprite = v14_watcher.readout.target
-        if v14_sprite == self.v14_project.stage:
+        if v14_sprite == self.stage:
             kurt_target = self.project
         else:
             kurt_target = self.project.get_sprite(v14_sprite.name)
@@ -450,11 +499,11 @@ class Serializer(object):
         return kurt_watcher
 
     def save_watcher(self, kurt_watcher):
-        v14_watcher = WatcherMorph()
-        readout = v14_watcher.readout = UpdatingStringMorph(
+        v14_watcher = self.UserObject("WatcherMorph")
+        readout = v14_watcher.readout = self.UserObject("UpdatingStringMorph",
             font_with_size = [Symbol('VerdanaBold'), 10],
         )
-        v14_watcher.readoutFrame = WatcherReadoutFrameMorph(
+        v14_watcher.readoutFrame = self.UserObject("WatcherReadoutFrameMorph",
             submorphs = [v14_watcher.readout]
         )
 
@@ -466,14 +515,14 @@ class Serializer(object):
         v14_watcher.name = kurt_watcher.block.type.translate('scratch14').text
 
         if kurt_watcher.target == self.project:
-            v14_morph = self.v14_project.stage
+            v14_morph = self.stage
             v14_watcher.isSpriteSpecfic = False
         else:
-            v14_morph = self.v14_project.get_sprite(kurt_watcher.target.name)
+            v14_morph = self.get_sprite(kurt_watcher.target.name)
             v14_watcher.name = v14_morph.name + " " + v14_watcher.name
 
         readout.target = v14_morph
-        v14_watcher.owner = self.v14_project.stage
+        v14_watcher.owner = self.stage
 
         selector = kurt_watcher.block.type.translate('scratch14').command
         command = 'getVar:' if selector == 'readVariable' else selector
@@ -486,7 +535,7 @@ class Serializer(object):
             v14_watcher.isLarge = True
             readout.font_with_size[1] = 14
         elif kurt_watcher.style == "slider":
-            v14_watcher.scratchSlider = WatcherSliderMorph()
+            v14_watcher.scratchSlider = self.UserObject("WatcherSliderMorph")
 
         v14_watcher.sliderMin = kurt_watcher.slider_min
         v14_watcher.sliderMax = kurt_watcher.slider_max
@@ -564,8 +613,7 @@ class Serializer(object):
     def save_scriptable(self, kurt_scriptable, v14_scriptable):
         clean_up(kurt_scriptable.scripts)
 
-        v14_scriptable.scripts = [save_script(s, self.v14_project)
-                                  for s in kurt_scriptable.scripts]
+        v14_scriptable.scripts = map(self.save_script, kurt_scriptable.scripts)
 
         blocks_by_id = []
         for script in kurt_scriptable.scripts:
@@ -577,7 +625,8 @@ class Serializer(object):
             if block.comment:
                 (x, y) = v14_scriptable.scripts[-1][0]
                 pos = (x, y + 29)
-                array = save_script(kurt.Comment(block.comment, pos), self.v14_project)
+                array = save_script(kurt.Comment(block.comment, pos),
+                                    self.v14_project)
                 for i in xrange(len(blocks_by_id)):
                     if blocks_by_id[i] is block:
                         array[1][0].append(i + 1)
@@ -608,11 +657,12 @@ class Serializer(object):
 
         # sprite
         if isinstance(kurt_scriptable, kurt.Sprite):
-            v14_scriptable.owner = self.v14_project.stage
+            v14_scriptable.owner = self.stage
 
             v14_scriptable.name = kurt_scriptable.name
             v14_scriptable.rotationDegrees = kurt_scriptable.direction - 90
-            v14_scriptable.rotationStyle = Symbol(kurt_scriptable.rotation_style)
+            v14_scriptable.rotationStyle = Symbol(
+                    kurt_scriptable.rotation_style)
             v14_scriptable.draggable = kurt_scriptable.is_draggable
             v14_scriptable.flags = 0 if kurt_scriptable.is_visible else 1
 
@@ -625,20 +675,21 @@ class Serializer(object):
             v14_scriptable.bounds = Rectangle([x, y, x+w, y+h])
 
 
-
 class Scratch14Plugin(KurtPlugin):
     name = "scratch14"
     display_name = "Scratch 1.4"
     extension = ".sb"
     blocks = block_list
     features = []
-    serializer = Serializer
+
+    serializer_cls = Serializer
+    user_objects = make_user_objects(user_objects_by_name)
 
     def load(self, fp):
-        return self.serializer(self).load(fp)
+        return self.serializer_cls(self).load(fp)
 
     def save(self, fp, project):
-        return self.serializer(self).save(fp, project)
+        return self.serializer_cls(self).save(fp, project)
 
 
 Kurt.register(Scratch14Plugin())
@@ -659,3 +710,4 @@ block_workaround('stop', lambda block: {
     'this script': kurt.Block('stop script'),
     'all': kurt.Block('stop all'),
 }.get(block.args[0], None))
+
