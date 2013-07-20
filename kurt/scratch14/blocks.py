@@ -20,7 +20,6 @@
 import re
 
 from construct import *
-from construct.text import *
 
 import kurt
 from kurt.scratch14.fixed_objects import Symbol
@@ -30,71 +29,66 @@ from kurt.scratch14.blockspecs_src import *
 
 #-- Squeak blockspecs parser --#
 
-string = QuotedString("string", start_quote="'", end_quote="'", esc_char="\\")
+TOKENS = map(re.compile, [
+    r"'()'",
+    r"'(.*?[^\\])?'",
+    r'#[~-]',
+    r'#([A-Za-z+*/\\<>=&|~:-]+)', # _=@%?!`^$
+    r'(-?[0-9]+(\.[0-9]+)?)',
+    r'\(',
+    r'\)',
+])
 
-symbol = Struct("symbol",
-    Literal("#"),
-    StringAdapter(GreedyRange(CharOf("value", set("+*/\<>=&|~:-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"))))
-    # _=@%?!`^$
-)
+def tokenize(squeak_code):
+    remain = str(squeak_code)
+    while remain:
+        remain = remain.lstrip()
+        for pat in TOKENS:
+            m = pat.match(remain)
+            if m:
+                if m.groups():
+                    token = m.group(1)
+                else:
+                    token = m.group()
+                token = token.replace("\\'", "'")
+                yield token
+                remain = remain[m.end():]
+                break
+        else:
+            raise SyntaxError, "Unknown token at %r" % remain
 
-spacer = Struct("spacer",
-    Literal("#"),
-    CharOf("", "~-"),
-    Whitespace(),
-    Value("is_block", lambda c: False)
-)
+def parse(squeak_code):
+    tokens = tokenize(squeak_code)
+    for token in tokens:
+        if token == "(":
+            blockspec = []
+            token = tokens.next()
+            while token != ")":
+                token = token.replace("#-", "-")
+                if token.lstrip("-").isdigit():
+                    token = int(token)
+                elif token.lstrip("-").replace(".", "").isdigit():
+                    token = float(token)
+                blockspec.append(token)
+                token = tokens.next()
+            yield blockspec
+        elif token in ("#-", "#~"):
+            yield None
+        else:
+            yield token
 
-value = Select("value",
-    symbol,
-    string,
-    FloatNumber("value"),
-    DecNumber("value"),
-    Struct("negative number",
-        Literal("-"),
-        DecNumber("number"),
-        Value("value", lambda ctx: -ctx['number']),
-    ),
-
-)
-
-blockspec = Struct("blockspec",
-    Literal("("),
-    Whitespace(),
-    Rename("text", string),
-    Whitespace(),
-    Rename("flag", symbol),
-    Whitespace(),
-    Rename("command", symbol),
-    Whitespace(),
-    OptionalGreedyRepeater(Rename("defaults", Struct("",
-        value,
-        Whitespace(),
-    ))),
-    Whitespace(),
-    Literal(")"),
-    Whitespace(),
-
-    Value("is_block", lambda c: True)
-)
-
-category = Struct("category",
-    Rename("name", string),
-    Whitespace(),
-    Rename("blocks", OptionalGreedyRepeater(
-        Select("",
-            blockspec,
-            spacer,
-        ),
-    )),
-    Whitespace(),
-)
-
-blockspecs = Struct("blockspecs",
-    Rename("categories", OptionalGreedyRepeater(category)),
-    #StringAdapter(OptionalGreedyRange(Char("leftovers"))), # used for DEBUG
-    Terminator,
-)
+def make_blocks(squeak_code):
+    category = None
+    for thing in parse(squeak_code):
+        if isinstance(thing, basestring):
+            category = thing
+            continue
+        else:
+            block = thing
+            if block:
+                (text, flag, command) = block[:3]
+                block = blockify(category, text, flag, command, block[3:])
+            yield block
 
 
 
@@ -214,7 +208,7 @@ MATCH_COMMANDS = {
 
 INSERT_RE = re.compile(r'(%.(?:\.[A-z]+)?)')
 
-def blockify(command, text, flag, category, defaults):
+def blockify(category, text, flag, command, defaults):
     if command in IGNORE_COMMANDS:
         return
 
@@ -255,40 +249,14 @@ def blockify(command, text, flag, category, defaults):
 
     return tb
 
-def parse_blockspec(squeak_code):
-    parsed = blockspecs.parse(squeak_code)
-    categories = parsed.categories
-
-    for category in categories:
-        for block in category.blocks:
-            if not block.is_block:
-                continue
-
-            defaults = []
-            for default in block.defaults:
-                default = default.value
-                if isinstance(default, Container):
-                    default = default.value
-                defaults.append(default)
-
-            bt = blockify(
-                block.command.value,
-                block.text,
-                block.flag.value,
-                category.name,
-                defaults,
-            )
-            if bt:
-                yield bt
-
 
 
 #-- build lists --#
 
-block_list = (list(parse_blockspec(squeak_blockspecs)) +
-    list(parse_blockspec(squeak_stage_blockspecs)) +
-    list(parse_blockspec(squeak_sprite_blockspecs)) +
-    list(parse_blockspec(squeak_obsolete_blockspecs)))
+block_list = (list(make_blocks(squeak_blockspecs)) +
+    list(make_blocks(squeak_stage_blockspecs)) +
+    list(make_blocks(squeak_sprite_blockspecs)) +
+    list(make_blocks(squeak_obsolete_blockspecs)))
 
 block_list += [
     # variable reporters
@@ -318,10 +286,10 @@ block_list += [
 
 blocks_by_cmd = {}
 for block in block_list:
-    cmd = block.command
-    if cmd not in blocks_by_cmd:
-        blocks_by_cmd[cmd] = []
-    blocks_by_cmd[cmd].append(block)
+    if block:
+        cmd = block.command
+        if cmd not in blocks_by_cmd:
+            blocks_by_cmd[cmd] = []
+        blocks_by_cmd[cmd].append(block)
 
 block_list = sum(blocks_by_cmd.values(), [])
-
