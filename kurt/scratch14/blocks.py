@@ -283,13 +283,3 @@ block_list += [
     kurt.TranslatedBlockType('control', 'hat', 'whenClicked',
         ['when clicked']),
 ]
-
-blocks_by_cmd = {}
-for block in block_list:
-    if block:
-        cmd = block.command
-        if cmd not in blocks_by_cmd:
-            blocks_by_cmd[cmd] = []
-        blocks_by_cmd[cmd].append(block)
-
-block_list = sum(blocks_by_cmd.values(), [])
