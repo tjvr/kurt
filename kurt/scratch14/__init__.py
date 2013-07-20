@@ -20,6 +20,8 @@
 import re
 import wave
 
+import PIL
+
 import kurt
 from kurt import StringIO
 from kurt.plugin import Kurt, KurtPlugin, block_workaround
@@ -47,14 +49,28 @@ from kurt.scratch14.heights import clean_up
 # kurt_* -- objects from kurt 2.0 api from kurt/__init__.py
 # v14_*  -- objects from this module, kurt.scratch14
 
+def get_media(v14_scriptable):
+    """Return (images, sounds)"""
+    images = []
+    sounds = []
+    for media in v14_scriptable.media:
+        if isinstance(media, Sound):
+            sounds.append(media)
+        elif isinstance(media, Image):
+            images.append(media)
+    return (images, sounds)
+
 def load_image(v14_image):
     if v14_image:
         if v14_image.jpegBytes:
             image = kurt.Image(v14_image.jpegBytes.value, "JPEG")
             image._size = v14_image.size
         else:
-            image = kurt.Image(v14_image.get_image())
-
+            form = v14_image.compositeForm or v14_image.form
+            (width, height, rgba_array) = form.to_array()
+            size = (width, height)
+            pil_image = PIL.Image.fromstring("RGBA", size, rgba_array)
+            image = kurt.Image(pil_image)
         return kurt.Costume(v14_image.name, image, v14_image.rotationCenter)
 
 def save_image(kurt_costume):
@@ -63,13 +79,21 @@ def save_image(kurt_costume):
 
         if image.format == "JPEG":
             v14_image = Image(
-                name = kurt_costume.name,
+                name = unicode(kurt_costume.name),
                 jpegBytes = ByteArray(kurt_costume.image.contents),
             )
-            v14_image.size = kurt_costume.image.size
-            v14_image.rotationCenter = Point(kurt_costume.rotation_center)
         else:
-            v14_image = Image.from_image(kurt_costume.name, kurt_costume.image.pil_image)
+            pil_image = kurt_costume.image.pil_image
+            pil_image = pil_image.convert("RGBA")
+            (width, height) = pil_image.size
+            rgba_string = pil_image.tostring()
+
+            v14_image = Image(
+                name = unicode(kurt_costume.name),
+                form = Form.from_string(width, height, rgba_string),
+            )
+
+        v14_image.size = kurt_costume.image.size
         v14_image.rotationCenter = Point(kurt_costume.rotation_center)
         return v14_image
 
@@ -264,9 +288,10 @@ def load_lists(v14_lists, kurt_project, kurt_target):
 
 def save_lists(kurt_target, kurt_project, v14_morph, v14_project):
     for (name, kurt_list) in kurt_target.lists.items():
+        name = unicode(name)
         v14_list = ScratchListMorph(
             name = name,
-            items = kurt_list.items,
+            items = map(unicode, kurt_list.items),
         )
 
         if not kurt_list.watcher:
@@ -290,7 +315,7 @@ def save_lists(kurt_target, kurt_project, v14_morph, v14_project):
             v14_list.owner = v14_project.stage
             v14_project.stage.submorphs.append(v14_list)
 
-        v14_morph.lists[v14_list.name] = v14_list
+        v14_morph.lists[name] = v14_list
 
 def get_blocks_by_id(this_block):
     if isinstance(this_block, kurt.Script):
@@ -344,12 +369,15 @@ def load_scriptable(kurt_scriptable, v14_scriptable):
     # media
     kurt_scriptable.variables = dict(map(load_variable,
             v14_scriptable.variables.items()))
-    kurt_scriptable.costumes = map(load_image, v14_scriptable.images)
-    kurt_scriptable.sounds = map(load_sound, v14_scriptable.sounds)
+
+    (images, sounds) = get_media(v14_scriptable)
+    kurt_scriptable.costumes = map(load_image, images)
+    kurt_scriptable.sounds = map(load_sound, sounds)
 
     # costume
-    costume_index = v14_scriptable.images.index(v14_scriptable.costume)
-    kurt_scriptable.costume = kurt_scriptable.costumes[costume_index]
+    if kurt_scriptable.costumes:
+        index = images.index(v14_scriptable.costume)
+        kurt_scriptable.costume_index = index
 
     # attributes
     kurt_scriptable.volume = v14_scriptable.volume
@@ -407,17 +435,19 @@ def save_scriptable(kurt_scriptable, v14_scriptable, v14_project):
 
     v14_scriptable.variables = dict(map(save_variable,
         kurt_scriptable.variables.items()))
-    v14_scriptable.images = map(save_image, kurt_scriptable.costumes)
-    v14_scriptable.sounds = map(save_sound, kurt_scriptable.sounds)
 
-    if kurt_scriptable.costume:
-        costume_index = kurt_scriptable.costumes.index(kurt_scriptable.costume)
-        v14_scriptable.costume = v14_scriptable.images[costume_index]
+    images = map(save_image, kurt_scriptable.costumes)
+    v14_scriptable.media = OrderedCollection(
+            images + map(save_sound, kurt_scriptable.sounds))
+
+    v14_scriptable.costume = images[kurt_scriptable.costume_index]
 
     v14_scriptable.volume = kurt_scriptable.volume
 
     # sprite
     if isinstance(kurt_scriptable, kurt.Sprite):
+        v14_scriptable.owner = v14_project.stage
+
         v14_scriptable.name = kurt_scriptable.name
         v14_scriptable.rotationDegrees = kurt_scriptable.direction - 90
         v14_scriptable.rotationStyle = Symbol(kurt_scriptable.rotation_style)

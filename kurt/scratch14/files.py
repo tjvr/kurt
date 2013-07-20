@@ -145,8 +145,6 @@ class ScratchProjectFile(BinaryFile):
             info["thumbnail"] = info["thumbnail"].form
         info["comment"] = info["comment"].replace("\n", "\r")
 
-        self.stage.normalize()
-
         project = Container(
             info = info,
             stage = self.stage,

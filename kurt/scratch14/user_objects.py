@@ -274,69 +274,15 @@ class ScriptableScratchMorph(BaseMorph):
     def __init__(self, *args, **kwargs):
         UserObject.__init__(self, *args, **kwargs)
 
-        self.images = []
-        self.sounds = []
-
-        self.build_media() # returns silently if self.media is still a Ref
-
     def set_defaults(self):
         BaseMorph.set_defaults(self)
-
         self.scripts = []
         self.media = []
-        self.costume = None # defaults to first Image in self.media on save
         self.variables = {}
         self.lists = {}
         self.isClone = False
-
         self.volume = 100
         self.tempoBPM = 60
-
-    def built(self):
-        UserObject.built(self)
-
-        self.build_media()
-
-    def build_media(self):
-        if isinstance(self.media, Ref):
-            return # Don't run this yet!
-
-        media = self.media
-        self.media = []
-        for media in media:
-            if isinstance(media, Sound):
-                self.sounds.append(media)
-            elif isinstance(media, Image):
-                self.images.append(media)
-            else:
-                self.media.append(media)
-
-    def normalize(self):
-        """Called before saving"""
-        if not self.costume:
-            for media in self.media + self.images:
-                if isinstance(media, Image):
-                    self.costume = media
-                    break
-            else:
-                raise ValueError("%r does not have a costume" % self)
-
-        self.lists = dict(
-            (unicode(name), list) for (name, list) in self.lists.items()
-        )
-        for list_name in self.lists:
-            scratch_list = self.lists[list_name]
-            if not isinstance(scratch_list, ScratchListMorph):
-                scratch_list = ScratchListMorph(items=scratch_list)
-                self.lists[list_name] = scratch_list
-            scratch_list.name = list_name
-            scratch_list.normalize()
-
-    def _encode_field(self, name, value):
-        if name == 'media':
-            return OrderedCollection(self.sounds + self.images + self.media)
-        else:
-            return value
 
 
 class SensorBoardMorph(BaseMorph):
@@ -363,11 +309,8 @@ class Sprite(ScriptableScratchMorph):
 
     def set_defaults(self):
         ScriptableScratchMorph.set_defaults(self)
-
         self.name = "Sprite1"
         self.color = Color(0, 0, 1023)
-        # self.owner - Stage
-
         self.visibility = 100
         self.scalePoint = Point(1.0, 1.0)
         self.rotationDegrees = 0.0
@@ -404,45 +347,8 @@ class Stage(ScriptableScratchMorph):
         self.zoom = 1.0
         self.hPan =  0
         self.vPan =  0
-        self.sprites = []
+        self.sprites = OrderedCollection()
         self.sceneStates = {}
-
-        image = Image(
-            name = "background",
-            form = ColorForm(
-                width = 480,
-                height = 360,
-                depth = 1,
-                bits = ByteArray("\xf5\x18\xff\x00\x00Ta\x00"),
-            ),
-        )
-
-        self.media = [image]
-        self.images = [image]
-        self.costume = image
-
-    def normalize(self):
-        """Called before saving"""
-        ScriptableScratchMorph.normalize(self)
-
-        for sprite in self.sprites:
-            if sprite not in self.submorphs:
-                self.submorphs.append(sprite)
-            sprite.owner = self
-            sprite.normalize()
-
-    def built(self):
-        ScriptableScratchMorph.built(self)
-        self.sprites = list(self.sprites)
-
-    def _encode_field(self, name, value):
-        value = ScriptableScratchMorph._encode_field(self, name, value)
-
-        if name == 'sprites':
-            return OrderedCollection(self.sprites)
-        else:
-            return value
-
 
 class ChoiceArgMorph(BaseMorph):
     """unused?"""
@@ -549,68 +455,9 @@ class Image(ScratchMedia):
         "jpegBytes", "compositeForm")
     _version = 4
 
-    def built(self):
-        # Called after loading from file
-        if self.compositeForm:
-            self.form_without_text = self.form
-            self.form = self.compositeForm
-
-        if not self.size and self.form:
-            self.size = (self.form.width, self.form.height)
-
-    def _encode_field(self, name, value):
-        if name == 'name':
-            return unicode(value)
-        return value
-
-    @classmethod
-    def from_image(cls, name, image_file):
-        """Create Image from a PIL.Image.Image object"""
-        name = unicode(name)
-        if image_file.format == "JPEG":
-            f = StringIO.StringIO()
-            image_file.save(f, format="JPEG")
-
-            f.seek(0)
-            jpegBytes = f.read()
-
-            image = cls(
-                name = name,
-                jpegBytes = ByteArray(jpegBytes),
-            )
-
-        else:
-            image_file = image_file.convert("RGBA")
-            assert image_file.mode == "RGBA"
-
-            (width, height) = image_file.size
-            rgba_string = image_file.tostring()
-
-            image = cls(
-                name = name,
-                form = Form.from_string(width, height, rgba_string),
-            )
-
-        image.size = image_file.size
-        return image
-
     def set_defaults(self):
         ScratchMedia.set_defaults(self)
         self.rotationCenter = Point(0, 0)
-
-        self.form_without_text = None
-        self.size = None
-
-    def get_image(self):
-        """Return a PIL.Image.Image object"""
-        if self.jpegBytes:
-            image = PIL.Image.open(StringIO.StringIO(self.jpegBytes.value))
-        else:
-            (width, height, rgba_array) = self.form.to_array()
-            size = (width, height)
-            image = PIL.Image.fromstring("RGBA", size, rgba_array)
-
-        return image
 
 
 class MovieMedia(ScratchMedia):
@@ -691,11 +538,6 @@ class ScratchListMorph(BorderedMorph):
         self.color = Color(774, 786, 798)
 
         self.items = []
-
-    def normalize(self):
-        """Called before saving"""
-        self.items = [unicode(item) for item in self.items]
-
 
 
 class ScrollingStringMorph(BaseMorph):
