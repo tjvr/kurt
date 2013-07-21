@@ -1656,6 +1656,10 @@ class TranslatedBlockType(BaseBlockType):
 
         """
 
+    def copy(self):
+        return self.__class__(self.category, self.shape, self.command,
+                              self.parts, self._match)
+
 
 class CustomBlockType(BaseBlockType):
     """A user-specified :class:`BlockType`.

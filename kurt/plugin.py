@@ -168,9 +168,13 @@ class Kurt(object):
         plugin.features = map(Feature.get, plugin.features)
 
         # fix blocks
+        blocks = []
         for tbt in plugin.blocks:
             if tbt:
+                tbt = tbt.copy()
                 tbt.format = plugin.name
+            blocks.append(tbt)
+        plugin.blocks = blocks
 
         # add blocks
         new_blocks = filter(None, plugin.blocks)
