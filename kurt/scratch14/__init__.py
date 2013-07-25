@@ -149,10 +149,11 @@ class Serializer(object):
         self.stage = self.UserObject("ScratchStageMorph")
 
         # project info
+        thumbnail = self.save_image(self.project.thumbnail)
         self.info = {
             'author': self.project.author,
             'comment': self.project.notes.replace("\n", "\r"),
-            'thumbnail': self.save_image(self.project.thumbnail).form,
+            'thumbnail': thumbnail.form if thumbnail else None,
             'history': '',
             'language': 'en',
             'os-version': '',
@@ -161,16 +162,11 @@ class Serializer(object):
         }
 
         # make all sprites (need to do before we save scripts)
-        print self.stage.sprites
-
         for kurt_sprite in self.project.sprites:
             v14_sprite = self.UserObject("ScratchSpriteMorph",
                                          name=kurt_sprite.name)
             v14_sprite._original = kurt_sprite
             self.stage.sprites.append(v14_sprite)
-
-        for v14_sprite in self.stage.sprites:
-            print v14_sprite._original
 
         # stage
         self.save_scriptable(self.project.stage, self.stage)
