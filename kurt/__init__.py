@@ -1184,7 +1184,8 @@ class Insert(object):
         'videoState': ['off', 'on', 'on-flipped'],
     }
 
-    def __init__(self, shape, kind=None, default=None, name=None):
+    def __init__(self, shape, kind=None, default=None, name=None,
+            unevaluated=None):
         self.shape = shape
         """What kind of values this argument accepts.
 
@@ -1274,6 +1275,15 @@ class Insert(object):
         self.default = default or Insert.SHAPE_DEFAULTS.get(shape, None)
         """The default value for the insert."""
 
+        if unevaluated is None:
+            unevaluated = True if shape == 'stack' else False
+        self.unevaluated = unevaluated
+        """True if the interpreter should evaluate the argument to the block.
+
+        Defaults to True for 'stack' inserts, False for all others.
+
+        """
+
         self.name = name
         """The name of the parameter to a :class:`CustomBlockType`.
 
@@ -1288,6 +1298,8 @@ class Insert(object):
             r += ", %r" % self.kind
         if self.default != Insert.SHAPE_DEFAULTS.get(self.shape, None):
             r += ", default=%r" % self.default
+        if self.unevaluated:
+            r += ", unevaluated=%r" % self.unevaluated
         if self.name:
             r += ", name=%r" % self.name
         r += ")"
@@ -1295,7 +1307,7 @@ class Insert(object):
 
     def __eq__(self, other):
         if isinstance(other, Insert):
-            for name in ("shape", "default"):
+            for name in ("shape", "kind", "default", "unevaluated"):
                 if getattr(self, name) != getattr(other, name):
                     return False
             else:
@@ -1518,8 +1530,10 @@ class BlockType(BaseBlockType):
         """
         assert self.shape == tb.shape
         assert len(self.inserts) == len(tb.inserts)
-        assert [i.shape for i in self.inserts] == [i.shape for i in tb.inserts]
-        assert [i.kind for i in self.inserts] == [i.kind for i in tb.inserts]
+        for (i, o) in zip(self.inserts, tb.inserts):
+            assert i.shape == o.shape
+            assert i.kind == o.kind
+            assert i.unevaluated == o.unevaluated
         if plugin not in self._translations:
             self._translations[plugin] = tb
 

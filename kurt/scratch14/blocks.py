@@ -247,6 +247,10 @@ def blockify(category, text, flag, command, defaults):
     elif command == 'showBackground:':
         tb.inserts[0].kind = 'backdrop'
 
+    # fix unevaluated inserts
+    if "until" in tb.text or "forever if" in tb.text:
+        tb.inserts[0].unevaluated = True
+
     return tb
 
 

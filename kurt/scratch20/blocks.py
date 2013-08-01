@@ -109,7 +109,10 @@ def blockify(blockspec):
         elif "e" in flag:
             parts += [kurt.Insert("stack"), "else", kurt.Insert("stack")]
 
-        return kurt.TranslatedBlockType(category, shape, command, parts)
+        tb = kurt.TranslatedBlockType(category, shape, command, parts)
+        if "until" in tb.text or "forever if" in tb.text:
+            tb.inserts[0].unevaluated = True
+        return tb
     else:
         return None
 
