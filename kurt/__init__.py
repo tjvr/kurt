@@ -1558,6 +1558,11 @@ class BlockType(BaseBlockType):
         """Return the list of :class:`TranslatedBlockType` instances."""
         return self._translations.values()
 
+    def has_translation(self, plugin):
+        """Return True if the plugin supports this block."""
+        plugin = kurt.plugin.Kurt.get_plugin(plugin)
+        return plugin.name in self._translations
+
     def has_command(self, command):
         """Returns True if any of the translations have the given command."""
         for tb in self._translations.values():
