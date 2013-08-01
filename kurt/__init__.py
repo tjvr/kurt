@@ -758,8 +758,8 @@ class Sprite(Scriptable, Actor):
         """
 
         self.position = (0, 0)
-        """The ``(x, y)`` position to the right and above of the centre of the
-        stage in pixels.
+        """The ``(x, y)`` position of the centre of the sprite in Scratch
+        co-ordinates.
 
         """
 
@@ -1555,6 +1555,7 @@ class BlockType(BaseBlockType):
 
     @property
     def translations(self):
+        """Return the list of :class:`TranslatedBlockType` instances."""
         return self._translations.values()
 
     def has_command(self, command):
@@ -1966,10 +1967,11 @@ class Costume(object):
         if not rotation_center:
             rotation_center = (int(image.width / 2), int(image.height / 2))
         self.rotation_center = tuple(rotation_center)
-        """``(x, y)`` position of the center of the image from the top-left
-        corner, about which the sprite rotates.
+        """``(x, y)`` position from the top-left corner of the point about
+        which the image rotates.
 
         Defaults to the center of the image.
+
         """
 
         self.image = image
