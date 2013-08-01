@@ -67,8 +67,8 @@ blacklist = set([
 
 
 #for bt in kurt.plugin.Kurt.blocks:
-#    if "scratch14" in bt._translations:
-#        command = bt.translate("scratch14").command
+#    if "scratch14" in bt.conversions:
+#        command = bt.convert("scratch14").command
 #        if command in bheights or command in blacklist:
 #            continue
 #        print repr(command)+":",

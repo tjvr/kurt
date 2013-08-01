@@ -383,19 +383,19 @@ class ZipWriter(object):
         if watcher.kind == 'list':
             return
 
-        tbt = watcher.block.type.translate('scratch20')
-        if tbt.command == 'senseVideoMotion':
+        pbt = watcher.block.type.convert('scratch20')
+        if pbt.command == 'senseVideoMotion':
             label = 'video ' + watcher.block.args[0]
-        elif tbt.command == 'timeAndDate':
+        elif pbt.command == 'timeAndDate':
             label = watcher.block.args[0]
         else:
-            label = tbt.text % tuple(watcher.block.args)
+            label = pbt.text % tuple(watcher.block.args)
 
         if not isinstance(watcher.target, kurt.Project):
             label = watcher.target.name + " " + label
 
         return {
-            'cmd': 'getVar:' if tbt.command == 'readVariable' else tbt.command,
+            'cmd': 'getVar:' if pbt.command == 'readVariable' else pbt.command,
             'param': ",".join(map(unicode, watcher.block.args))
                     if watcher.block.args else None,
             'label': label,
@@ -407,7 +407,7 @@ class ZipWriter(object):
             'visible': watcher.is_visible,
             'x': watcher.pos[0],
             'y': watcher.pos[1],
-            'color': self.save_color(CATEGORY_COLORS[tbt.category]),
+            'color': self.save_color(CATEGORY_COLORS[pbt.category]),
             'isDiscrete': True,
         }
 
@@ -500,7 +500,7 @@ class ZipWriter(object):
             spec = make_spec(block.type.parts)
             return ['call', spec] + block.args
 
-        command = block.type.translate("scratch20").command
+        command = block.type.convert("scratch20").command
 
         if command == 'procDef':
             cb = block.args[0]

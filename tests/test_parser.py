@@ -43,7 +43,7 @@ assert pb(testf).stringify(True) == out
 # scratchblocks
 
 def command_getter(self):
-    return self.type.translate('scratch14').command
+    return self.type.convert('scratch14').command
 kurt.Block.command = property(command_getter)
 
 

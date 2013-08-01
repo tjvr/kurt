@@ -359,7 +359,7 @@ class Serializer(object):
         return kurt.Script(map(self.load_block, blocks), pos)
 
     def save_block(self, kurt_block):
-        command = kurt_block.type.translate('scratch14').command
+        command = kurt_block.type.convert('scratch14').command
 
         inserts = list(kurt_block.type.inserts)
         args = []
@@ -508,7 +508,7 @@ class Serializer(object):
         else:
             (x, y) = (10, 10)
 
-        v14_watcher.name = kurt_watcher.block.type.translate('scratch14').text
+        v14_watcher.name = kurt_watcher.block.type.convert('scratch14').text
 
         if kurt_watcher.target == self.project:
             v14_morph = self.stage
@@ -520,7 +520,7 @@ class Serializer(object):
         readout.target = v14_morph
         v14_watcher.owner = self.stage
 
-        selector = kurt_watcher.block.type.translate('scratch14').command
+        selector = kurt_watcher.block.type.convert('scratch14').command
         command = 'getVar:' if selector == 'readVariable' else selector
         readout.getSelector = Symbol(command)
 

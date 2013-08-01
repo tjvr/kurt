@@ -29,7 +29,7 @@ import kurt
 
 
 def block_height(block):
-    command = block.type.translate("scratch14").command
+    command = block.type.convert("scratch14").command
 
     FIXED = {
         'KeyEventHatMorph': 41,

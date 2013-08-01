@@ -99,7 +99,7 @@ class KurtPlugin(object):
     """A list of the :class:`Features <Feature>` that the plugin supports."""
 
     blocks = []
-    """The list of :class:`TranslatedBlockType` objects supported by this
+    """The list of :class:`PluginBlockType` objects supported by this
     plugin, in the order they appear in the program's interface.
 
     """
@@ -110,7 +110,7 @@ class KurtPlugin(object):
     # Override the following methods in subclass:
 
     def make_blocks(self):
-        """Return a list of :class:`TranslatedBlockType` objects, which will be
+        """Return a list of :class:`PluginBlockType` objects, which will be
         the value of the :attr:`blocks` property.
 
         This function is only called once.
@@ -169,25 +169,25 @@ class Kurt(object):
 
         # fix blocks
         blocks = []
-        for tbt in plugin.blocks:
-            if tbt:
-                tbt = tbt.copy()
-                tbt.format = plugin.name
-            blocks.append(tbt)
+        for pbt in plugin.blocks:
+            if pbt:
+                pbt = pbt.copy()
+                pbt.format = plugin.name
+            blocks.append(pbt)
         plugin.blocks = blocks
 
         # add blocks
         new_blocks = filter(None, plugin.blocks)
-        for tbt in new_blocks:
+        for pbt in new_blocks:
             for bt in cls.blocks:
-                if (bt.has_command(tbt.command) or
-                        bt.has_command(tbt._match)):
-                    bt._add_translation(plugin.name, tbt)
+                if (bt.has_command(pbt.command) or
+                        bt.has_command(pbt._match)):
+                    bt._add_conversion(plugin.name, pbt)
                     break
             else:
-                if tbt._match:
-                    raise ValueError, "Couldn't match %r" % tbt._match
-                cls.blocks.append(kurt.BlockType(tbt))
+                if pbt._match:
+                    raise ValueError, "Couldn't match %r" % pbt._match
+                cls.blocks.append(kurt.BlockType(pbt))
 
     @classmethod
     def get_plugin(cls, name=None, **kwargs):
@@ -248,8 +248,8 @@ class Kurt(object):
         text = kurt.BlockType._strip_text(text)
         matches = []
         for block in cls.blocks:
-            for tbt in block._translations.values():
-                if tbt.stripped_text == text:
+            for pbt in block.conversions:
+                if pbt.stripped_text == text:
                     matches.append(block)
                     break
         return matches

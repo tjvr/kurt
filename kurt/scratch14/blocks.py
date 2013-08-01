@@ -236,22 +236,22 @@ def blockify(category, text, flag, command, defaults):
     elif flag == "c":
         parts += [kurt.Insert("stack")]
 
-    tb = kurt.TranslatedBlockType(category, shape, command, parts,
+    pbt = kurt.PluginBlockType(category, shape, command, parts,
             match=match)
 
     # fix insert kinds
     if command == 'getAttribute:of:':
-        tb.inserts[1].kind = 'spriteOrStage'
+        pbt.inserts[1].kind = 'spriteOrStage'
     elif command == 'touching:':
-        tb.inserts[0].kind = 'touching'
+        pbt.inserts[0].kind = 'touching'
     elif command == 'showBackground:':
-        tb.inserts[0].kind = 'backdrop'
+        pbt.inserts[0].kind = 'backdrop'
 
     # fix unevaluated inserts
-    if "until" in tb.text or "forever if" in tb.text:
-        tb.inserts[0].unevaluated = True
+    if "until" in pbt.text or "forever if" in pbt.text:
+        pbt.inserts[0].unevaluated = True
 
-    return tb
+    return pbt
 
 
 
@@ -264,26 +264,26 @@ block_list = (list(make_blocks(squeak_blockspecs)) +
 
 block_list += [
     # variable reporters
-    kurt.TranslatedBlockType('variables', 'reporter', 'readVariable',
+    kurt.PluginBlockType('variables', 'reporter', 'readVariable',
         [kurt.Insert('inline', 'var', default='var')]),
-    kurt.TranslatedBlockType('variables', 'reporter', 'contentsOfList:',
+    kurt.PluginBlockType('variables', 'reporter', 'contentsOfList:',
         [kurt.Insert('inline', 'list', default='list')]),
 
     # Blocks with different meaning depending on arguments are special-cased
     # inside load_block/save_block.
-    kurt.TranslatedBlockType('control', 'hat', 'whenGreenFlag',
+    kurt.PluginBlockType('control', 'hat', 'whenGreenFlag',
         ['when green flag clicked']),
-    kurt.TranslatedBlockType('control', 'hat', 'whenIReceive',
+    kurt.PluginBlockType('control', 'hat', 'whenIReceive',
         ['when I receive ', kurt.Insert('readonly-menu', 'broadcast')]),
 
     # changeVariable is special-cased (and isn't in blockspecs)
-    kurt.TranslatedBlockType('variables', 'stack', 'changeVar:by:', ['change ',
+    kurt.PluginBlockType('variables', 'stack', 'changeVar:by:', ['change ',
         kurt.Insert('readonly-menu', 'var'), ' by ', kurt.Insert('number')]),
-    kurt.TranslatedBlockType('variables', 'stack', 'setVar:to:', ['set ',
+    kurt.PluginBlockType('variables', 'stack', 'setVar:to:', ['set ',
         kurt.Insert('readonly-menu', 'var'), ' to ', kurt.Insert('string')]),
 
     # MouseClickEventHatMorph is special-cased as it has an extra argument:
     # 'when %m clicked'
-    kurt.TranslatedBlockType('control', 'hat', 'whenClicked',
+    kurt.PluginBlockType('control', 'hat', 'whenClicked',
         ['when clicked']),
 ]

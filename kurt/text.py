@@ -116,12 +116,12 @@ def inline_blocks():
 
 def all_the_blocks():
     for block in kurt.plugin.Kurt.blocks:
-        done_translations = set()
-        for block in block.translations:
-            if block.text in done_translations:
+        done_text = set()
+        for block in block.conversions:
+            if block.text in done_text:
                 continue
             yield block
-            done_translations.add(block.text)
+            done_text.add(block.text)
 
 def match_part(part, block_part):
     if isinstance(block_part, kurt.Insert):

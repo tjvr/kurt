@@ -448,8 +448,8 @@ class Project(object):
                                 % self._plugin.display_name)
 
                 else: # BlockType
-                    tbt = block.type.translate(self._plugin)
-                    if 'obsolete' in tbt.category:
+                    pbt = block.type.convert(self._plugin)
+                    if 'obsolete' in pbt.category:
                         raise BlockNotSupported("%r is obsolete in %s" %
                                 (block.type, self._plugin.display_name))
             except BlockNotSupported, err:
@@ -550,8 +550,8 @@ class UnknownBlock(Exception):
 class BlockNotSupported(Exception):
     """The plugin doesn't support this Block.
 
-    Raised by :attr:`Block.translate` when it can't find a
-    :class:`TranslatedBlockType` for the given plugin.
+    Raised by :attr:`Block.convert` when it can't find a
+    :class:`PluginBlockType` for the given plugin.
 
     """
     pass
@@ -1375,7 +1375,7 @@ class Insert(object):
 
 
 class BaseBlockType(object):
-    """Base for :class:`BlockType` and :class:`TranslatedBlockType`.
+    """Base for :class:`BlockType` and :class:`PluginBlockType`.
 
     Defines common attributes.
 
@@ -1508,75 +1508,75 @@ class BlockType(BaseBlockType):
     """The specification for a type of :class:`Block`.
 
     These are initialiased by :class:`Kurt` by combining
-    :class:`TranslatedBlockType` objects from individual format plugins to
+    :class:`PluginBlockType` objects from individual format plugins to
     create a single :class:`BlockType` for each command.
 
     """
 
-    def __init__(self, translation):
-        if isinstance(translation, basestring):
+    def __init__(self, pbt):
+        if isinstance(pbt, basestring):
             raise ValueError("Invalid argument. Did you mean `BlockType.get`?")
 
-        self._translations = OrderedDict([(translation.format, translation)])
-        """Stores :class:`TranslatedBlockType` objects for each plugin name."""
+        self._plugins = OrderedDict([(pbt.format, pbt)])
+        """Stores :class:`PluginBlockType` objects for each plugin name."""
 
         self._workaround = None
 
-    def _add_translation(self, plugin, tb):
-        """Add the given TranslatedBlockType to :attr:`_translations`.
+    def _add_conversion(self, plugin, pbt):
+        """Add a new PluginBlockType conversion.
 
-        If the plugin already exists, replace the existing translation.
+        If the plugin already exists, do nothing.
 
         """
-        assert self.shape == tb.shape
-        assert len(self.inserts) == len(tb.inserts)
-        for (i, o) in zip(self.inserts, tb.inserts):
+        assert self.shape == pbt.shape
+        assert len(self.inserts) == len(pbt.inserts)
+        for (i, o) in zip(self.inserts, pbt.inserts):
             assert i.shape == o.shape
             assert i.kind == o.kind
             assert i.unevaluated == o.unevaluated
-        if plugin not in self._translations:
-            self._translations[plugin] = tb
+        if plugin not in self._plugins:
+            self._plugins[plugin] = pbt
 
-    def translate(self, plugin=None):
-        """Return a :class:`TranslatedBlockType` for the given plugin name.
+    def convert(self, plugin=None):
+        """Return a :class:`PluginBlockType` for the given plugin name.
 
         If plugin is ``None``, return the first registered plugin.
 
         """
         if plugin:
             plugin = kurt.plugin.Kurt.get_plugin(plugin)
-            if plugin.name in self._translations:
-                return self._translations[plugin.name]
+            if plugin.name in self._plugins:
+                return self._plugins[plugin.name]
             else:
                 raise BlockNotSupported("%s doesn't have %r" %
                         (plugin.display_name, self))
         else:
-            return self.translations[0]
+            return self.conversions[0]
 
     @property
-    def translations(self):
-        """Return the list of :class:`TranslatedBlockType` instances."""
-        return self._translations.values()
+    def conversions(self):
+        """Return the list of :class:`PluginBlockType` instances."""
+        return self._plugins.values()
 
-    def has_translation(self, plugin):
+    def has_conversion(self, plugin):
         """Return True if the plugin supports this block."""
         plugin = kurt.plugin.Kurt.get_plugin(plugin)
-        return plugin.name in self._translations
+        return plugin.name in self._plugins
 
     def has_command(self, command):
-        """Returns True if any of the translations have the given command."""
-        for tb in self._translations.values():
-            if tb.command == command:
+        """Returns True if any of the plugins have the given command."""
+        for pbt in self._plugins.values():
+            if pbt.command == command:
                 return True
         return False
 
     @property
     def shape(self):
-        return self.translate().shape
+        return self.convert().shape
 
     @property
     def parts(self):
-        return self.translate().parts
+        return self.convert().parts
 
     @classmethod
     def get(cls, block_type):
@@ -1584,20 +1584,20 @@ class BlockType(BaseBlockType):
 
         * If it's already a BlockType instance, return that.
 
-        * If it exactly matches the command on a :class:`TranslatedBlockType`,
+        * If it exactly matches the command on a :class:`PluginBlockType`,
           return the corresponding BlockType.
 
-        * If it loosely matches the text on a TranslatedBlockType, return the
+        * If it loosely matches the text on a PluginBlockType, return the
           corresponding BlockType.
 
-        * If it's a TranslatedBlockType instance, look for and return the
+        * If it's a PluginBlockType instance, look for and return the
           corresponding BlockType.
 
         """
         if isinstance(block_type, (BlockType, CustomBlockType)):
             return block_type
 
-        if isinstance(block_type, TranslatedBlockType):
+        if isinstance(block_type, PluginBlockType):
             block_type = block_type.command
 
         block = kurt.plugin.Kurt.block_by_command(block_type)
@@ -1607,10 +1607,10 @@ class BlockType(BaseBlockType):
         blocks = kurt.plugin.Kurt.blocks_by_text(block_type)
         for block in blocks: # check the blocks' commands map to unique blocks
             if kurt.plugin.Kurt.block_by_command(
-                    block.translate().command) != blocks[0]:
+                    block.convert().command) != blocks[0]:
                 raise ValueError(
                         "ambigious block text %r, use one of %r instead" %
-                        (block_type, [b.translate().command for b in blocks]))
+                        (block_type, [b.convert().command for b in blocks]))
 
         if blocks:
             return blocks[0]
@@ -1620,8 +1620,8 @@ class BlockType(BaseBlockType):
     def __eq__(self, other):
         if isinstance(other, BlockType):
             if self.shape == other.shape and self.inserts == other.inserts:
-                for t in self._translations:
-                    if t in other._translations:
+                for t in self._plugins:
+                    if t in other._plugins:
                         return True
 
     def __ne__(self, other):
@@ -1631,11 +1631,11 @@ class BlockType(BaseBlockType):
         self._workaround = workaround
 
 
-class TranslatedBlockType(BaseBlockType):
+class PluginBlockType(BaseBlockType):
     """Holds plugin-specific :class:`BlockType` attributes.
 
     For each block concept, :class:`Kurt` builds a single BlockType that
-    references a corresponding TranslatedBlockType for each plugin that
+    references a corresponding PluginBlockType for each plugin that
     supports that block.
 
     Note that whichever plugin is loaded first takes precedence.
@@ -1815,7 +1815,7 @@ class Block(object):
     def __repr__(self):
         string = "%s.%s(%s, " % (self.__class__.__module__,
                 self.__class__.__name__,
-                repr(self.type.translate().command if isinstance(self.type,
+                repr(self.type.convert().command if isinstance(self.type,
                     BlockType) else self.type))
         for arg in self.args:
             if isinstance(arg, Block):
