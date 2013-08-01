@@ -58,6 +58,7 @@ class number(Token):
         return self
 
 class string(Token):
+    lbp = 0
     def nud(self):
         return self
 
@@ -272,6 +273,9 @@ class iden(Token):
             self.parts = parts
             throw("Can't find block %r" % parts)
 
+        if expect == set(['']):
+            return ''
+
         all_inserts = filter(lambda p: isinstance(p, kurt.Insert), expect)
 
         if isinstance(token, iden):
@@ -384,6 +388,8 @@ def tokenize(program):
         m = WHITESPACE_PAT.match(remain)
         if m:
             remain = remain[m.end():]
+            if not remain:
+                break
 
         for (pat, cls) in TOKENS:
             m = pat.match(remain)
@@ -457,6 +463,7 @@ def parse(program, scriptable):
     if not isinstance(result, list):
         throw("Result does not evaluate to a block")
     return kurt.Script(result)
+
 
 def throw(msg, hint=None, expected=None):
     global remain
