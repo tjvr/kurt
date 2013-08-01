@@ -14,8 +14,8 @@ Contents:
    :maxdepth: 4
 
    changes-1.4
-   kurt
-   plugin
+   api
+   plugin-api
 
 
 

@@ -40,8 +40,8 @@ List available plugins
 
 To get a list of the plugins registered with :class:`Kurt`:
 
-    >>> kurt.plugin.Kurt.plugins
-    {'scratch14': kurt.scratch14.Scratch14Plugin()}
+    >>> kurt.plugin.Kurt.plugins.keys()
+    ['scratch20', 'scratch14']
 
 You should see your plugin in the output, unless you forgot to :attr:`register
 <Kurt.register>` it.
@@ -55,6 +55,10 @@ Some things to keep in mind:
 * Most Scratch file formats have the *stage* as the base object -- so project
   attributes, such as the notes and the list of sprites, are stored on the
   stage object.
+* For Scratch, which doesn't support stage-specific variables, global variables
+  and lists are stored on the Project, not the Stage.
+* If your plugin contains obsolete blocks, they should be at the *end* of the
+  :attr:`blocks` list. Otherwise things might not work properly.
 
 """
 

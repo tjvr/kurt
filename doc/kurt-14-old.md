@@ -1,3 +1,9 @@
+This is the old Kurt 1.4 documentation. The compiler stuff has yet to be
+rewritten for Kurt 2.0, so we ignore it for now.
+
+The rest is outdated. Seriously, ignore this.
+
+
 
 ## Using the Compiler
 

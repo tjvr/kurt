@@ -1,5 +1,5 @@
-``kurt.plugin``
-===============
+Plugin API
+==========
 
 .. include:: warning.rst
 
