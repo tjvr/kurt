@@ -224,7 +224,8 @@ class Serializer(object):
         if v14_image:
             if v14_image.jpegBytes:
                 image = kurt.Image(v14_image.jpegBytes.value, "JPEG")
-                image._size = v14_image.size
+                if hasattr(v14_image, 'size'):
+                    image._size = v14_image.size
             else:
                 form = v14_image.compositeForm or v14_image.form
                 (width, height, rgba_array) = form.to_array()

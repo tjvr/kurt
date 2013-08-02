@@ -722,6 +722,8 @@ class Stage(Scriptable):
     """
 
     name = "Stage"
+    is_draggable = False
+    is_visible = True
 
     SIZE = (480, 360)
     COLOR = (255, 255, 255)
