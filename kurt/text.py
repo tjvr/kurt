@@ -469,9 +469,9 @@ def throw(msg, hint=None, expected=None):
     global remain
 
     if expected:
-        expected = map(repr, expected)
-        hint = "Expected %s" % (expected[0] if len(expected) == 1
-                                else "one of " + ", ".join(expected))
+        repr_expected = map(repr, expected)
+        hint = "Expected %s" % (repr_expected[0] if len(repr_expected) == 1
+                                else "one of " + ", ".join(repr_expected))
 
     if hint:
         msg += ". " + hint
@@ -483,5 +483,7 @@ def throw(msg, hint=None, expected=None):
 
     line = NEWLINE_PAT.split(p_input)[lineno - 1]
     offset = len(p_input) - len(remain) #- len(token.value)
-    raise SyntaxError(msg, ('<string>', lineno, offset, line))
+    err = SyntaxError(msg, ('<string>', lineno, offset, line))
+    err.expected = expected
+    raise err
 
