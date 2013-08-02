@@ -434,6 +434,19 @@ class Project(object):
             if not isinstance(actor, Scriptable):
                 actor._normalize()
 
+        # make Watchers if needed
+        for thing in [self, self.stage] + self.sprites:
+            for (name, var) in thing.variables.items():
+                if not var.watcher:
+                    var.watcher = kurt.Watcher(thing,
+                            kurt.Block("var", name), is_visible=False)
+                    self.actors.append(var.watcher)
+            for (name, list_) in thing.lists.items():
+                if not list_.watcher:
+                    list_.watcher = kurt.Watcher(thing,
+                            kurt.Block("list", name), is_visible=False)
+                    self.actors.append(list_.watcher)
+
         # notes - line endings
         self.notes = self.notes.replace("\r\n", "\n").replace("\r", "\n")
 

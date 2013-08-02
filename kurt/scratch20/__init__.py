@@ -405,8 +405,8 @@ class ZipWriter(object):
             'sliderMax': watcher.slider_max,
             'sliderMin': watcher.slider_min,
             'visible': watcher.is_visible,
-            'x': watcher.pos[0],
-            'y': watcher.pos[1],
+            'x': watcher.pos[0] if watcher.pos else 10,
+            'y': watcher.pos[1] if watcher.pos else 10,
             'color': self.save_color(CATEGORY_COLORS[pbt.category]),
             'isDiscrete': True,
         }
@@ -478,17 +478,14 @@ class ZipWriter(object):
                 "isPersistent": variable.is_cloud,
             })
 
-        for (name, _list) in target.lists.items():
-            watcher = _list.watcher or kurt.Watcher(target,
-                        kurt.Block("contentsOfList:", name), is_visible=False)
-
+        for (name, list_) in target.lists.items():
             sd["lists"].append({
                 "listName": name,
-                "contents": _list.items,
-                "isPersistent": _list.is_cloud,
-                "visible": watcher.is_visible,
-                "x": watcher.pos[0],
-                "y": watcher.pos[1],
+                "contents": list_.items,
+                "isPersistent": list_.is_cloud,
+                "visible": list_.watcher.is_visible,
+                "x": list_.watcher.pos[0] if list_.watcher.pos else 10,
+                "y": list_.watcher.pos[1] if list_.watcher.pos else 10,
                 "width": 120,
                 "height": 117,
             })

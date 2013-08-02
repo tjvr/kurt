@@ -442,10 +442,6 @@ class Serializer(object):
                 list_items = map(unicode, kurt_list.items),
             )
 
-            if not kurt_list.watcher:
-                kurt_watcher = kurt.Watcher(kurt_target,
-                        kurt.Block("contentsOfList:", name), is_visible=False)
-
             pos = kurt_list.watcher.pos
             if pos:
                 (x, y) = pos
