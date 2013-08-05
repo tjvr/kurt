@@ -1691,6 +1691,20 @@ class PluginBlockType(BaseBlockType):
         return self.__class__(self.category, self.shape, self.command,
                               self.parts, self._match)
 
+    def __eq__(self, other):
+        if isinstance(other, BlockType):
+            if self.shape == other.shape and self.inserts == other.inserts:
+                for t in self._plugins:
+                    if t in other._plugins:
+                        return True
+        elif isinstance(other, PluginBlockType):
+            for name in ("shape", "inserts", "command", "format", "category"):
+                 if getattr(self, name) != getattr(other, name):
+                    return False
+            else:
+                return True
+        return False
+
 
 class CustomBlockType(BaseBlockType):
     """A user-specified :class:`BlockType`.

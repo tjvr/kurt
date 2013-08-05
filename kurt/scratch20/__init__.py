@@ -392,7 +392,7 @@ class ZipWriter(object):
             label = pbt.text % tuple(watcher.block.args)
 
         if not isinstance(watcher.target, kurt.Project):
-            label = watcher.target.name + " " + label
+            label = watcher.target.name + ": " + label
 
         return {
             'cmd': 'getVar:' if pbt.command == 'readVariable' else pbt.command,

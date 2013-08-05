@@ -1,8 +1,9 @@
-- put back TranslatedBlockType eq
-- check Insert eq
-- add colon to sprite variable monitors between the sprite name and the variable name (e.g. “cat: hunger level”)
 - scratch14 sprite positions
 parser:
+	direction;
+	if touching mouse-pointer ?
+	[#ff0000]
+	say join join mouse x " " (mouse x > 46 and mouse x < 131)
 	- custom blocks
 	- block plugin-style booleans
 	- multiple scripts in one input
