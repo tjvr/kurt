@@ -462,9 +462,6 @@ class Project(object):
 
                 else: # BlockType
                     pbt = block.type.convert(self._plugin)
-                    if 'obsolete' in pbt.category:
-                        raise BlockNotSupported("%r is obsolete in %s" %
-                                (block.type, self._plugin.display_name))
             except BlockNotSupported, err:
                 err.message += ". Caused by: %r" % block
                 err.args = (err.message,)
