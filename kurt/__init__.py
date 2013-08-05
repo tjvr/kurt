@@ -356,18 +356,17 @@ class Project(object):
         plugin = p._plugin
 
         # require path
-        if not path:
-            path = self.path
-        if not path:
+        p.path = path or self.path
+        if not p.path:
             raise ValueError, "path is required"
 
-        if isinstance(path, basestring):
+        if isinstance(p.path, basestring):
             # split path
-            (folder, filename) = os.path.split(path)
+            (folder, filename) = os.path.split(p.path)
             (name, extension) = os.path.splitext(filename)
 
             # get plugin from extension
-            if path:
+            if path: # only if not using self.path
                 try:
                     plugin = kurt.plugin.Kurt.get_plugin(extension=extension)
                 except ValueError:
@@ -379,12 +378,12 @@ class Project(object):
                 if not name:
                     raise ValueError, "name is required"
             filename = name + plugin.extension
-            path = os.path.join(folder, filename)
+            p.path = os.path.join(folder, filename)
 
             # open
-            fp = open(path, "wb")
+            fp = open(p.path, "wb")
         else:
-            fp = path
+            fp = p.path
             path = None
 
         if not plugin:
@@ -395,7 +394,7 @@ class Project(object):
         result = p._save(fp)
         if path:
             fp.close()
-        return result if debug else path
+        return result if debug else p.path
 
     def _save(self, fp):
         return self._plugin.save(fp, self)
