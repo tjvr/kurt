@@ -1149,7 +1149,7 @@ class Insert(object):
         'number-menu': '(%s v)',
         'color': '[%s]',
         'boolean': '<%s>',
-        'stack': '\n\t%s\n',
+        'stack': '\n    %s\n',
         'inline': '%s',
         'block': '{%s}',
     }
@@ -1342,7 +1342,7 @@ class Insert(object):
                 value = "\n".join(block.stringify(block_plugin) for block in value)
 
             if self.shape == 'stack':
-                value = value.replace("\n", "\n\t")
+                value = value.replace("\n", "\n    ")
 
             if block_plugin or self.shape in 'stack':
                 value = Insert.SHAPE_FMTS.get(self.shape, '%s') % (value,)
@@ -1832,17 +1832,18 @@ class Block(object):
         for arg in self.args:
             if isinstance(arg, Block):
                 string = string.rstrip("\n")
-                string += "\n\t" + repr(arg).replace("\n", "\n\t") + ",\n"
+                string += "\n    %s,\n" % repr(arg).replace("\n", "\n    ")
             elif isinstance(arg, list):
                 if string.endswith("\n"):
-                    string += "\t"
+                    string += "    "
                 else:
                     string += " "
                 string += "[\n"
                 for block in arg:
-                    string += "\t\t" + repr(block).replace("\n", "\n\t\t")
+                    string += "    "
+                    string += repr(block).replace("\n", "\n    ")
                     string += ",\n"
-                string += "\t], "
+                string += "    ], "
             else:
                 string += repr(arg) + ", "
         string = string.rstrip(" ").rstrip(",")
@@ -1905,7 +1906,7 @@ class Script(object):
         r = "%s.%s([\n" % (self.__class__.__module__,
                 self.__class__.__name__)
         for block in self.blocks:
-            r += "\t" + repr(block).replace("\n", "\n\t") + ",\n"
+            r += "    " + repr(block).replace("\n", "\n    ") + ",\n"
         r = r.rstrip().rstrip(",") + "]"
         if self.pos:
             r += ", pos=%r" % (self.pos,)
