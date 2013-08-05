@@ -68,6 +68,7 @@ class color(Token):
         return self
 
 class lparen(Token):
+    lbp = 0
     def nud(self):
         global token
         contents = expression()
@@ -479,7 +480,10 @@ def throw(msg, hint=None, expected=None):
     msg += "\nExpression stack:"
     for token in e_stack:
         msg += "\n  %r" % token
-    msg += "\nLeft:\n  %s" % repr(e_left).replace("\n", "\n  ")
+
+    repr_e_left = (e_left.stringify() if hasattr(e_left, "stringify")
+                                      else repr(e_left))
+    msg += "\nLeft:\n  %s" % repr_e_left.replace("\n", "\n  ")
 
     line = NEWLINE_PAT.split(p_input)[lineno - 1]
     offset = len(p_input) - len(remain) #- len(token.value)
