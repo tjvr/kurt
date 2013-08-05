@@ -1,10 +1,7 @@
 *.pyc
-*.sb
 *.egg-info/
 build/
-construct/
 dist/
-files/
-tests/
-parser.out
-parselog.txt
+doc/_*
+tmp/
+*.swp

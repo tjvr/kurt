@@ -1,0 +1,20 @@
+- scratch14 sprite positions
+parser:
+	direction;
+	if touching mouse-pointer ?
+	[#ff0000]
+	say join join mouse x " " (mouse x > 46 and mouse x < 131)
+	- custom blocks
+	- block plugin-style booleans
+	- multiple scripts in one input
+optimise scratch14:
+	- don't convert images to pil
+	- optimise image loading
+	- compress images when saving
+	- optimise sounds
+	- clean up
+features:
+	- stacking order of actors
+	- cleanup scratch 2 scripts
+	- fix compiler/decompiler
+	- URL regexes?

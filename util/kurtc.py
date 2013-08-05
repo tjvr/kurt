@@ -18,7 +18,9 @@
 # You should have received a copy of the GNU Lesser General Public License along 
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
-"""Scratch project  <--->  folder structure of scripts and images
+"""Currently broken. TODO: fix
+
+Scratch project  <--->  folder structure of scripts and images
 
 Usage: kurtc.py decompile "path/to/file.sb"
        kurtc.py compile "path/to/project files/"
@@ -45,13 +47,11 @@ Folder structure: (most subfolders are optional)
 import os
 import sys
 
-try:
-    import kurt
-except ImportError: # try and find kurt directory
-    path_to_file = os.path.join(os.getcwd(), __file__)
-    path_to_lib = os.path.split(os.path.split(path_to_file)[0])[0]
-    sys.path.append(path_to_lib)
-
+ # try and find kurt directory
+path_to_file = os.path.join(os.getcwd(), __file__)
+path_to_lib = os.path.split(os.path.split(path_to_file)[0])[0]
+sys.path.append(path_to_lib)
+import kurt
 from kurt.compiler import cmd_compile
 from kurt.decompiler import cmd_decompile
 

@@ -18,7 +18,9 @@
 # You should have received a copy of the GNU Lesser General Public License along 
 # with Kurt. If not, see <http://www.gnu.org/licenses/>.
 
-"""Graphical interface for kurtc.py"""
+"""Currently broken. TODO: fix
+
+Graphical interface for kurtc.py"""
 
 from Tkinter import *
 from tkFont import Font
