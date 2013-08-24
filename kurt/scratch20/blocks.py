@@ -110,7 +110,8 @@ def blockify(blockspec):
             parts += [kurt.Insert("stack"), "else", kurt.Insert("stack")]
 
         pbt = kurt.PluginBlockType(category, shape, command, parts)
-        if "until" in pbt.text or "forever if" in pbt.text:
+        if pbt.text in ("wait until %s", "repeat until %s%s",
+                        "forever if %s%s"):
             pbt.inserts[0].unevaluated = True
         return pbt
     else:

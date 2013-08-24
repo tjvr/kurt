@@ -248,7 +248,7 @@ def blockify(category, text, flag, command, defaults):
         pbt.inserts[0].kind = 'backdrop'
 
     # fix unevaluated inserts
-    if "until" in pbt.text or "forever if" in pbt.text:
+    if pbt.text in ("wait until %s", "repeat until %s%s", "forever if %s%s"):
         pbt.inserts[0].unevaluated = True
 
     return pbt
