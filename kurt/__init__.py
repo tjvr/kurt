@@ -237,6 +237,9 @@ class Project(object):
         Path can be a file-like object, in which case format is required.
         Otherwise, can guess the appropriate format from the extension.
 
+        If you pass a file-like object, you're responsible for closing the
+        file.
+
         :param path:   Path or file pointer.
         :param format: :attr:`KurtFileFormat.name` eg. ``"scratch14"``.
                        Overrides the extension.
@@ -245,7 +248,8 @@ class Project(object):
         :raises: :py:class:`ValueError` if the format doesn't exist.
 
         """
-        if isinstance(path, basestring):
+        path_was_string = isinstance(path, basestring)
+        if path_was_string:
             (folder, filename) = os.path.split(path)
             (name, extension) = os.path.splitext(filename)
             if format is None:
@@ -262,7 +266,8 @@ class Project(object):
             raise ValueError, "Unknown format %r" % format
 
         project = plugin.load(fp)
-        fp.close()
+        if path_was_string:
+            fp.close()
         project.convert(plugin)
         if isinstance(path, basestring):
             project.path = path
