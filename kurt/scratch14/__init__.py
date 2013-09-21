@@ -115,7 +115,7 @@ class Serializer(object):
                 name = 'thumbnail',
                 form = thumbnail,
             )
-        self.project.thumbnail = self.load_image(thumbnail)
+        self.project.thumbnail = self.load_image(thumbnail).image
 
         # stage
         self.load_scriptable(self.project.stage, self.stage)
@@ -149,7 +149,8 @@ class Serializer(object):
         self.stage = self.UserObject("ScratchStageMorph")
 
         # project info
-        thumbnail = self.save_image(self.project.thumbnail)
+        thumbnail = self.save_image(
+                kurt.Costume("thumbnail", self.project.thumbnail))
         self.info = {
             'author': self.project.author,
             'comment': self.project.notes.replace("\n", "\r"),

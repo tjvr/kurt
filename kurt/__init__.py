@@ -185,7 +185,7 @@ class Project(object):
         """:class:`dict` of global :class:`Lists <List>` by name."""
 
         self.thumbnail = None
-        """A screenshot of the project. May be displayed in project browser."""
+        """An :class:`Image` with a screenshot of the project."""
 
         self.tempo = 60
         """The tempo in BPM used for note blocks."""
@@ -305,7 +305,7 @@ class Project(object):
 
         p.variables = dict((n, v.copy()) for (n, v) in self.variables.items())
         p.lists = dict((n, l.copy()) for (n, l) in self.lists.items())
-        p.thumbnail = self.thumbnail.copy() if self.thumbnail else None
+        p.thumbnail = self.thumbnail
         p.tempo = self.tempo
         p.notes = self.notes
         p.author = self.author
