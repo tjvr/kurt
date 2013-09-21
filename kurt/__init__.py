@@ -1332,6 +1332,10 @@ class Insert(object):
     def __ne__(self, other):
         return not self == other
 
+    def copy(self):
+        return Insert(self.shape, self.kind, self.default, self.name,
+                      self.unevaluated)
+
     def stringify(self, value=None, block_plugin=False):
         if value is None or (value is False and self.shape == "boolean"):
             value = self.default
