@@ -1082,13 +1082,13 @@ class Color(object):
                 r = [int(x, 16) for x in split]
             (r, g, b) = r
 
-        self.r = r
+        self.r = int(r)
         """Red component, 0-255"""
 
-        self.g = g
+        self.g = int(g)
         """Green component, 0-255"""
 
-        self.b = b
+        self.b = int(b)
         """Blue component, 0-255"""
 
     @property
