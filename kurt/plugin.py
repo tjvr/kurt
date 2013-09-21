@@ -113,15 +113,6 @@ class KurtPlugin(object):
 
     # Override the following methods in subclass:
 
-    def make_blocks(self):
-        """Return a list of :class:`PluginBlockType` objects, which will be
-        the value of the :attr:`blocks` property.
-
-        This function is only called once.
-
-        """
-        raise NotImplementedError
-
     def load(self, fp):
         """Load a project from a file with this format.
 
@@ -262,6 +253,10 @@ class Kurt(object):
 
 #-- Features --#
 
+def empty_generator():
+    if False: yield
+
+
 class Feature(object):
     """A format feature that a plugin supports."""
 
@@ -286,16 +281,36 @@ class Feature(object):
             return self.name == other
         return self is other
 
+    def normalize(self, project):
+        """Convert project to a plugin that SUPPORTS this feature."""
+        return empty_generator()
+
     def workaround(self, project):
-        if False: yield
-
-    def __call__(self, f):
-        self.workaround = f
+        """Convert project to a plugin that does NOT support this feature."""
+        return empty_generator()
 
 
-@Feature("Vector Images",
+def workaround(feature):
+    feature = Feature.get(feature)
+    def _wrapper(f):
+        assert callable(f)
+        feature.workaround = f
+    return _wrapper
+
+def normalize(feature):
+    feature = Feature.get(feature)
+    def _wrapper(f):
+        assert callable(f)
+        feature.normalize = f
+    return _wrapper
+
+
+
+Feature("Vector Images",
         """Allow vector format (SVG) image files for costumes.""")
-def _workaround(project):
+
+@workaround("Vector Images")
+def _workaround_no_vector_images(project):
     """Replace vector images with fake ones."""
     RED = (255, 0, 0)
     PLACEHOLDER = kurt.Image.new((32, 32), RED)
@@ -305,10 +320,12 @@ def _workaround(project):
                 yield "%s - %s" % (scriptable.name, costume.name)
                 costume.image = PLACEHOLDER
 
-@Feature("Stage-specific Variables",
+Feature("Stage-specific Variables",
         """Can have stage-specific variables and lists, in addition to global
         variables and lists (which are stored on the :class:`Project`).""")
-def _workaround(project):
+
+@workaround("Stage-specific Variables")
+def _workaround_no_stage_specific_variables(project):
     """Make Stage-specific variables global (move them to Project)."""
     for (name, var) in project.stage.variables.items():
         yield "variable %s" % name
@@ -319,10 +336,23 @@ def _workaround(project):
     project.stage.variables = {}
     project.stage.lists = {}
 
-Feature("Custom Blocks", """Blocks accept :class:`CustomBlockType` objects for
+Feature("Custom Blocks",
+        """Blocks accept :class:`CustomBlockType` objects for
         their :attr:`type`.""")
 
-del _workaround
+Feature("First-class Lists",
+        """Variables can take list values. Nested lists are supported.
+        `Scriptable.lists` and `Project.lists` are unused.""")
+
+@workaround("First-class Lists")
+def _workaround_no_first_class_lists(project):
+    """Replace list-containing variables with lists of the same name."""
+    return empty_generator() # TODO
+
+@normalize("First-class Lists")
+def _normalize_first_class_lists(project):
+    """Replace `Scriptable.lists` with variables containing lists."""
+    return empty_generator() # TODO
 
 
 

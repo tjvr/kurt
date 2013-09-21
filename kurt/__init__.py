@@ -495,9 +495,13 @@ class Project(object):
 
         # workaround unsupported features
         for feature in kurt.plugin.Feature.FEATURES.values():
-            if feature not in self._plugin.features and feature.workaround:
+            if feature not in self._plugin.features:
                 for x in feature.workaround(self):
                     yield UnsupportedFeature(feature, x)
+
+        # normalize supported features
+        for feature in self._plugin.features:
+            feature.normalize(self)
 
     def get_broadcasts(self):
         def get_broadcasts(block):
