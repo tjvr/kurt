@@ -35,7 +35,7 @@ Or download the compressed archive [from PyPI](http://pypi.python.org/pypi/kurt)
 
 ## Requirements
 
-Requires at least Python 2.6. Doesn't support Python 3.
+Requires **Python 2.7**. Doesn't support Python 3.
 
 The installation methods above will automatically install kurt and its dependencies. To do a manual install instead, you need:
 
