@@ -149,12 +149,14 @@ class Serializer(object):
         self.stage = self.UserObject("ScratchStageMorph")
 
         # project info
-        thumbnail = self.save_image(
-                kurt.Costume("thumbnail", self.project.thumbnail))
+        thumbnail = self.save_image(kurt.Costume("thumbnail", (
+                self.project.thumbnail or kurt.Image.new((160, 120), (1, 1, 1))
+            ))).form
+
         self.info = {
             'author': self.project.author,
             'comment': self.project.notes.replace("\n", "\r"),
-            'thumbnail': thumbnail.form if thumbnail else None,
+            'thumbnail': thumbnail,
             'history': '',
             'language': 'en',
             'os-version': '',
