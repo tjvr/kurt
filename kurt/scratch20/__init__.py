@@ -107,6 +107,7 @@ class ZipReader(object):
         # watchers
         for actor in actors:
             if not isinstance(actor, kurt.Sprite):
+                if 'listName' in actor: continue
                 actor = self.load_watcher(actor)
             self.project.actors.append(actor)
 
