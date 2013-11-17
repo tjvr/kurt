@@ -849,6 +849,7 @@ class Watcher(Actor):
             pos=None):
         Actor.__init__(self)
 
+        assert target is not None
         self.target = target
         """The :attr:`Scriptable` or :attr:`Project` the watcher belongs to.
 

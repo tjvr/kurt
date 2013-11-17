@@ -227,10 +227,11 @@ class ZipReader(object):
 
     def load_watcher(self, wd):
         command = 'readVariable' if wd['cmd'] == 'getVar:' else wd['cmd']
-        if wd['target'] == 'Stage':
+        if wd['target'] == self.json['objName']: # Usually "Stage"
             target = self.project
         else:
             target = self.project.get_sprite(wd['target'])
+            assert target
         watcher = kurt.Watcher(target,
             kurt.Block(command, *(wd['param'].split(',') if wd['param']
                                                          else [])),
