@@ -178,6 +178,13 @@ def block_from_parts(parts):
                 if (isinstance(arg, iden) and
                         not insert.shape in ("number-menu", "readonly-menu")):
                     arg = kurt.Block(arg.value)
+                elif (isinstance(arg, iden) and
+                        insert.shape in ("number-menu", "readonly-menu") and
+                        arg not in insert.options()):
+                    try:
+                        arg = kurt.Block(arg.value)
+                    except kurt.UnknownBlock:
+                        arg = arg.value
                 else:
                     arg = arg.value
             elif (isinstance(arg, kurt.Block) and

@@ -77,22 +77,27 @@ project = kurt.Project()
 
 y = 170
 
+project.variables = {
+    'Fonts.Message': kurt.Variable(),
+    'Fonts.x': kurt.Variable(),
+    'Fonts.y': kurt.Variable(),
+    'Fonts.line_height': kurt.Variable(),
+    'Fonts.Font': kurt.Variable(),
+}
+
 stage_script = """
-when gf clicked  // Example script, delete me!
+when gf clicked
 clear
-set [Fonts.Message v] to [{MESSAGE}]
-set [Fonts.x v] to (-230)
-set [Fonts.y v] to (170)
-set [Fonts.line_height v] to (::line_height::)
+set Fonts.Message to "{MESSAGE}"
+set Fonts.x to (-230)
+set Fonts.y to (170)
+set Fonts.line_height to (::line_height::)
 """.format(**locals())
 
 line_height = 0
 
 for font_path in FONT_PATHS:
-    try:
-        font = ImageFont.truetype(font_path, FONT_SIZE)
-    except IOError:
-        continue
+    font = ImageFont.truetype(font_path, FONT_SIZE)
     (_, font_name) = os.path.split(font_path)
     if "." in font_name:
         font_name = ".".join(font_name.split(".")[:-1])
@@ -111,6 +116,11 @@ for font_path in FONT_PATHS:
     error = False
     for char in CHARACTERS:
         pil_image = text_to_image(font, char, TEXT_COLOR)
+        (width, height) = pil_image.size
+        if char == " " and width == 0 or height == 0:
+            width = max(1, width)
+            height = max(1, width)
+            pil_image = Image.new("RGB", (width, height), (255, 255, 255))
 
         try:
             costume = kurt.Costume(char, kurt.Image(pil_image), (0, 0))
@@ -133,53 +143,53 @@ for font_path in FONT_PATHS:
     """)
 
     sprite.parse("""
-    when I receive [Fonts.Write]
-    if <not <(Fonts.Font) = [{font_name}]>>
+    when I receive "Fonts.Write"
+    if not Fonts.Font = "{font_name}"
         stop script
     end
     hide
     go to x:(Fonts.x) y:(Fonts.y)
-    set [i v] to [1]
-    set [message v] to (Fonts.Message)
-    repeat until <(i) > ((length of (message)) - (1))>
-        set [word x v] to (x position)
-        set [j v] to (i)
-        switch to costume [! v]
-        repeat until <<(costume #)=[1]> or <(j) > ((length of (message)) - (1))>>
-            switch to costume (letter (j) of (message))
-            change [word x v] by (item (costume #) of [widths v])
-            if <(word x) > [230]>
-                set x to (-230)
-                change y by (() - (Fonts.line_height))
-                if <(y position) < (-170)>
-                    wait (1) secs
+    set i to 1
+    set message to Fonts.Message
+    repeat until i > (length of message) - 1
+        set word x to x position
+        set j to i
+        switch costume to "!"
+        repeat until (costume # = 1 or j > (length of message) - 1)
+            switch costume to letter j of message
+            change word x by (item (costume #) of widths)
+            if word x > 230
+                set x to -230
+                change y by 0 - Fonts.line_height
+                if y position < -170
+                    wait 1 secs
                     clear
-                    set y to (170)
+                    set y to 170
                 end
-                switch to costume ((1) + (0))
-                set [j v] to [0]
+                switch costume to 1 + 0
+                set j to 0
             else
-                change [j v] by (1)
+                change j by 1
             end
-            if <(costume #)=[1]>
-                change [j v] by (-1)
+            if costume # = 1
+                change j by -1
             end
         end
-        repeat until <(i) > (j)>
-            switch to costume (letter (i) of (message))
+        repeat until i > j
+            switch costume to letter i of message
             stamp
-            change x by (item (costume #) of [widths v])
-            change [i v] by (1)
+            change x by item costume # of widths
+            change i by 1
         end
     end
-    switch to costume [A v]
-    set [Fonts.x v] to (x position)
-    set [Fonts.y v] to (y position)
+    switch costume to A
+    set Fonts.x to x position
+    set Fonts.y to y position
     """.format(**locals()))
 
     stage_script += """
-    set [Fonts.Font v] to [{font_name}]
-    broadcast [Fonts.Write] and wait
+    set Fonts.Font to "{font_name}"
+    broadcast "Fonts.Write" and wait
     """.format(**locals())
 
     project.sprites.append(sprite)
@@ -190,11 +200,11 @@ stage_script = stage_script.replace("::line_height::", str(line_height))
 project.stage.parse(stage_script)
 
 project.stage.parse("""
-set [Fonts.Message v] to [Hello there!] // How to use
-set [Fonts.x v] to [0]
-set [Fonts.y v] to [0]
-set [Fonts.Font v] to [HelveticaCY]
-broadcast [Fonts.Write] and wait
+set Fonts.Message to "Hello there!"
+set Fonts.x to 0
+set Fonts.y to 0
+set Fonts.Font to "HelveticaCY"
+broadcast "Fonts.Write" and wait
 """)
 
 

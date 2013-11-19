@@ -1374,7 +1374,7 @@ class Insert(object):
         Mostly complete, excepting 'attribute'.
 
         """
-        options = Insert.KIND_OPTIONS.get(self.kind, [])
+        options = list(Insert.KIND_OPTIONS.get(self.kind, []))
         if scriptable:
             if self.kind == 'var':
                 options += scriptable.variables.keys()
