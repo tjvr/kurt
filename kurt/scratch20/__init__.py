@@ -497,9 +497,11 @@ class ZipWriter(object):
     def save_block(self, block):
         if isinstance(block.type, kurt.CustomBlockType):
             spec = make_spec(block.type.parts)
-            return ['call', spec] + block.args
-
-        command = block.type.convert("scratch20").command
+            prefix = ['call', spec]
+            command = None
+        else:
+            command = block.type.convert("scratch20").command
+            prefix = [command]
 
         if command == 'procDef':
             cb = block.args[0]
@@ -529,7 +531,8 @@ class ZipWriter(object):
                 elif insert.kind == 'spriteOnly' and arg == 'myself':
                     arg = '_myself_'
             args.append(arg)
-        return [command] + args
+
+        return prefix + args
 
     def save_script(self, script):
         if isinstance(script, kurt.Script):
