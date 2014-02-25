@@ -1538,6 +1538,12 @@ class BlockType(BaseBlockType):
 
     """
 
+    def __getstate__(self):
+        """lambda functions are not pickleable so drop them."""
+        copy = self.__dict__.copy()
+        copy['_workaround'] = None
+        return copy
+
     def __init__(self, pbt):
         if isinstance(pbt, basestring):
             raise ValueError("Invalid argument. Did you mean `BlockType.get`?")
@@ -2110,6 +2116,21 @@ class Image(object):
         else:
             self._contents = contents
             self._format = Image.image_format(format)
+
+    def __getstate__(self):
+        if isinstance(self._pil_image, PIL.Image.Image):
+            copy = self.__dict__.copy()
+            copy['_pil_image'] = {
+                'data': self._pil_image.tobytes(),
+                'size': self._pil_image.size,
+                'mode': self._pil_image.mode}
+            return copy
+        return self.__dict__
+
+    def __setstate__(self, data):
+        self.__dict__.update(data)
+        if self._pil_image:
+            self._pil_image = PIL.Image.fromstring(**self._pil_image)
 
     # Properties
 

@@ -211,6 +211,7 @@ class Collection(FixedObjectWithRepeater, ContainsRefs):
         if name in ('append', 'count', 'extend', 'index', 'insert', 'pop',
                     'remove', 'reverse', 'sort'):
             return getattr(self.value, name)
+        raise AttributeError
 
     def __getitem__(self, index):
         return self.value[index]
