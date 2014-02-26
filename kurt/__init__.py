@@ -2132,7 +2132,7 @@ class Image(object):
     def __setstate__(self, data):
         self.__dict__.update(data)
         if self._pil_image:
-            self._pil_image = PIL.Image.fromstring(**self._pil_image)
+            self._pil_image = PIL.Image.frombytes(**self._pil_image)
 
     # Properties
 
