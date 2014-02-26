@@ -1952,6 +1952,8 @@ class Script(object):
     # Pretend to be a list
 
     def __getattr__(self, name):
+        if name.startswith('__') and name.endswith('__'):
+            return super(Script, self).__getattr__(name)
         return getattr(self.blocks, name)
 
     def __iter__(self):
@@ -2075,7 +2077,7 @@ class Costume(object):
     def __getattr__(self, name):
         if name in ('width', 'height', 'size'):
             return getattr(self.image, name)
-        raise AttributeError, "%r object has no attribute %r" % (self, name)
+        return super(Costume, self).__getattr__(name)
 
 
 class Image(object):
