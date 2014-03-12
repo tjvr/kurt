@@ -250,7 +250,7 @@ class Serializer(object):
                 pil_image = kurt_costume.image.pil_image
                 pil_image = pil_image.convert("RGBA")
                 (width, height) = pil_image.size
-                rgba_string = pil_image.tostring()
+                rgba_string = pil_image.tobytes()
 
                 v14_image = self.UserObject("ImageMedia",
                     name = unicode(kurt_costume.name),
