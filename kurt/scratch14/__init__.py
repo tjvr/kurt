@@ -115,7 +115,8 @@ class Serializer(object):
                 name = 'thumbnail',
                 form = thumbnail,
             )
-        self.project.thumbnail = self.load_image(thumbnail).image
+        thumbnail_costume = self.load_image(thumbnail)
+        if thumbnail_costume: self.project.thumbnail = thumbnail_costume.image
 
         # stage
         self.load_scriptable(self.project.stage, self.stage)
@@ -231,9 +232,7 @@ class Serializer(object):
                     image._size = v14_image.size
             else:
                 form = v14_image.compositeForm or v14_image.form
-                (width, height, rgba_array) = form.to_array()
-                size = (width, height)
-                pil_image = PIL.Image.fromstring("RGBA", size, rgba_array)
+                pil_image = form.to_array()
                 image = kurt.Image(pil_image)
             return kurt.Costume(v14_image.name, image,
                                 v14_image.rotationCenter)

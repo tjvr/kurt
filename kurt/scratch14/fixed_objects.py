@@ -17,8 +17,12 @@
 
 """Primitive fixed-format objects - eg String, Dictionary."""
 
+import PIL
+
 from array import array # used by Form
 from copy import copy
+import itertools
+import operator
 
 from construct import Container, Struct, Embed, Rename
 from construct import PascalString, UBInt32, SBInt32, UBInt16, UBInt8, Bytes
@@ -66,7 +70,7 @@ def default_colormap():
                                  255 * green / 5,
                                  255 * blue / 5,
                                  255))
-    return colormap
+    return map(bytearray, colormap)
 
 
 class FixedObject(object):
@@ -341,6 +345,10 @@ class Color(FixedObject):
         (r, g, b) = self.to_8bit()
         return array('B', (r, g, b, 255))
 
+    def to_argb_array(self):
+        (r, g, b) = self.to_8bit()
+        return bytearray((255, r, g, b))
+
 
 
 class TranslucentColor(Color):
@@ -378,6 +386,11 @@ class TranslucentColor(Color):
 
     def to_rgba_array(self):
         return array('B', self.to_8bit())
+
+    def to_argb_array(self):
+        (r, g, b, a) = self.to_8bit()
+        return bytearray((a, r, g, b))
+
 
 
 
@@ -480,8 +493,7 @@ class Bitmap(FixedObjectByteArray):
                             Value("pixels", lambda ctx: "\x00\x00\x00\x00")
                         ),
                     )),
-                    1: Embed(Struct("",
-                        Bytes("_b", 1),
+                    1: Embed(Struct("", Bytes("_b", 1),
                         StrictRepeater(get_run_length,
                             Value("pixels", lambda ctx: ctx._b * 4),
                         ),
@@ -503,16 +515,14 @@ class Bitmap(FixedObjectByteArray):
     )
 
     @classmethod
-    def from_byte_array(cls, bytes):
+    def from_byte_array(cls, bytes_):
         """Decodes a run-length encoded ByteArray and returns a Bitmap.
         The ByteArray decompresses to a sequence of 32-bit values, which are
         stored as a byte string. (The specific encoding depends on Form.depth.)
         """
-        runs = cls._length_run_coding.parse(bytes)
-        data = ""
-        for run in runs.data:
-            for pixel in run.pixels:
-                data += pixel
+        runs = cls._length_run_coding.parse(bytes_)
+        pixels = (run.pixels for run in runs.data)
+        data = "".join(itertools.chain.from_iterable(pixels))
         return cls(data)
 
 
@@ -578,68 +588,52 @@ class Form(FixedObject, ContainsRefs):
             self.bits = Bitmap.from_byte_array(self.bits.value)
         assert isinstance(self.bits, Bitmap)
 
-    def _to_pixels(self):
-        pixel_bytes = self.bits.value
-        if self.depth == 32:
-            for i in range(0, len(pixel_bytes), 4):
-                (a, r, g, b) = (ord(x) for x in pixel_bytes[i:i+4])
-                if a == 0 and (r > 0 or g > 0 or b > 0):
-                    a = 255
-                yield array("B", (r, g, b, a))
+    def to_array(self):
+        pixel_bytes = bytearray(self.bits.value)
 
-        elif self.depth == 16:
-            raise NotImplementedError # TODO: depth 16
+        if self.depth == 32:
+            argb_array = pixel_bytes
 
         elif self.depth <= 8:
+            wide_argb_array = bytearray(len(pixel_bytes) * 4)
+
+            num_colors = 2 ** self.depth
             if self.colors:
-                colors = [color.to_rgba_array() for color in self.colors]
+                colors = [color.to_argb_array() for color in self.colors]
+                colors += [None] * (num_colors - len(colors))
             else:
-                colors = default_colormap()
-            length = len(pixel_bytes) * 8 / self.depth
-            repeater = MetaRepeater(length, Bits("pixels", self.depth))
-            pixels_construct = BitStruct("", repeater)
-            for pixel in pixels_construct.parse(pixel_bytes).pixels:
-                yield colors[pixel]
+                colors = default_colormap()[0:num_colors]
+            assert len(colors) == num_colors
 
-    def to_array(self):
-        rgba = array('B') #unsigned byte
-        pixel_count = 0
-        num_pixels = self.width * self.height
+            # Precompute pixel colors for each byte.
+            # This is way faster than doing different bit-shifting ops to get
+            # each pixel depending on depth.
 
-        # Rows are rounded to be a whole number of words (32 bits) long.
-        # Presumably this is because Bitmaps are compressed (run-length encoded)
-        # in 32-bit segments.
-        skip = 0
-        if self.depth <= 8:
-            pixels_per_word = 32 / self.depth
+            multicolors = itertools.product(colors, repeat=8//self.depth)
+            multicolors = [bytearray(b'').join(multicolor)
+                           for multicolor in multicolors]
+
+            wide_argb_array = bytearray(b'').join(
+                    operator.itemgetter(*pixel_bytes)(multicolors))
+
+            # Rows are rounded to be a whole number of words (32 bits) long.
+            # Presumably this is because Bitmaps are compressed (run-length
+            # encoded) in 32-bit segments.
+            pixels_per_word = 32 // self.depth
             pixels_in_last_word = self.width % pixels_per_word
             skip = (pixels_per_word - pixels_in_last_word) % pixels_per_word
 
-        x = 0
-        pixels = self._to_pixels()
-        while 1:
-            try:
-                color = pixels.next()
-            except StopIteration:
-                break
+            out_rowlen = self.width * 4
+            in_rowlen  = out_rowlen + skip * 4
+            row_indexes = xrange(0, len(wide_argb_array), in_rowlen)
+            argb_array = bytearray(b'').join(wide_argb_array[i:i+out_rowlen]
+                                              for i in row_indexes)
+        else:
+            raise NotImplementedError # TODO: depth 16
 
-            rgba.extend(color)
-
-            pixel_count += 1
-            x += 1
-            if x >= self.width:
-                for i in xrange(skip):
-                    pixel = pixels.next()
-                x = 0
-
-        length = self.width * self.height * 4
-        blank = array("B", (0, 0, 0, 0))
-        while len(rgba) < length:
-            rgba.extend(blank)
-
-        assert len(rgba) == length
-
-        return (self.width, self.height, rgba)
+        size = (self.width, self.height)
+        return PIL.Image.frombuffer("RGBA", size, buffer(argb_array), "raw",
+                                    "ARGB", 0, 1)
 
     @classmethod
     def from_string(cls, width, height, rgba_string):
@@ -660,26 +654,6 @@ class Form(FixedObject, ContainsRefs):
             depth = 32,
             bits = Bitmap(raw),
         )
-
-    @classmethod
-    def from_array(cls, width, height, rgba_array):
-        """Returns a Form with 32-bit RGBA pixels
-        Accepts sequence of flattened r, g, b, a, r, g, b, a ... values for
-        each pixel
-        """
-        # Unused now
-        raw = ""
-        for i in range(0, len(rgba_array), 4):
-            (r, g, b, a) = (chr(x) for x in rgba_array[i:i+4])
-            raw += "".join((a, r, g, b))
-
-        return Form(
-            width = width,
-            height = height,
-            depth = 32,
-            bits = Bitmap(raw),
-        )
-
 
 class ColorForm(Form):
     """A rectangular array of pixels, used for holding images.
