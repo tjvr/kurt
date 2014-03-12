@@ -115,6 +115,8 @@ class ZipReader(object):
 
     def read_image(self, file_id):
         if file_id not in self.loaded_images:
+            if file_id not in self.image_filenames:
+                return None
             filename = self.image_filenames[file_id]
             (_, extension) = os.path.splitext(filename)
             contents = self.zip_file.open(filename).read()
@@ -159,7 +161,9 @@ class ZipReader(object):
                 rotation_center = (x, y)
 
             if 'text' in cd:
-                image = image.paste(self.read_image(cd['textLayerID']))
+                text_layer = self.read_image(cd['textLayerID'])
+                if text_layer:
+                    image = image.paste(text_layer)
 
             scriptable.costumes.append(kurt.Costume(cd['costumeName'], image,
                 rotation_center))
