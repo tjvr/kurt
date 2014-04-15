@@ -12,7 +12,7 @@ setup(name = 'kurt',
       author = 'Tim Radvan',
       author_email = 'blob8108@gmail.com',
       url = 'https://github.com/blob8108/kurt',
-      description = 'Read/write MIT Scratch files, & de/compile them from text & images',
+      description = "Library for reading/writing MIT's Scratch file format.",
       install_requires = ['construct == 2.0.6', 'pillow >= 2.0'],
       keywords = ['scratch'],
       license = 'LGPL',
@@ -31,9 +31,5 @@ setup(name = 'kurt',
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Education",
       ],
-      long_description = """\
-Python library for reading/writing Scratch (.sb & .sprite) files.
-
-Also includes a de/compiler for converting Scratch projects <---> folder structure structure with project contents.
-"""
+      long_description = open("README.md").read(),
 )
