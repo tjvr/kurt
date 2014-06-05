@@ -1651,9 +1651,10 @@ class BlockType(BaseBlockType):
     def __eq__(self, other):
         if isinstance(other, BlockType):
             if self.shape == other.shape and self.inserts == other.inserts:
-                for t in self._plugins:
-                    if t in other._plugins:
-                        return True
+                for plugin in self._plugins:
+                    if plugin in other._plugins:
+                        return self._plugins[plugin] == other._plugins[plugin]
+        return False
 
     def __ne__(self, other):
         return not self == other
