@@ -17,7 +17,7 @@
 
 """Experimental text parser for scripts.
 
-ohe original parser used block plugin syntax, the same as the ``scratchblocks``
+The original parser used block plugin syntax, the same as the ``scratchblocks``
 tag used on the Scratch Forums and Wiki. See:
 http://wiki.scratch.mit.edu/wiki/Block_Plugin
 
@@ -429,36 +429,27 @@ def tokenize(program):
 #-- Parser --#
 
 p_input = ""
-e_stack = []
-e_left = None
 
 def expression(rbp=0):
     global token
-    global e_left
     t = token
     token = next()
-    e_stack.append(t)
-    e_left = t.nud()
-    e_stack.pop(-1)
+    left = t.nud()
     if not hasattr(token, "lbp"):
         throw("Not an operator: %r" % token)
     while rbp < token.lbp:
         t = token
         token = next()
-        e_stack.append(t)
-        e_left = t.led(e_left)
-        e_stack.pop(-1)
+        left = t.led(left)
         if not hasattr(token, "lbp"):
             throw("Not an operator: %r" % token)
-    return e_left
+    return left
 
 def parse(program, scriptable):
-    global token, next, context, p_input, e_stack, e_left
+    global token, next, context, p_input
 
     # for errors
     p_input = program
-    e_stack = []
-    e_left = None
 
     context = scriptable
     next = tokenize(program).next
@@ -483,14 +474,6 @@ def throw(msg, hint=None, expected=None):
 
     if hint:
         msg += ". " + hint
-
-    msg += "\nExpression stack:"
-    for token in e_stack:
-        msg += "\n  %r" % token
-
-    repr_e_left = (e_left.stringify() if hasattr(e_left, "stringify")
-                                      else repr(e_left))
-    msg += "\nLeft:\n  %s" % repr_e_left.replace("\n", "\n  ")
 
     line = NEWLINE_PAT.split(p_input)[lineno - 1]
     offset = len(p_input) - len(remain) #- len(token.value)
