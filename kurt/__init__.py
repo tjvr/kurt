@@ -468,6 +468,8 @@ class Project(object):
                     pbt = block.type.convert(self._plugin)
             except BlockNotSupported, err:
                 err.message += ". Caused by: %r" % block
+                err.block = block
+                err.scriptable = scriptable
                 err.args = (err.message,)
                 if getattr(block.type, '_workaround', None):
                     block = block.type._workaround(block)
@@ -1579,8 +1581,10 @@ class BlockType(BaseBlockType):
             if plugin.name in self._plugins:
                 return self._plugins[plugin.name]
             else:
-                raise BlockNotSupported("%s doesn't have %r" %
+                err = BlockNotSupported("%s doesn't have %r" %
                         (plugin.display_name, self))
+                err.block_type = self
+                raise err
         else:
             return self.conversions[0]
 
