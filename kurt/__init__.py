@@ -826,7 +826,7 @@ class Sprite(Scriptable, Actor):
         """Return a new instance, deep-copying all the attributes."""
         o = self.__class__(self.project, self.name)
         Scriptable.copy(self, o)
-        o.direction = tuple(self.position)
+        o.position = tuple(self.position)
         o.direction = self.direction
         o.rotation_style = self.rotation_style
         o.size = self.size
