@@ -973,7 +973,7 @@ class Watcher(Actor):
 class Variable(object):
     """A memory value used in scripts.
 
-    There are both :attr`global variables <Project.variables> and
+    There are both :attr:`global variables <Project.variables>` and
     :attr:`sprite-specific variables <Sprite.variables>`.
 
     Some formats also have :attr:`stage-specific variables <Stage.variables>`.
