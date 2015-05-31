@@ -862,7 +862,7 @@ class Watcher(Actor):
 
         For variables::
 
-            kurt.Block('getVar:', 'variable name')
+            kurt.Block('readVariable', 'variable name')
 
         For lists::
 
