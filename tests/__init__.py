@@ -3,6 +3,8 @@ import os
 import unittest
 from kurt import kurt
 
+from tests.corpus import *
+
 SELF_PATH = os.path.dirname(os.path.abspath(__file__))
 
 

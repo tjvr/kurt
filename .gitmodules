@@ -1,0 +1,3 @@
+[submodule "scratch-corpus"]
+	path = tests/scratch-corpus
+	url = https://github.com/tjvr/scratch-corpus
