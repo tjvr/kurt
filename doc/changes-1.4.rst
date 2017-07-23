@@ -11,7 +11,7 @@ Kurt 2.0 includes support for multiple file formats, and so has a brand-new,
 shiny interface. As the API breaks support with previous versions, the major
 version has been updated.
 
-Ideally you should rewrite your code to use the :doc:`new interface <kurt>`.
+Ideally you should rewrite your code to use the :doc:`new interface <api>`.
 It's much cleaner, and you get support for multiple file formats for free!
 
 A quick, very incomplete list of some of the names that have changed:
